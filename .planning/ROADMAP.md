@@ -35,10 +35,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Geldbeträge werden systemweit exakt (decimal/numeric, nie float) gerechnet, belegt durch Golden-File-Tests zur EN-16931-Rundung
   5. Nutzer kann die UI zwischen Deutsch und Englisch umschalten; die App ist als PWA auf Desktop und Smartphone installierbar
   6. Tarif-Feature-Gates (S/M/L/XL) blenden Funktionen pro Mandant sichtbar ein/aus (ohne Zahlungsabwicklung)
-**Plans**: TBD
+**Plans**: 8 plans
 
 Plans:
-- [ ] 01-01: TBD (verfeinert in plan-phase)
+- [ ] 01-01-PLAN.md — Solution scaffold + platform tenancy/DB kernel (interceptor) + inert ledger + docker
+- [ ] 01-02-PLAN.md — Tenant/Membership model + RLS migration (enable/force/policies) + least-privilege DB roles
+- [ ] 01-03-PLAN.md — Money value object + EN-16931 per-category rounding (TDD golden files)
+- [ ] 01-04-PLAN.md — Immutable append-only audit log (REVOKE + trigger + RLS) + synchronous writer
+- [ ] 01-05-PLAN.md — Tier entitlements (S/M/L/XL plan→capability map + FeatureManagement filter)
+- [ ] 01-06-PLAN.md — Keycloak BFF auth + registration (org→tenant mirror) + tenant middleware + /me endpoints
+- [ ] 01-07-PLAN.md — React 19 PWA shell + DE/EN i18n + BFF cookie API client
+- [ ] 01-08-PLAN.md — Testcontainers cross-tenant/audit-immutability suites + CI gate + human-verify
 
 ### Phase 2: Stammdaten
 **Goal**: Nutzer kann seine Geschäftspartner und sein Leistungsangebot pflegen — die Datenbasis, aus der sich später jeder Beleg speist.
@@ -158,7 +165,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Plattform-Kern | 0/TBD | Not started | - |
+| 1. Plattform-Kern | 0/8 | Planned | - |
 | 2. Stammdaten | 0/TBD | Not started | - |
 | 3. Belegkette & Rechnungskern | 0/TBD | Not started | - |
 | 4. PDF & Versand | 0/TBD | Not started | - |
