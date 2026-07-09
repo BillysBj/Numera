@@ -119,13 +119,47 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| PLAT-01 | Phase 1 | Pending |
+| PLAT-02 | Phase 1 | Pending |
+| PLAT-04 | Phase 1 | Pending |
+| PLAT-05 | Phase 1 | Pending |
+| PLAT-06 | Phase 1 | Pending |
+| PLAT-07 | Phase 1 | Pending |
+| PLAT-09 | Phase 1 | Pending |
+| CRM-01 | Phase 2 | Pending |
+| CRM-02 | Phase 2 | Pending |
+| CRM-03 | Phase 2 | Pending |
+| CATL-01 | Phase 2 | Pending |
+| CATL-02 | Phase 2 | Pending |
+| DOCS-01 | Phase 3 | Pending |
+| DOCS-04 | Phase 3 | Pending |
+| INV-01 | Phase 3 | Pending |
+| INV-02 | Phase 3 | Pending |
+| INV-03 | Phase 3 | Pending |
+| INV-04 | Phase 3 | Pending |
+| OPDN-01 | Phase 3 | Pending |
+| DOCS-02 | Phase 4 | Pending |
+| DOCS-03 | Phase 4 | Pending |
+| EINV-01 | Phase 5 | Pending |
+| EINV-02 | Phase 5 | Pending |
+| EINV-03 | Phase 5 | Pending |
+| EINV-04 | Phase 5 | Pending |
+| EINV-05 | Phase 5 | Pending |
+| OPDN-02 | Phase 6 | Pending |
+| OPDN-03 | Phase 6 | Pending |
+| INV-05 | Phase 7 | Pending |
+| INV-06 | Phase 7 | Pending |
+| INV-07 | Phase 7 | Pending |
+| CRM-04 | Phase 8 | Pending |
+| CRM-05 | Phase 8 | Pending |
+| PLAT-03 | Phase 8 | Pending |
+| PLAT-08 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33 ⚠️
+- Mapped to phases: 33
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-09*
-*Last updated: 2026-07-09 after initial definition*
+*Last updated: 2026-07-09 after roadmap creation*
