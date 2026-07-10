@@ -1,28 +1,40 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import LanguageSwitcher from './components/LanguageSwitcher'
 
-// Task 1 shell: minimal routed app. i18n (Task 2) and the Login/Dashboard
-// pages + BFF client (Task 3) are wired in subsequent tasks.
-function Shell({ title }: { title: string }) {
+// App-shell chrome shared by every route: brand + language switch reachable
+// from both Login and Dashboard.
+function AppHeader() {
+  const { t } = useTranslation('common')
   return (
-    <>
-      <header className="app-header">
-        <span className="brand">Numera</span>
-      </header>
-      <main className="app-main">
-        <h1>{title}</h1>
-        <p className="muted">Plattform-Kern PWA shell.</p>
-      </main>
-    </>
+    <header className="app-header">
+      <span className="brand">{t('app.name')}</span>
+      <LanguageSwitcher />
+    </header>
+  )
+}
+
+// Placeholder shell used until the real pages are wired (Task 3).
+function Placeholder({ titleKey }: { titleKey: string }) {
+  const { t } = useTranslation('common')
+  return (
+    <main className="app-main">
+      <h1>{t(titleKey)}</h1>
+      <p className="muted">{t('app.tagline')}</p>
+    </main>
   )
 }
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<Shell title="Login" />} />
-      <Route path="/dashboard" element={<Shell title="Dashboard" />} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    <>
+      <AppHeader />
+      <Routes>
+        <Route path="/login" element={<Placeholder titleKey="nav.login" />} />
+        <Route path="/dashboard" element={<Placeholder titleKey="dashboard.title" />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </>
   )
 }

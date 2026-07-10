@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Numera",
+    "tagline": "Platform core"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "login": "Sign in",
+    "logout": "Sign out"
+  },
+  "language": {
+    "label": "Language",
+    "de": "DE",
+    "en": "EN"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome, {{name}}",
+    "tenant": "Company",
+    "entitlements": "Enabled features",
+    "noEntitlements": "No features enabled yet.",
+    "loading": "Loading …",
+    "error": "Could not load data."
+  },
+  "offline": {
+    "banner": "Offline – financial data is only available online."
+  }
+}

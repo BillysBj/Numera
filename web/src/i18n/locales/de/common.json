@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "Numera",
+    "tagline": "Plattform-Kern"
+  },
+  "nav": {
+    "dashboard": "Übersicht",
+    "login": "Anmelden",
+    "logout": "Abmelden"
+  },
+  "language": {
+    "label": "Sprache",
+    "de": "DE",
+    "en": "EN"
+  },
+  "dashboard": {
+    "title": "Übersicht",
+    "welcome": "Willkommen, {{name}}",
+    "tenant": "Unternehmen",
+    "entitlements": "Freigeschaltete Funktionen",
+    "noEntitlements": "Noch keine Funktionen freigeschaltet.",
+    "loading": "Wird geladen …",
+    "error": "Daten konnten nicht geladen werden."
+  },
+  "offline": {
+    "banner": "Offline – Finanzdaten sind nur online verfügbar."
+  }
+}
