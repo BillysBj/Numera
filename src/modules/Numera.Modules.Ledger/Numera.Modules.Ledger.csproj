@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Numera.Modules.Ledger</RootNamespace>
+    <AssemblyName>Numera.Modules.Ledger</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+  </ItemGroup>
+
+</Project>
