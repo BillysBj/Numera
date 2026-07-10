@@ -18,6 +18,13 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 
+// Hangfire owns/creates its own schema (DDL), so it must NOT run as the least-privilege
+// runtime role. Its storage tables are infrastructure, not tenant data (RLS does not
+// apply), so a schema-owning connection is used here while the tenant-scoped
+// NumeraDbContext above stays on the RLS-subject "Default" (numera_app) connection.
+var hangfireConnectionString = builder.Configuration.GetConnectionString("Hangfire")
+    ?? connectionString;
+
 // --- Tenancy + data access -------------------------------------------------
 // ICurrentTenant is scoped: one mutable holder per request, set by
 // TenantResolutionMiddleware from the organization claim. NumeraDbContext resolves
@@ -31,7 +38,11 @@ builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(conn
 // --- Audit + entitlements --------------------------------------------------
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
-builder.Services.AddFeatureManagement().AddFeatureFilter<PlanFeatureFilter>();
+// Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
+// (which reads the per-request tenant + DbContext), so the feature manager and its
+// filters must live in the request scope — AddFeatureManagement() would register them
+// as singletons and fail DI scope validation ("cannot consume scoped from singleton").
+builder.Services.AddScopedFeatureManagement().AddFeatureFilter<PlanFeatureFilter>();
 
 // --- Registration (Keycloak Admin API) + background jobs -------------------
 builder.Services.AddHttpClient();
@@ -49,7 +60,7 @@ builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
-    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(hangfireConnectionString)));
 builder.Services.AddHangfireServer();
 
 var app = builder.Build();
