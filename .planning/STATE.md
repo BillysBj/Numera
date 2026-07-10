@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 1 of 9 (Plattform-Kern)
-Plan: 4 of 8 complete in current phase (01-01, 01-02, 01-03, 01-07)
-Status: Executing phase 1 (wave 2)
-Last activity: 2026-07-10 — Plan 01-02 complete (Tenant/Membership model + FORCE RLS migration + least-privilege DB roles; isolation verified live on postgres:18)
+Plan: 5 of 8 complete in current phase (01-01, 01-02, 01-03, 01-05, 01-07); 01-04 in parallel
+Status: Executing phase 1 (wave 3)
+Last activity: 2026-07-10 — Plan 01-05 complete (tier entitlements: Plan→Capability map, server-authoritative EntitlementService, Microsoft.FeatureManagement PlanFeatureFilter; 9 tests green)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 63%
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01-plattform-kern P01 | 35 | 3 tasks | 16 files |
 | Phase 01-plattform-kern P02 | 35 | 2 tasks | 10 files |
 | Phase 01-plattform-kern P02 | 35 | 2 tasks tasks | 10 files files |
+| Phase 01-plattform-kern P05 | 15 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -56,6 +57,7 @@ Recent decisions affecting current work:
 - [Phase 01-plattform-kern]: 01-01: Provisioned .NET SDK 10.0.301 user-local (machine had only 8.0.303); forced classic Numera.sln format over .NET 10 default .slnx
 - [Phase 01-plattform-kern]: 01-02: tenants self-scoped by RLS on id (not ITenantEntity); FORCE RLS on every table + numera_app has NO BYPASSRLS makes RLS the unconditional primary isolation control
 - [Phase 01-plattform-kern]: 01-02: shared migration in Platform.Db covers Modules.Ledger tables via reflective Numera.Modules.*.dll discovery (avoids circular ref); Api is the ef startup project
+- [Phase 01-plattform-kern]: 01-05: tier entitlement = pure projection of tenants.plan; PlanCapabilityMap is single source of truth, Plan re-exports TenantPlan (no duplicate enum); server-authoritative FeatureManagement filter (auth ∧ tenant ∧ entitlement), frontend visibility cosmetic; no payment code; no migration (reads existing column)
 
 ### Pending Todos
 
@@ -73,5 +75,5 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-10
-Stopped at: Completed 01-02-PLAN.md (Tenant/Membership + FORCE RLS migration + least-privilege DB roles; verified live on postgres:18). 01-01, 01-03, 01-07 also complete. Remaining phase-1 plans: 01-04, 01-05, 01-06, 01-08.
+Stopped at: Completed 01-05-PLAN.md (tier entitlements: Plan→Capability map + server-authoritative EntitlementService + Microsoft.FeatureManagement PlanFeatureFilter; 9 tests green, no migration, no payment code). 01-01, 01-02, 01-03, 01-07 also complete; 01-04 (audit) running in parallel. Remaining phase-1 plans: 01-04, 01-06, 01-08.
 Resume file: None
