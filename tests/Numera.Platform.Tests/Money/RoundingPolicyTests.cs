@@ -121,7 +121,7 @@ public class RoundingPolicyTests
     [Fact]
     public void Money_DefaultsToEur_AndKeepsDecimalAmount()
     {
-        var m = new Money.Money(19.99m);
+        var m = new Numera.Platform.Money.Money(19.99m);
         Assert.Equal(19.99m, m.Amount);
         Assert.Equal("EUR", m.CurrencyCode);
     }
@@ -129,8 +129,8 @@ public class RoundingPolicyTests
     [Fact]
     public void Money_ArithmeticStaysExactInDecimal()
     {
-        var a = new Money.Money(0.10m);
-        var b = new Money.Money(0.20m);
+        var a = new Numera.Platform.Money.Money(0.10m);
+        var b = new Numera.Platform.Money.Money(0.20m);
         var sum = a + b;
         // 0.10 + 0.20 == 0.30 exactly in decimal (would drift in float/double).
         Assert.Equal(0.30m, sum.Amount);
@@ -139,8 +139,8 @@ public class RoundingPolicyTests
     [Fact]
     public void Money_AddingDifferentCurrencies_Throws()
     {
-        var eur = new Money.Money(1m, "EUR");
-        var usd = new Money.Money(1m, "USD");
+        var eur = new Numera.Platform.Money.Money(1m, "EUR");
+        var usd = new Numera.Platform.Money.Money(1m, "USD");
         Assert.Throws<InvalidOperationException>(() => { var _ = eur + usd; });
     }
 }
