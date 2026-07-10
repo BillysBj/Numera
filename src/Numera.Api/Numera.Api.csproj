@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Numera.Api</RootNamespace>
+    <AssemblyName>Numera.Api</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+  </ItemGroup>
+
+</Project>

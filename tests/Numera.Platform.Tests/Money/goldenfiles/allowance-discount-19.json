@@ -1,0 +1,10 @@
+{
+  "name": "Line allowance reducing a 19% base",
+  "description": "A 19% line of 1000.00 with an allowance of 152.63. The DISCOUNTED base (847.37) is what gets taxed and rounded: 847.37 * 19 / 100 = 161.0003 -> 161.00. Asserts the allowance is applied to the base BEFORE tax rounding.",
+  "grossBase": 1000.00,
+  "allowance": 152.63,
+  "ratePercent": 19,
+  "category": "S",
+  "expectedTaxableBase": 847.37,
+  "expectedTax": 161.00
+}

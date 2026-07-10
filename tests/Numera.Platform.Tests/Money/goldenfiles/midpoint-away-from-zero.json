@@ -1,0 +1,10 @@
+{
+  "name": "Midpoint rounding proves AwayFromZero, not banker's ToEven",
+  "description": "Each case produces an exact x.xx5 at the third decimal. AwayFromZero rounds the trailing 5 up; banker's ToEven would round to the nearest even digit and diverge. E.g. 0.125 -> 0.13 (AwayFromZero) vs 0.12 (ToEven).",
+  "cases": [
+    { "taxableBase": 2.50, "ratePercent": 5, "unroundedTax": 0.125, "expectedTax": 0.13, "toEvenWouldGive": 0.12 },
+    { "taxableBase": 0.50, "ratePercent": 25, "unroundedTax": 0.125, "expectedTax": 0.13, "toEvenWouldGive": 0.12 },
+    { "taxableBase": 1.50, "ratePercent": 25, "unroundedTax": 0.375, "expectedTax": 0.38, "toEvenWouldGive": 0.38 },
+    { "taxableBase": 3.50, "ratePercent": 5, "unroundedTax": 0.175, "expectedTax": 0.18, "toEvenWouldGive": 0.18 }
+  ]
+}

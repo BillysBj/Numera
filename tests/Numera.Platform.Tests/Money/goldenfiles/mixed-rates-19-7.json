@@ -1,0 +1,10 @@
+{
+  "name": "Mixed 19% + 7% in one document",
+  "description": "Two VAT categories. Each rounds to 2dp AwayFromZero, then the document VAT total is the SUM of the rounded per-category amounts, NOT round(sum-of-unrounded). Chosen so per-category-then-sum (6.31) diverges from round(6.3192)=6.32.",
+  "lines": [
+    { "taxableBase": 12.34, "ratePercent": 19, "category": "S", "expectedTax": 2.34 },
+    { "taxableBase": 56.78, "ratePercent": 7, "category": "S", "expectedTax": 3.97 }
+  ],
+  "expectedDocumentVatTotal": 6.31,
+  "naiveRoundOfGrandTotal": 6.32
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Reverse-charge (§13b, category AE) line with 0% assessed tax",
+  "description": "A reverse-charge line: taxable base carries value but the assessed tax is 0.00 at a 0 rate. Asserts tax = 0.00 and the AE category is preserved. Pflichttext handling is Phase 3; here only arithmetic + category.",
+  "taxableBase": 5000.00,
+  "ratePercent": 0,
+  "category": "AE",
+  "expectedTax": 0.00
+}

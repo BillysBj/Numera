@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: numera-postgres
+    environment:
+      POSTGRES_DB: numera
+      POSTGRES_USER: numera
+      POSTGRES_PASSWORD: dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - numera-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U numera -d numera"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    container_name: numera-keycloak
+    command: start-dev --features=organization
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+
+volumes:
+  numera-postgres-data:

@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node / Frontend
+node_modules/
+web/dist/
+web/dev-dist/
+*.local
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+appsettings.*.Local.json
+
+# IDE
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Test artifacts
+TestResults/
+coverage/
