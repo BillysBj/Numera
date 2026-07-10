@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      Real-Postgres integration suite (Testcontainers). net10.0 so it can reference
+      the platform assemblies. Not packable; flagged as a test project so the SDK
+      wires xUnit discovery.
+    -->
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Test project: no XML docs, and don't fail the build on analyzer noise. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.*" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.*" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Platform.Audit is referenced so Numera.Platform.Audit.dll is copied next to
+      the test assembly: NumeraDbContext discovers the tenant-scoped AuditEvent
+      entity by probing its own output directory (cycle-avoidance pattern), so the
+      DLL must be present for the model (and thus these suites) to see audit_events.
+    -->
+    <ProjectReference Include="..\..\src\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <ProjectReference Include="..\..\src\platform\Numera.Platform.Tenancy\Numera.Platform.Tenancy.csproj" />
+    <ProjectReference Include="..\..\src\platform\Numera.Platform.Audit\Numera.Platform.Audit.csproj" />
+    <!--
+      Modules.Ledger is referenced so its DLL is deployed next to the test assembly:
+      NumeraDbContext discovers the inert ledger entities the same way the Api host
+      does, making the runtime model match the shipped migration snapshot (otherwise
+      EF 10 raises PendingModelChangesWarning when applying migrations).
+    -->
+    <ProjectReference Include="..\..\src\modules\Numera.Modules.Ledger\Numera.Modules.Ledger.csproj" />
+  </ItemGroup>
+
+</Project>
