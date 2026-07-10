@@ -1,0 +1,58 @@
+name: ci
+
+# Build + test gate for the Numera platform. The cross-tenant RLS suite and the
+# audit-immutability suite are HARD GATES: they run as their own required steps
+# (no continue-on-error), so a leak or a mutable audit row fails the whole pipeline.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  backend:
+    name: build + unit + integration (Testcontainers)
+    runs-on: ubuntu-latest # Docker is preinstalled -> Testcontainers postgres:18 works
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x' # global.json pins 10.0.301 (rollForward latestFeature)
+
+      - name: Restore
+        run: dotnet restore Numera.sln
+
+      - name: Build
+        run: dotnet build Numera.sln -c Release --no-restore
+
+      # Unit suites: Money golden-file rounding + entitlement resolution.
+      - name: Unit tests
+        run: dotnet test tests/Numera.Platform.Tests -c Release --no-build --logger "console;verbosity=normal"
+
+      # HARD GATE: real-Postgres cross-tenant isolation, audit immutability, pool-leak.
+      # This step is required (no continue-on-error) — success criteria 2 & 3.
+      - name: Integration tests (RLS + audit + pool-leak)
+        run: dotnet test tests/Numera.IntegrationTests -c Release --no-build --logger "console;verbosity=normal"
+
+  web:
+    name: web build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci --prefix web
+
+      - name: Build
+        run: npm run build --prefix web
+
+      - name: Test
+        run: npm test --prefix web
