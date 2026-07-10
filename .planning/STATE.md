@@ -35,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01 P07 | 18 | 3 tasks | 14 files |
+| Phase 01-plattform-kern P01 | 35 | 3 tasks | 16 files |
 
 ## Accumulated Context
 
@@ -49,6 +50,8 @@ Recent decisions affecting current work:
 - [Phase 01-plattform-kern]: VAT rounding locked to MidpointRounding.AwayFromZero (kaufmaennisch); document total = sum of per-category rounded amounts (EN 16931 BR-CO-14), never round(grand_total)
 - [Phase 01]: Plan 01-07: SPA holds no tokens — BFF HttpOnly session cookie carries auth via same-origin credentials:'include' fetch; PWA precaches app shell only and treats /api as NetworkOnly (no stale financial data)
 - [Phase 01]: Plan 01-07: DE/EN i18n via react-i18next (German default/fallback); language persisted to localStorage + lng cookie so BFF/SSR agree on locale
+- [Phase 01-plattform-kern]: 01-01: Tenant GUC via parameterized set_config interceptor + RESET on close (pool/injection-safe); EF global query filter mirrors RLS for every ITenantEntity
+- [Phase 01-plattform-kern]: 01-01: Provisioned .NET SDK 10.0.301 user-local (machine had only 8.0.303); forced classic Numera.sln format over .NET 10 default .slnx
 
 ### Pending Todos
 
@@ -61,6 +64,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 - QuestPDF PDF/A-3b-Konformität — Spike in Phase 4/5 (Fallback iText)
 - XRechnung 4.0 (Ende 2026 erwartet) — Upgrade-Pfad in Phase 5 bestätigen
 - .NET 10 SDK (global.json pins 10.0.301) not installed — only 8.0.303 present; Money project builds on net8.0 for now, retarget net10.0 when SDK provisioned
+- Docker daemon not running in exec env; docker compose up (postgres:18/keycloak:26) not started (config validated). Needed for 01-02 RLS migration + Testcontainers.
 
 ## Session Continuity
 
