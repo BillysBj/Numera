@@ -22,10 +22,16 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.2
     container_name: numera-keycloak
-    command: start-dev --features=organization
+    # --import-realm imports every *-realm.json under /opt/keycloak/data/import on
+    # startup (idempotent: skips a realm that already exists). The organization
+    # feature backs Keycloak Organizations (one org per tenant/Mandant).
+    command: start-dev --features=organization --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      # Mount the realm export so --import-realm picks up realm-numera.json.
+      - ./keycloak:/opt/keycloak/data/import:ro
     ports:
       - "8080:8080"
 
