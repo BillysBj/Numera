@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.FeatureManagement;
 
 using Numera.Api.Auth;
+using Numera.Api.Endpoints;
+using Numera.Api.Jobs;
+using Numera.Api.Services;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
 using Numera.Platform.Entitlements;
@@ -30,6 +33,11 @@ builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 builder.Services.AddFeatureManagement().AddFeatureFilter<PlanFeatureFilter>();
 
+// --- Registration (Keycloak Admin API) + background jobs -------------------
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<RegistrationService>();
+builder.Services.AddTransient<WelcomeEmailJob>();
+
 // --- BFF authentication (cookie + Keycloak OIDC, tokens server-side) --------
 builder.Services.AddKeycloakBff(builder.Configuration);
 builder.Services.AddAuthorization();
@@ -51,5 +59,11 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// After authentication: map the organization claim -> tenant_id -> ICurrentTenant so
+// RLS receives the tenant on every request.
+app.UseMiddleware<TenantResolutionMiddleware>();
+
+app.MapAuthEndpoints();
 
 app.Run();
