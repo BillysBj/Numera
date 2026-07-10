@@ -66,7 +66,7 @@ public class NumeraDbContext : DbContext
         // mirroring the DB RLS policy.
         RegisterModuleTenantEntities(modelBuilder);
         ConfigureLedgerTableNames(modelBuilder);
-        ConfigureAuditTableName(modelBuilder);
+        ConfigureAuditEvents(modelBuilder);
 
         ApplyTenantQueryFilters(modelBuilder);
         ApplySnakeCaseNaming(modelBuilder);
@@ -97,20 +97,26 @@ public class NumeraDbContext : DbContext
     }
 
     /// <summary>
-    /// Names the reflectively-registered <c>AuditEvent</c> entity (from
-    /// Numera.Platform.Audit — not a compile-time reference, else a cycle) to its
-    /// pluralised <c>audit_events</c> table so it matches the append-only REVOKE +
-    /// trigger + RLS SQL emitted by the AuditEvents migration. Matched by simple
-    /// type name to avoid referencing the Audit assembly.
+    /// Configures the reflectively-registered <c>AuditEvent</c> entity (from
+    /// Numera.Platform.Audit — not a compile-time reference, else a cycle): its
+    /// pluralised <c>audit_events</c> table name (matching the append-only REVOKE +
+    /// trigger + RLS SQL in the AuditEvents migration) and a <c>(tenant_id,
+    /// occurred_at)</c> index for chronological audit-trail reads within a tenant.
+    /// Matched by simple type name to avoid referencing the Audit assembly.
     /// </summary>
-    private static void ConfigureAuditTableName(ModelBuilder modelBuilder)
+    private static void ConfigureAuditEvents(ModelBuilder modelBuilder)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (entityType.ClrType.Name == "AuditEvent")
+            if (entityType.ClrType.Name != "AuditEvent")
             {
-                modelBuilder.Entity(entityType.ClrType).ToTable("audit_events");
+                continue;
             }
+
+            var builder = modelBuilder.Entity(entityType.ClrType);
+            builder.ToTable("audit_events");
+            builder.HasIndex(nameof(ITenantEntity.TenantId), "OccurredAt")
+                .HasDatabaseName("ix_audit_events_tenant_id_occurred_at");
         }
     }
 
