@@ -10,36 +10,43 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 1 of 9 (Plattform-Kern)
-Plan: 7 of 8 complete in current phase (01-01 … 01-07)
-Status: Executing phase 1 (wave 5 next: 01-08 tests/CI + human-verify)
-Last activity: 2026-07-10 — Plan 01-06 complete (Keycloak BFF auth verified live end-to-end: registration → org→tenant mirror + audit row, OIDC HttpOnly-cookie login, /api/me + entitlements, feature gate 403(S)/200(XL), Hangfire job under tenant context; 3 live-verification fixes committed: runtime role numera_app statt Superuser, scoped FeatureManagement, realm import scopes/org-claim)
+Plan: 8 of 8 complete in current phase (01-01 … 01-08)
+Status: Phase 1 execution complete — awaiting orchestrator phase verification
+Last activity: 2026-07-10 — Plan 01-08 complete (Testcontainers postgres:18 integration suite proving cross-tenant RLS isolation, audit immutability, and pool-leak safety as numera_app with IgnoreQueryFilters; GitHub Actions CI with RLS/audit hard gates; human-verify of the full register→session→i18n→PWA→tier-gate loop APPROVED. CI validated locally — first live Actions run pending a git remote)
 
-Progress: [█████████░] 88%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: — min
-- Total execution time: 0 hours
+- Total plans completed: 8 (Phase 1: 01-01 … 01-08)
+- Average duration: ~31 min (over 7 recorded plans; 01-03 not recorded)
+- Total execution time: ~3.6 hours (recorded plans)
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
+
+**Per-Plan (Phase 01):**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| 01-01 | 35 min | 3 | 16 |
+| 01-02 | 35 min | 2 | 10 |
+| 01-03 | — (not recorded) | — | — |
+| 01-04 | 10 min | 2 | 11 |
+| 01-05 | 15 min | 2 | 10 |
+| 01-06 | 45 min | 3 (+3 fixes) | 13 |
+| 01-07 | 18 min | 3 | 14 |
+| 01-08 | 60 min | 3 (2 code) | 7 |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 10, 15, 45, 18, 60 min
+- Trend: stable; 01-08 longer due to the human-verify checkpoint
 
 *Updated after each plan completion*
-| Phase 01 P07 | 18 | 3 tasks | 14 files |
-| Phase 01-plattform-kern P01 | 35 | 3 tasks | 16 files |
-| Phase 01-plattform-kern P02 | 35 | 2 tasks | 10 files |
-| Phase 01-plattform-kern P02 | 35 | 2 tasks tasks | 10 files files |
-| Phase 01-plattform-kern P05 | 15 | 2 tasks | 10 files |
-| Phase 01-plattform-kern P04 | 10 | 2 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -59,6 +66,7 @@ Recent decisions affecting current work:
 - [Phase 01-plattform-kern]: 01-02: tenants self-scoped by RLS on id (not ITenantEntity); FORCE RLS on every table + numera_app has NO BYPASSRLS makes RLS the unconditional primary isolation control
 - [Phase 01-plattform-kern]: 01-02: shared migration in Platform.Db covers Modules.Ledger tables via reflective Numera.Modules.*.dll discovery (avoids circular ref); Api is the ef startup project
 - [Phase 01-plattform-kern]: 01-05: tier entitlement = pure projection of tenants.plan; PlanCapabilityMap is single source of truth, Plan re-exports TenantPlan (no duplicate enum); server-authoritative FeatureManagement filter (auth ∧ tenant ∧ entitlement), frontend visibility cosmetic; no payment code; no migration (reads existing column)
+- [Phase 01-plattform-kern]: 01-08: non-retrofittable foundations (tenant isolation, audit immutability, pool-safety) are proven on real postgres:18 via Testcontainers running as numera_app (NO BYPASSRLS) with IgnoreQueryFilters — a superuser silently bypasses FORCE RLS and would make isolation tests falsely pass; RLS+audit suites are non-continue-on-error CI steps (hard gates). CI validated locally only — first live GitHub Actions run pending a git remote
 - [Phase 01-plattform-kern]: 01-04: audit_events immutability is DB-enforced by TWO layers — REVOKE UPDATE/DELETE from numera_app (permission denied) + BEFORE UPDATE OR DELETE trigger raising 'audit_events is append-only' (unconditional, catches mis-grant/owner/superuser); app-code discipline deemed insufficient
 - [Phase 01-plattform-kern]: 01-04: ICurrentUser seam lives in Platform.Tenancy (not Api) so Platform.Audit avoids an Api dependency; AuditWriter appends into the caller's DbContext with no own transaction/scope/SaveChanges (atomic with the recorded change); prev_hash/row_hash reserved nullable for a non-breaking GoBD hash-chain later
 
@@ -78,5 +86,6 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-10
-Stopped at: Completed 01-06-PLAN.md (Keycloak BFF auth, live end-to-end verified; client secret stored via dotnet user-secrets, never committed). Remaining phase-1 plan: 01-08 (Testcontainers suites + CI gate + human-verify checkpoint). Docker stack (postgres + keycloak) left running for 01-08.
+Stopped at: Completed 01-08-PLAN.md (Testcontainers postgres:18 integration suite: cross-tenant RLS isolation + audit immutability + pool-leak, all as numera_app with IgnoreQueryFilters; GitHub Actions CI with RLS/audit hard gates; human-verify of full Phase 1 loop APPROVED). Phase 1 execution complete (8/8 plans). CI caveat: no git remote yet, so CI validated locally only — first live Actions run pending a remote. Docker stack (postgres + keycloak) left running.
 Resume file: None
+Next: orchestrator runs phase verifier + ROADMAP update for Phase 1 (not done here).
