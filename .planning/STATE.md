@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 1 of 9 (Plattform-Kern)
-Plan: 6 of 8 complete in current phase (01-01, 01-02, 01-03, 01-04, 01-05, 01-07)
-Status: Executing phase 1 (wave 3)
-Last activity: 2026-07-10 — Plan 01-04 complete (immutable append-only audit log: audit_events with REVOKE UPDATE/DELETE + BEFORE UPDATE OR DELETE trigger + RLS; ICurrentUser seam; synchronous in-transaction AuditWriter; verified live on postgres:18)
+Plan: 7 of 8 complete in current phase (01-01 … 01-07)
+Status: Executing phase 1 (wave 5 next: 01-08 tests/CI + human-verify)
+Last activity: 2026-07-10 — Plan 01-06 complete (Keycloak BFF auth verified live end-to-end: registration → org→tenant mirror + audit row, OIDC HttpOnly-cookie login, /api/me + entitlements, feature gate 403(S)/200(XL), Hangfire job under tenant context; 3 live-verification fixes committed: runtime role numera_app statt Superuser, scoped FeatureManagement, realm import scopes/org-claim)
 
-Progress: [███████░░░] 75%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -78,5 +78,5 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-10
-Stopped at: Completed 01-04-PLAN.md (immutable append-only audit log: audit_events table with ENABLE+FORCE RLS + tenant_isolation, REVOKE UPDATE/DELETE + GRANT INSERT/SELECT to numera_app, BEFORE UPDATE OR DELETE trigger raising 'audit_events is append-only', reserved prev_hash/row_hash; ICurrentUser seam in Platform.Tenancy; synchronous in-transaction AuditWriter; verified live on postgres:18). 01-01, 01-02, 01-03, 01-05, 01-07 also complete. Remaining phase-1 plans: 01-06, 01-08.
+Stopped at: Completed 01-06-PLAN.md (Keycloak BFF auth, live end-to-end verified; client secret stored via dotnet user-secrets, never committed). Remaining phase-1 plan: 01-08 (Testcontainers suites + CI gate + human-verify checkpoint). Docker stack (postgres + keycloak) left running for 01-08.
 Resume file: None
