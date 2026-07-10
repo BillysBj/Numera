@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 
 ## Current Position
 
-Phase: 1 of 9 (Plattform-Kern)
-Plan: 8 of 8 complete in current phase (01-01 … 01-08)
-Status: Phase 1 execution complete — awaiting orchestrator phase verification
-Last activity: 2026-07-10 — Plan 01-08 complete (Testcontainers postgres:18 integration suite proving cross-tenant RLS isolation, audit immutability, and pool-leak safety as numera_app with IgnoreQueryFilters; GitHub Actions CI with RLS/audit hard gates; human-verify of the full register→session→i18n→PWA→tier-gate loop APPROVED. CI validated locally — first live Actions run pending a git remote)
+Phase: 1 of 9 (Plattform-Kern) — ✓ COMPLETE + VERIFIED
+Plan: 8 of 8 complete (01-01 … 01-08)
+Status: Phase 1 verified (7/7 must-haves). Ready to plan Phase 2 (Stammdaten).
+Last activity: 2026-07-10 — Phase verification passed after remediating 1 gap: Numera.Platform.Money + Numera.Platform.Tests were missing from Numera.sln, so the CI `dotnet test --no-build` step would have failed before ever reaching the RLS/audit hard gate. Both projects registered, Money retargeted net8.0→net10.0, full CI sequence replayed green (build 0/0, unit 16/16, integration 8/8) — commit 3912848.
 
-Progress: [██████████] 100%
+Progress: [██████████] 100% (Phase 1 of 9)
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-10
-Stopped at: Completed 01-08-PLAN.md (Testcontainers postgres:18 integration suite: cross-tenant RLS isolation + audit immutability + pool-leak, all as numera_app with IgnoreQueryFilters; GitHub Actions CI with RLS/audit hard gates; human-verify of full Phase 1 loop APPROVED). Phase 1 execution complete (8/8 plans). CI caveat: no git remote yet, so CI validated locally only — first live Actions run pending a remote. Docker stack (postgres + keycloak) left running.
+Stopped at: Phase 1 (Plattform-Kern) complete and verified — 8/8 plans, 7/7 must-haves, ROADMAP + REQUIREMENTS traceability updated (PLAT-01/02/04/05/06/07/09 = Complete). One verifier-found gap remediated (solution-registration of Money/unit-test projects; CI would have died before the RLS gate).
+Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo.
 Resume file: None
-Next: orchestrator runs phase verifier + ROADMAP update for Phase 1 (not done here).
+Next: /gsd:plan-phase 2 (Stammdaten — Kunden/Lieferanten + Produktkatalog).

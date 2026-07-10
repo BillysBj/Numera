@@ -9,15 +9,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Plattform & Mandanten (PLAT)
 
-- [ ] **PLAT-01**: Nutzer kann sich registrieren, eine Firma (Mandant) anlegen und sich sicher anmelden (E-Mail/Passwort, Session bleibt erhalten)
-- [ ] **PLAT-02**: Alle Daten sind strikt pro Mandant isoliert (Postgres RLS + App-Filter); Cross-Tenant-Zugriff ist durch Tests abgesichert
+- [x] **PLAT-01**: Nutzer kann sich registrieren, eine Firma (Mandant) anlegen und sich sicher anmelden (E-Mail/Passwort, Session bleibt erhalten)
+- [x] **PLAT-02**: Alle Daten sind strikt pro Mandant isoliert (Postgres RLS + App-Filter); Cross-Tenant-Zugriff ist durch Tests abgesichert
 - [ ] **PLAT-03**: Nutzer kann Teammitglieder einladen; Rollen: Inhaber (Vollzugriff), Mitarbeiter (eingeschränkt), Steuerberater (lesender Zugriff auf Belege/Auswertungen)
-- [ ] **PLAT-04**: Tarif-Feature-Gates (S/M/L/XL) steuern Funktionsumfang pro Mandant (ohne Zahlungsabwicklung)
-- [ ] **PLAT-05**: Jede finanzrelevante Änderung wird in einem unveränderbaren Audit-Log erfasst (Wer/Was/Wann)
-- [ ] **PLAT-06**: UI ist vollständig zweisprachig (Deutsch + Englisch), umschaltbar pro Nutzer
-- [ ] **PLAT-07**: App läuft als responsive PWA auf Desktop und Smartphone und ist installierbar
+- [x] **PLAT-04**: Tarif-Feature-Gates (S/M/L/XL) steuern Funktionsumfang pro Mandant (ohne Zahlungsabwicklung)
+- [x] **PLAT-05**: Jede finanzrelevante Änderung wird in einem unveränderbaren Audit-Log erfasst (Wer/Was/Wann)
+- [x] **PLAT-06**: UI ist vollständig zweisprachig (Deutsch + Englisch), umschaltbar pro Nutzer
+- [x] **PLAT-07**: App läuft als responsive PWA auf Desktop und Smartphone und ist installierbar
 - [ ] **PLAT-08**: Nutzer kann alle Daten seines Mandanten exportieren (DSGVO-Portabilität)
-- [ ] **PLAT-09**: Geldbeträge werden systemweit exakt gerechnet (decimal/numeric, nie float); Rundung folgt EN-16931-Regeln
+- [x] **PLAT-09**: Geldbeträge werden systemweit exakt gerechnet (decimal/numeric, nie float); Rundung folgt EN-16931-Regeln
 
 ### Kunden, Lieferanten & CRM (CRM)
 
@@ -119,13 +119,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PLAT-01 | Phase 1 | Pending |
-| PLAT-02 | Phase 1 | Pending |
-| PLAT-04 | Phase 1 | Pending |
-| PLAT-05 | Phase 1 | Pending |
-| PLAT-06 | Phase 1 | Pending |
-| PLAT-07 | Phase 1 | Pending |
-| PLAT-09 | Phase 1 | Pending |
+| PLAT-01 | Phase 1 | Complete |
+| PLAT-02 | Phase 1 | Complete |
+| PLAT-04 | Phase 1 | Complete |
+| PLAT-05 | Phase 1 | Complete |
+| PLAT-06 | Phase 1 | Complete |
+| PLAT-07 | Phase 1 | Complete |
+| PLAT-09 | Phase 1 | Complete |
 | CRM-01 | Phase 2 | Pending |
 | CRM-02 | Phase 2 | Pending |
 | CRM-03 | Phase 2 | Pending |
