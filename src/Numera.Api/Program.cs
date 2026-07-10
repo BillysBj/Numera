@@ -65,5 +65,6 @@ app.UseAuthorization();
 app.UseMiddleware<TenantResolutionMiddleware>();
 
 app.MapAuthEndpoints();
+app.MapMeEndpoints();
 
 app.Run();
