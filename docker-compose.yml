@@ -9,7 +9,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - numera-postgres-data:/var/lib/postgresql/data
+      # postgres:18 stores data in a major-version subdirectory; the volume MUST be
+      # mounted at /var/lib/postgresql (not /var/lib/postgresql/data) or the image
+      # refuses to start. See docker-library/postgres#37 and PR #1259.
+      - numera-postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U numera -d numera"]
       interval: 5s

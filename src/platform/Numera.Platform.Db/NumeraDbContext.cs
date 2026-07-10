@@ -64,8 +64,104 @@ public class NumeraDbContext : DbContext
         // project). Each is registered, given a tenant_id-leading access index, and a
         // defence-in-depth global query filter mirroring the DB RLS policy.
         RegisterModuleTenantEntities(modelBuilder);
+        ConfigureLedgerTableNames(modelBuilder);
 
         ApplyTenantQueryFilters(modelBuilder);
+        ApplySnakeCaseNaming(modelBuilder);
+    }
+
+    /// <summary>
+    /// Maps the reflectively-registered ledger entity types to their pluralised,
+    /// snake_case table names so they line up with the RLS SQL in the migration
+    /// (accounts, journal_entries, postings). Done by simple-name match to avoid a
+    /// compile-time reference to the Modules.Ledger assembly.
+    /// </summary>
+    private static void ConfigureLedgerTableNames(ModelBuilder modelBuilder)
+    {
+        var ledgerTables = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Account"] = "accounts",
+            ["JournalEntry"] = "journal_entries",
+            ["Posting"] = "postings",
+        };
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (ledgerTables.TryGetValue(entityType.ClrType.Name, out var table))
+            {
+                modelBuilder.Entity(entityType.ClrType).ToTable(table);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Rewrites table, column, key and index names to snake_case so the physical
+    /// schema (and thus the hand-written RLS SQL referencing <c>tenant_id</c>) is
+    /// consistent Postgres convention regardless of the CLR property casing.
+    /// </summary>
+    private static void ApplySnakeCaseNaming(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            var tableName = entityType.GetTableName();
+            if (tableName is not null)
+            {
+                entityType.SetTableName(ToSnakeCase(tableName));
+            }
+
+            foreach (var property in entityType.GetProperties())
+            {
+                property.SetColumnName(ToSnakeCase(property.GetColumnName()));
+            }
+
+            foreach (var key in entityType.GetKeys())
+            {
+                key.SetName(ToSnakeCase(key.GetName()!));
+            }
+
+            foreach (var fk in entityType.GetForeignKeys())
+            {
+                fk.SetConstraintName(ToSnakeCase(fk.GetConstraintName()!));
+            }
+
+            foreach (var index in entityType.GetIndexes())
+            {
+                var indexName = index.GetDatabaseName();
+                if (indexName is not null)
+                {
+                    index.SetDatabaseName(ToSnakeCase(indexName));
+                }
+            }
+        }
+    }
+
+    private static string ToSnakeCase(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return name;
+        }
+
+        var sb = new System.Text.StringBuilder(name.Length + 8);
+        for (var i = 0; i < name.Length; i++)
+        {
+            var c = name[i];
+            if (char.IsUpper(c))
+            {
+                if (i > 0 && (char.IsLower(name[i - 1]) || (i + 1 < name.Length && char.IsLower(name[i + 1]))))
+                {
+                    sb.Append('_');
+                }
+
+                sb.Append(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+
+        return sb.ToString();
     }
 
     private static void ConfigureTenant(ModelBuilder modelBuilder)
@@ -110,6 +206,8 @@ public class NumeraDbContext : DbContext
     /// </summary>
     private static void RegisterModuleTenantEntities(ModelBuilder modelBuilder)
     {
+        EnsureModuleAssembliesLoaded();
+
         var tenantEntityTypes = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic)
             .SelectMany(SafeGetTypes)
@@ -170,6 +268,82 @@ public class NumeraDbContext : DbContext
 
             var filter = Expression.Lambda(body, parameter);
             modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
+        }
+    }
+
+    /// <summary>
+    /// Forces the transitive closure of referenced "Numera.*" assemblies to load so
+    /// that reflection over <see cref="AppDomain.CurrentDomain"/> sees module entity
+    /// types (e.g. Modules.Ledger) even though .NET loads assemblies lazily and
+    /// nothing has yet touched a type from them (notably at design-time migration
+    /// scaffolding). Modules reference Platform.Db, so this cannot be a compile-time
+    /// reference without a cycle.
+    /// </summary>
+    private static void EnsureModuleAssembliesLoaded()
+    {
+        // 1) Walk the reference graph of everything already loaded (covers the normal
+        //    runtime host where the Api entry assembly is present).
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var queue = new Queue<System.Reflection.Assembly>(
+            AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic));
+
+        foreach (var a in queue)
+        {
+            seen.Add(a.GetName().Name!);
+        }
+
+        while (queue.Count > 0)
+        {
+            var assembly = queue.Dequeue();
+            foreach (var reference in assembly.GetReferencedAssemblies())
+            {
+                if (reference.Name is null
+                    || !reference.Name.StartsWith("Numera.", StringComparison.Ordinal)
+                    || !seen.Add(reference.Name))
+                {
+                    continue;
+                }
+
+                TryLoad(() => System.Reflection.Assembly.Load(reference), queue);
+            }
+        }
+
+        // 2) Probe the DbContext assembly's directory for Numera.Modules.* DLLs and
+        //    load any not yet present. This is what makes design-time `dotnet ef`
+        //    scaffolding see module entities: the EF design host loads only the
+        //    DbContext assembly, so the Api->Ledger reference edge is never walked,
+        //    but the module DLLs ARE copied next to Platform.Db in the output.
+        var baseDir = System.IO.Path.GetDirectoryName(typeof(NumeraDbContext).Assembly.Location);
+        if (baseDir is null)
+        {
+            return;
+        }
+
+        foreach (var dll in System.IO.Directory.EnumerateFiles(baseDir, "Numera.Modules.*.dll"))
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(dll);
+            if (!seen.Add(name))
+            {
+                continue;
+            }
+
+            TryLoad(() => System.Reflection.Assembly.LoadFrom(dll), queue);
+        }
+    }
+
+    private static void TryLoad(Func<System.Reflection.Assembly> load, Queue<System.Reflection.Assembly> queue)
+    {
+        try
+        {
+            queue.Enqueue(load());
+        }
+        catch (System.IO.FileNotFoundException)
+        {
+            // Assembly not deployed in this context; skip.
+        }
+        catch (System.BadImageFormatException)
+        {
+            // Not a managed assembly we can reflect over; skip.
         }
     }
 

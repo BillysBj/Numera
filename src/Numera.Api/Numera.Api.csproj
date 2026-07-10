@@ -6,6 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Required by the EF Core tools (dotnet ef) when Api is the startup project. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.*">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
     <!-- Referenced so the modular-monolith host loads the ledger assembly, letting
          NumeraDbContext discover its ITenantEntity types for the shared migration. -->
