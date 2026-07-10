@@ -61,10 +61,12 @@ public class NumeraDbContext : DbContext
 
         // Discover tenant-scoped entities contributed by modules whose assemblies are
         // loaded in the current app-domain (e.g. Modules.Ledger via the Api startup
-        // project). Each is registered, given a tenant_id-leading access index, and a
-        // defence-in-depth global query filter mirroring the DB RLS policy.
+        // project, and Platform.Audit's AuditEvent). Each is registered, given a
+        // tenant_id-leading access index, and a defence-in-depth global query filter
+        // mirroring the DB RLS policy.
         RegisterModuleTenantEntities(modelBuilder);
         ConfigureLedgerTableNames(modelBuilder);
+        ConfigureAuditTableName(modelBuilder);
 
         ApplyTenantQueryFilters(modelBuilder);
         ApplySnakeCaseNaming(modelBuilder);
@@ -90,6 +92,24 @@ public class NumeraDbContext : DbContext
             if (ledgerTables.TryGetValue(entityType.ClrType.Name, out var table))
             {
                 modelBuilder.Entity(entityType.ClrType).ToTable(table);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Names the reflectively-registered <c>AuditEvent</c> entity (from
+    /// Numera.Platform.Audit — not a compile-time reference, else a cycle) to its
+    /// pluralised <c>audit_events</c> table so it matches the append-only REVOKE +
+    /// trigger + RLS SQL emitted by the AuditEvents migration. Matched by simple
+    /// type name to avoid referencing the Audit assembly.
+    /// </summary>
+    private static void ConfigureAuditTableName(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (entityType.ClrType.Name == "AuditEvent")
+            {
+                modelBuilder.Entity(entityType.ClrType).ToTable("audit_events");
             }
         }
     }
@@ -319,15 +339,22 @@ public class NumeraDbContext : DbContext
             return;
         }
 
-        foreach (var dll in System.IO.Directory.EnumerateFiles(baseDir, "Numera.Modules.*.dll"))
+        // Probe both module DLLs and Platform.Audit (which carries the tenant-scoped
+        // AuditEvent entity). Platform.Audit references Platform.Db, so Platform.Db
+        // cannot reference it at compile time — same cycle-avoidance as the modules.
+        var probePatterns = new[] { "Numera.Modules.*.dll", "Numera.Platform.Audit.dll" };
+        foreach (var pattern in probePatterns)
         {
-            var name = System.IO.Path.GetFileNameWithoutExtension(dll);
-            if (!seen.Add(name))
+            foreach (var dll in System.IO.Directory.EnumerateFiles(baseDir, pattern))
             {
-                continue;
-            }
+                var name = System.IO.Path.GetFileNameWithoutExtension(dll);
+                if (!seen.Add(name))
+                {
+                    continue;
+                }
 
-            TryLoad(() => System.Reflection.Assembly.LoadFrom(dll), queue);
+                TryLoad(() => System.Reflection.Assembly.LoadFrom(dll), queue);
+            }
         }
     }
 

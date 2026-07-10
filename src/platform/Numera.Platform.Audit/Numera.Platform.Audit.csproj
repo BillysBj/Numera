@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Numera.Platform.Audit</RootNamespace>
+    <AssemblyName>Numera.Platform.Audit</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <ProjectReference Include="..\Numera.Platform.Tenancy\Numera.Platform.Tenancy.csproj" />
+  </ItemGroup>
+
+</Project>

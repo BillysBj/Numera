@@ -18,6 +18,10 @@
     <!-- Referenced so the modular-monolith host loads the ledger assembly, letting
          NumeraDbContext discover its ITenantEntity types for the shared migration. -->
     <ProjectReference Include="..\modules\Numera.Modules.Ledger\Numera.Modules.Ledger.csproj" />
+    <!-- Referenced so Platform.Audit (AuditEvent + AuditWriter) is deployed next to
+         Platform.Db, letting NumeraDbContext discover the audit_events entity for the
+         shared migration and letting the host wire IAuditWriter (01-06). -->
+    <ProjectReference Include="..\platform\Numera.Platform.Audit\Numera.Platform.Audit.csproj" />
   </ItemGroup>
 
 </Project>
