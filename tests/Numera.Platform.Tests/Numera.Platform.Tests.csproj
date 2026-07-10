@@ -1,12 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!--
-      net10.0 so this project can reference the net10.0 platform assemblies
-      (Entitlements/Db/Tenancy). The net8.0 Money library is still consumable
-      via forward compatibility. Retargeted in plan 01-05.
-    -->
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- TargetFramework (net10.0) is inherited from Directory.Build.props. -->
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>

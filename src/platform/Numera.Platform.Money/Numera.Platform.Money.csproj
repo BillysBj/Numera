@@ -1,12 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!--
-      Target net8.0 today (installed SDK is 8.0.x). The Money type and
-      RoundingPolicy are TFM-agnostic and forward-compatible to net10.0;
-      retarget when the .NET 10 LTS SDK is provisioned (see STACK.md).
-    -->
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- TargetFramework (net10.0) is inherited from Directory.Build.props. -->
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
