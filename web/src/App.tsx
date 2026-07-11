@@ -4,6 +4,8 @@ import LanguageSwitcher from './components/LanguageSwitcher'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import PartnerListPage from './features/partners/PartnerListPage'
+import PartnerFormPage from './features/partners/PartnerFormPage'
+import PartnerDetailPage from './features/partners/PartnerDetailPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
 // reachable from Login, Dashboard and the partner pages.
@@ -30,6 +32,9 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/partners" element={<PartnerListPage />} />
+        <Route path="/partners/new" element={<PartnerFormPage />} />
+        <Route path="/partners/:id/edit" element={<PartnerFormPage />} />
+        <Route path="/partners/:id" element={<PartnerDetailPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
