@@ -310,18 +310,239 @@ public static class PartnerEndpoints
         Archived = p.ArchivedAt != null,
     }, AuditJson);
 
-    // Contact / note / activity sub-resources (CRM-02/03) — filled in Task 3.
+    // --- Contacts (BG-9) — ordinary child data, hard-delete is allowed --------
     private static void MapContacts(RouteGroupBuilder g)
     {
+        // GET /api/partners/{id}/contacts
+        g.MapGet("/{id:guid}/contacts", async (Guid id, NumeraDbContext db, CancellationToken ct) =>
+        {
+            var items = await db.Set<PartnerContact>()
+                .AsNoTracking()
+                .Where(c => c.PartnerId == id)
+                .OrderByDescending(c => c.IsPrimary).ThenBy(c => c.LastName)
+                .Select(c => new ContactDto(
+                    c.Id, c.Salutation, c.FirstName, c.LastName, c.Email, c.Phone, c.Position, c.IsPrimary))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return Results.Ok(items);
+        });
+
+        // POST /api/partners/{id}/contacts
+        g.MapPost("/{id:guid}/contacts", async (
+            Guid id,
+            CreateContactRequest req,
+            IValidator<CreateContactRequest> validator,
+            NumeraDbContext db,
+            ICurrentTenant tenant,
+            CancellationToken ct) =>
+        {
+            var result = await validator.ValidateAsync(req, ct).ConfigureAwait(false);
+            if (!result.IsValid)
+            {
+                return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            if (!await PartnerExistsAsync(db, id, ct).ConfigureAwait(false))
+            {
+                return Results.NotFound();
+            }
+
+            var c = new PartnerContact
+            {
+                TenantId = tenant.TenantId!.Value,
+                PartnerId = id,
+                Salutation = req.Salutation,
+                FirstName = req.FirstName,
+                LastName = req.LastName,
+                Email = req.Email,
+                Phone = req.Phone,
+                Position = req.Position,
+                IsPrimary = req.IsPrimary,
+            };
+            db.Add(c);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/partners/{id}/contacts/{c.Id}", new { c.Id });
+        });
+
+        // PUT /api/partners/{id}/contacts/{cid}
+        g.MapPut("/{id:guid}/contacts/{cid:guid}", async (
+            Guid id,
+            Guid cid,
+            CreateContactRequest req,
+            IValidator<CreateContactRequest> validator,
+            NumeraDbContext db,
+            CancellationToken ct) =>
+        {
+            var result = await validator.ValidateAsync(req, ct).ConfigureAwait(false);
+            if (!result.IsValid)
+            {
+                return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            var c = await db.Set<PartnerContact>()
+                .FirstOrDefaultAsync(x => x.Id == cid && x.PartnerId == id, ct)
+                .ConfigureAwait(false);
+            if (c is null)
+            {
+                return Results.NotFound();
+            }
+
+            c.Salutation = req.Salutation;
+            c.FirstName = req.FirstName;
+            c.LastName = req.LastName;
+            c.Email = req.Email;
+            c.Phone = req.Phone;
+            c.Position = req.Position;
+            c.IsPrimary = req.IsPrimary;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        });
+
+        // DELETE /api/partners/{id}/contacts/{cid} — contacts are NOT GoBD records → hard delete OK.
+        g.MapDelete("/{id:guid}/contacts/{cid:guid}", async (Guid id, Guid cid, NumeraDbContext db, CancellationToken ct) =>
+        {
+            var c = await db.Set<PartnerContact>()
+                .FirstOrDefaultAsync(x => x.Id == cid && x.PartnerId == id, ct)
+                .ConfigureAwait(false);
+            if (c is null)
+            {
+                return Results.NotFound();
+            }
+
+            db.Remove(c);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        });
     }
 
+    // --- Notes (CRM-03) — editable/deletable internal memos ------------------
     private static void MapNotes(RouteGroupBuilder g)
     {
+        // GET /api/partners/{id}/notes
+        g.MapGet("/{id:guid}/notes", async (Guid id, NumeraDbContext db, CancellationToken ct) =>
+        {
+            var items = await db.Set<PartnerNote>()
+                .AsNoTracking()
+                .Where(n => n.PartnerId == id)
+                .OrderByDescending(n => n.CreatedAt)
+                .Select(n => new NoteDto(n.Id, n.AuthorUserId, n.Body, n.CreatedAt, n.UpdatedAt))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return Results.Ok(items);
+        });
+
+        // POST /api/partners/{id}/notes — also lands a NoteAdded activity on the timeline.
+        g.MapPost("/{id:guid}/notes", async (
+            Guid id,
+            CreateNoteRequest req,
+            IValidator<CreateNoteRequest> validator,
+            NumeraDbContext db,
+            ICurrentTenant tenant,
+            ICurrentUser user,
+            CancellationToken ct) =>
+        {
+            var result = await validator.ValidateAsync(req, ct).ConfigureAwait(false);
+            if (!result.IsValid)
+            {
+                return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            if (!await PartnerExistsAsync(db, id, ct).ConfigureAwait(false))
+            {
+                return Results.NotFound();
+            }
+
+            var tenantId = tenant.TenantId!.Value;
+            var n = new PartnerNote
+            {
+                TenantId = tenantId,
+                PartnerId = id,
+                AuthorUserId = user.UserId ?? Guid.Empty,
+                Body = req.Body,
+            };
+            db.Add(n);
+            AddActivity(db, id, tenantId, PartnerActivityType.NoteAdded, "Note added", user.UserId);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/partners/{id}/notes/{n.Id}", new { n.Id });
+        });
+
+        // PUT /api/partners/{id}/notes/{nid}
+        g.MapPut("/{id:guid}/notes/{nid:guid}", async (
+            Guid id,
+            Guid nid,
+            CreateNoteRequest req,
+            IValidator<CreateNoteRequest> validator,
+            NumeraDbContext db,
+            CancellationToken ct) =>
+        {
+            var result = await validator.ValidateAsync(req, ct).ConfigureAwait(false);
+            if (!result.IsValid)
+            {
+                return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            var n = await db.Set<PartnerNote>()
+                .FirstOrDefaultAsync(x => x.Id == nid && x.PartnerId == id, ct)
+                .ConfigureAwait(false);
+            if (n is null)
+            {
+                return Results.NotFound();
+            }
+
+            n.Body = req.Body;
+            n.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        });
+
+        // DELETE /api/partners/{id}/notes/{nid} — notes are GoBD-irrelevant → hard delete OK.
+        g.MapDelete("/{id:guid}/notes/{nid:guid}", async (Guid id, Guid nid, NumeraDbContext db, CancellationToken ct) =>
+        {
+            var n = await db.Set<PartnerNote>()
+                .FirstOrDefaultAsync(x => x.Id == nid && x.PartnerId == id, ct)
+                .ConfigureAwait(false);
+            if (n is null)
+            {
+                return Results.NotFound();
+            }
+
+            db.Remove(n);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.NoContent();
+        });
     }
 
+    // --- Activity timeline (CRM-02 read) — read-only -------------------------
     private static void MapActivities(RouteGroupBuilder g)
     {
+        // GET /api/partners/{id}/activities — the partner's history, newest first.
+        // Appended by the create/update/archive/note handlers; there is no write route.
+        g.MapGet("/{id:guid}/activities", async (Guid id, NumeraDbContext db, CancellationToken ct) =>
+        {
+            var items = await db.Set<PartnerActivity>()
+                .AsNoTracking()
+                .Where(a => a.PartnerId == id)
+                .OrderByDescending(a => a.OccurredAt)
+                .Select(a => new ActivityDto(a.Id, a.OccurredAt, a.Type, a.Summary, a.ActorUserId))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return Results.Ok(items);
+        });
     }
+
+    private static Task<bool> PartnerExistsAsync(NumeraDbContext db, Guid id, CancellationToken ct) =>
+        db.Set<BusinessPartner>()
+            .IgnoreQueryFilters([NumeraDbContext.NotArchivedFilter])
+            .AnyAsync(p => p.Id == id, ct);
 }
 
 /// <summary>
