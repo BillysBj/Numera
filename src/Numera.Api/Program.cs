@@ -85,5 +85,6 @@ app.UseMiddleware<TenantResolutionMiddleware>();
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
 app.MapPartnerEndpoints();
+app.MapCatalogEndpoints();
 
 app.Run();
