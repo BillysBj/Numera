@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 2 of 9 (Stammdaten) — IN PROGRESS
-Plan: 1 of 7 complete (02-01)
-Status: Phase 2 wave 1 delivered. EF Core 10 named query filters ("Tenant" + "NotArchived") + IArchivable marker in place — the query-filter foundation every later Phase-2 wave depends on. Ready for 02-02.
-Last activity: 2026-07-11 — Executed 02-01: converted the unnamed tenant query filter to a named "Tenant" filter and added a named "NotArchived" filter for IArchivable (two independent filters, never &&-combined). Build 0/0; integration 8/8; unit 16/16 — Phase-1 suites unaffected (IgnoreQueryFilters() no-arg still drops all named filters, leaving RLS sole control). Commits 7cfcd61, 0a4d09c.
+Plan: 2 of 7 complete (02-01, 02-02)
+Status: Phase 2 wave 2 delivered. Numera.Modules.Crm exists — BusinessPartner (role flags, owned billing/shipping Address, EN 16931 buyer + B2G/bank/DATEV seams), partner_contacts/notes/activities, offline USt-IdNr validator. _Crm migration RLS-isolates all 4 CRM tables on real Postgres. Ready for 02-03.
+Last activity: 2026-07-11 — Executed 02-02: created the CRM data layer + _Crm migration with per-table hand-written RLS + partial-unique customer/supplier numbers, and the VatId offline validator. Build 0/0; integration 18/18 (10 new CRM RLS assertions); unit 31/31 (15 new VAT). Two auto-fixed owned-type bugs made the reflective snake-caser owned-type-safe. Commits 05f3b0a, 9a7b3f1, 6264f7b.
 
-Progress: [█░░░░░░] 14% (Phase 2 of 9 — 1/7 plans)
+Progress: [██░░░░░] 28% (Phase 2 of 9 — 2/7 plans)
 
 ## Performance Metrics
 
@@ -28,13 +28,14 @@ Progress: [█░░░░░░] 14% (Phase 2 of 9 — 1/7 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
-| 02-stammdaten | 1 of 7 | ~3 min | ~3 min |
+| 02-stammdaten | 2 of 7 | ~53 min | ~27 min |
 
 **Per-Plan (Phase 02):**
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | 02-01 | 3 min | 2 | 2 |
+| 02-02 | 50 min | 3 | 18 |
 
 **Per-Plan (Phase 01):**
 
@@ -54,6 +55,7 @@ Progress: [█░░░░░░] 14% (Phase 2 of 9 — 1/7 plans)
 - Trend: stable; 01-08 longer due to the human-verify checkpoint
 
 *Updated after each plan completion*
+| Phase 02 P02 | 50min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -78,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 01-plattform-kern]: 01-04: ICurrentUser seam lives in Platform.Tenancy (not Api) so Platform.Audit avoids an Api dependency; AuditWriter appends into the caller's DbContext with no own transaction/scope/SaveChanges (atomic with the recorded change); prev_hash/row_hash reserved nullable for a non-breaking GoBD hash-chain later
 - [Phase 02-stammdaten]: 02-01: EF Core 10 NAMED query filters — tenant filter renamed to "Tenant", new "NotArchived" filter for IArchivable; two independent filters, never &&-combined (a second unnamed HasQueryFilter would silently overwrite the first — data-leak-class bug). IgnoreQueryFilters() no-arg drops all → RLS sole control (integration tests unaffected).
 - [Phase 02-stammdaten]: 02-01: archival is app-level only — RLS deliberately does NOT filter archived rows (an archived row is still the tenant's own data, RESEARCH.md Pattern 1); IArchivable.ArchivedAt (DateTimeOffset?) drives the NotArchived filter.
+- [Phase 02-stammdaten]: 02-02: ONE BusinessPartner entity with IsCustomer/IsSupplier flags (not separate Customer/Supplier) — a dual-role partner is one master record; addresses are EF owned value types embedded in the partners row (no separate table/RLS/join), shipping optional/nullable.
+- [Phase 02-stammdaten]: 02-02: CRM RLS policies are hand-written per table via migrationBuilder.Sql (reflective ITenantEntity discovery never emits policies — the #1 silent-leak trap); customer/supplier numbers are unique per tenant only among non-archived rows (partial unique index) so archived numbers are reusable.
+- [Phase 02-stammdaten]: 02-02: USt-IdNr validation is offline-only (DE format + ISO 7064 MOD 11,10 checksum, EU shape check) and never gates a save on VIES; the reflective snake-caser was made owned-type-safe (skip owned PK columns, navigation-prefix owned value columns).
 
 ### Pending Todos
 
@@ -95,7 +100,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-11
-Stopped at: Completed 02-01-PLAN.md (Phase 2 wave 1) — named "Tenant" + "NotArchived" query filters + IArchivable marker in Platform.Db. Build 0/0, integration 8/8, unit 16/16.
-Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless %LOCALAPPDATA%\Microsoft\dotnet is prepended to PATH (per RESOLVED caveat).
+Stopped at: Completed 02-02-PLAN.md (Phase 2 wave 2) — Numera.Modules.Crm (BusinessPartner + owned Address + partner_contacts/notes/activities + VatId) and _Crm migration with per-table RLS. Build 0/0, integration 18/18, unit 31/31.
+Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless %LOCALAPPDATA%\Microsoft\dotnet is prepended to PATH (per RESOLVED caveat). gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
 Resume file: None
-Next: Execute 02-02-PLAN.md (Phase 2 wave 2 — depends on this named-filter foundation).
+Next: Execute 02-03-PLAN.md (Phase 2 wave 3).
