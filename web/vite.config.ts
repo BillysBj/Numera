@@ -1,6 +1,8 @@
 /// <reference types="vitest/config" />
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // Numera PWA config.
@@ -12,6 +14,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [
     react(),
+    // Tailwind v4 runs as a Vite plugin (no PostCSS config / no tailwind.config.js).
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png'],
@@ -41,6 +45,12 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    // `@/…` maps to web/src (shadcn/ui convention).
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   server: {
     // Same-origin BFF in dev: SPA and backend share an origin so the HttpOnly
     // session cookie flows on same-origin fetch (credentials: 'include').
