@@ -1,0 +1,143 @@
+{
+  "title": "Geschäftspartner",
+  "nav": "Partner",
+  "loadError": "Partner konnte nicht geladen werden.",
+  "actions": {
+    "create": "Partner anlegen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "archive": "Archivieren",
+    "unarchive": "Reaktivieren",
+    "delete": "Löschen",
+    "add": "Hinzufügen",
+    "back": "Zurück"
+  },
+  "table": {
+    "loading": "Wird geladen …",
+    "empty": "Keine Partner gefunden.",
+    "total": "{{count}} Partner",
+    "page": "Seite {{page}} von {{pages}}",
+    "prev": "Zurück",
+    "next": "Weiter"
+  },
+  "columns": {
+    "name": "Name",
+    "roles": "Rollen",
+    "city": "Ort",
+    "status": "Status",
+    "actions": "Aktionen"
+  },
+  "roles": {
+    "customer": "Kunde",
+    "supplier": "Lieferant"
+  },
+  "status": {
+    "active": "Aktiv",
+    "archived": "Archiviert"
+  },
+  "filters": {
+    "search": "Suchen …",
+    "role": "Rolle",
+    "allRoles": "Alle Rollen",
+    "showArchived": "Archivierte anzeigen"
+  },
+  "form": {
+    "createTitle": "Neuen Partner anlegen",
+    "editTitle": "Partner bearbeiten",
+    "sections": {
+      "master": "Stammdaten",
+      "billingAddress": "Rechnungsadresse",
+      "shippingAddress": "Lieferadresse",
+      "shippingToggle": "Abweichende Lieferadresse",
+      "tax": "Steuer & Zahlung",
+      "contacts": "Ansprechpartner"
+    },
+    "fields": {
+      "name": "Name",
+      "legalForm": "Rechtsform",
+      "street": "Straße",
+      "line2": "Adresszusatz",
+      "postalCode": "PLZ",
+      "city": "Ort",
+      "countryCode": "Land (ISO)",
+      "poBox": "Postfach",
+      "vatId": "USt-IdNr.",
+      "taxNumber": "Steuernummer",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "website": "Webseite",
+      "paymentTermsNetDays": "Zahlungsziel (Tage)",
+      "skontoPercent": "Skonto (%)",
+      "skontoDays": "Skonto-Frist (Tage)",
+      "defaultCurrency": "Währung",
+      "language": "Sprache",
+      "defaultTaxCategory": "Steuerkategorie",
+      "isCustomer": "Kunde",
+      "isSupplier": "Lieferant",
+      "customerNumber": "Kundennummer",
+      "supplierNumber": "Lieferantennummer"
+    },
+    "language": {
+      "de": "Deutsch",
+      "en": "Englisch"
+    },
+    "taxCategory": {
+      "none": "— keine —",
+      "S": "Regelsteuersatz (S)",
+      "AE": "Reverse-Charge (AE)",
+      "K": "Innergemeinschaftliche Lieferung (K)",
+      "E": "Steuerbefreit (E)",
+      "Z": "Nullsatz (Z)",
+      "G": "Ausfuhrlieferung (G)",
+      "O": "Nicht steuerbar (O)"
+    },
+    "contact": {
+      "salutation": "Anrede",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "position": "Position",
+      "isPrimary": "Hauptkontakt",
+      "add": "Ansprechpartner hinzufügen",
+      "none": "Noch keine Ansprechpartner."
+    },
+    "errors": {
+      "required": "Pflichtfeld",
+      "roleRequired": "Mindestens eine Rolle (Kunde/Lieferant) ist erforderlich.",
+      "countryCode": "2-stelliger ISO-Ländercode.",
+      "currency": "3-stelliger ISO-4217-Code.",
+      "vatId": "Keine plausible EU-USt-IdNr.",
+      "nameMax": "Höchstens 200 Zeichen.",
+      "skontoRange": "Wert zwischen 0 und 100.",
+      "server": "Speichern fehlgeschlagen."
+    }
+  },
+  "detail": {
+    "contacts": "Ansprechpartner",
+    "notes": "Notizen",
+    "timeline": "Aktivitäten",
+    "documents": "Belege",
+    "documentsHint": "Belege erscheinen ab Phase 3.",
+    "noContacts": "Noch keine Ansprechpartner.",
+    "noNotes": "Noch keine Notizen.",
+    "noActivities": "Noch keine Aktivitäten.",
+    "notePlaceholder": "Notiz eingeben …",
+    "addNote": "Notiz hinzufügen",
+    "confirmArchive": "Diesen Partner archivieren?",
+    "confirmUnarchive": "Diesen Partner reaktivieren?",
+    "confirmDeleteContact": "Ansprechpartner löschen?",
+    "confirmDeleteNote": "Notiz löschen?",
+    "editContact": "Ansprechpartner bearbeiten",
+    "editNote": "Notiz bearbeiten"
+  },
+  "activity": {
+    "PartnerCreated": "Partner angelegt",
+    "PartnerUpdated": "Partner aktualisiert",
+    "Archived": "Partner archiviert",
+    "Unarchived": "Partner reaktiviert",
+    "NoteAdded": "Notiz hinzugefügt"
+  }
+}

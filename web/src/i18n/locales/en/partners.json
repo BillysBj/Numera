@@ -1,0 +1,143 @@
+{
+  "title": "Business partners",
+  "nav": "Partners",
+  "loadError": "Could not load the partner.",
+  "actions": {
+    "create": "New partner",
+    "save": "Save",
+    "saving": "Saving …",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "archive": "Archive",
+    "unarchive": "Reactivate",
+    "delete": "Delete",
+    "add": "Add",
+    "back": "Back"
+  },
+  "table": {
+    "loading": "Loading …",
+    "empty": "No partners found.",
+    "total": "{{count}} partners",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "columns": {
+    "name": "Name",
+    "roles": "Roles",
+    "city": "City",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "roles": {
+    "customer": "Customer",
+    "supplier": "Supplier"
+  },
+  "status": {
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "filters": {
+    "search": "Search …",
+    "role": "Role",
+    "allRoles": "All roles",
+    "showArchived": "Show archived"
+  },
+  "form": {
+    "createTitle": "Create a new partner",
+    "editTitle": "Edit partner",
+    "sections": {
+      "master": "Master data",
+      "billingAddress": "Billing address",
+      "shippingAddress": "Shipping address",
+      "shippingToggle": "Separate shipping address",
+      "tax": "Tax & payment",
+      "contacts": "Contacts"
+    },
+    "fields": {
+      "name": "Name",
+      "legalForm": "Legal form",
+      "street": "Street",
+      "line2": "Address line 2",
+      "postalCode": "Postal code",
+      "city": "City",
+      "countryCode": "Country (ISO)",
+      "poBox": "PO box",
+      "vatId": "VAT ID",
+      "taxNumber": "Tax number",
+      "email": "Email",
+      "phone": "Phone",
+      "website": "Website",
+      "paymentTermsNetDays": "Payment terms (days)",
+      "skontoPercent": "Cash discount (%)",
+      "skontoDays": "Discount period (days)",
+      "defaultCurrency": "Currency",
+      "language": "Language",
+      "defaultTaxCategory": "Tax category",
+      "isCustomer": "Customer",
+      "isSupplier": "Supplier",
+      "customerNumber": "Customer number",
+      "supplierNumber": "Supplier number"
+    },
+    "language": {
+      "de": "German",
+      "en": "English"
+    },
+    "taxCategory": {
+      "none": "— none —",
+      "S": "Standard rate (S)",
+      "AE": "Reverse charge (AE)",
+      "K": "Intra-community supply (K)",
+      "E": "Tax exempt (E)",
+      "Z": "Zero-rated (Z)",
+      "G": "Export supply (G)",
+      "O": "Out of scope (O)"
+    },
+    "contact": {
+      "salutation": "Salutation",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "position": "Position",
+      "isPrimary": "Primary contact",
+      "add": "Add contact",
+      "none": "No contacts yet."
+    },
+    "errors": {
+      "required": "Required",
+      "roleRequired": "At least one role (customer/supplier) is required.",
+      "countryCode": "2-letter ISO country code.",
+      "currency": "3-letter ISO 4217 code.",
+      "vatId": "Not a plausible EU VAT ID.",
+      "nameMax": "At most 200 characters.",
+      "skontoRange": "Value between 0 and 100.",
+      "server": "Saving failed."
+    }
+  },
+  "detail": {
+    "contacts": "Contacts",
+    "notes": "Notes",
+    "timeline": "Activity",
+    "documents": "Documents",
+    "documentsHint": "Documents arrive in Phase 3.",
+    "noContacts": "No contacts yet.",
+    "noNotes": "No notes yet.",
+    "noActivities": "No activity yet.",
+    "notePlaceholder": "Write a note …",
+    "addNote": "Add note",
+    "confirmArchive": "Archive this partner?",
+    "confirmUnarchive": "Reactivate this partner?",
+    "confirmDeleteContact": "Delete this contact?",
+    "confirmDeleteNote": "Delete this note?",
+    "editContact": "Edit contact",
+    "editNote": "Edit note"
+  },
+  "activity": {
+    "PartnerCreated": "Partner created",
+    "PartnerUpdated": "Partner updated",
+    "Archived": "Partner archived",
+    "Unarchived": "Partner reactivated",
+    "NoteAdded": "Note added"
+  }
+}
