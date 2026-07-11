@@ -49,6 +49,44 @@ CREATE POLICY tenant_isolation ON postings
     USING (tenant_id = current_setting('app.current_tenant')::uuid)
     WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
 
+-- --- CRM tables (Phase 2, _Crm migration) ------------------------------------
+-- partners, partner_contacts, partner_notes, partner_activities: standard
+-- tenant_id isolation. Archived rows are deliberately NOT filtered by RLS
+-- (archival is app-level only, RESEARCH.md Pattern 1).
+-- partners
+ALTER TABLE partners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partners FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON partners
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- partner_contacts
+ALTER TABLE partner_contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_contacts FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON partner_contacts
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- partner_notes
+ALTER TABLE partner_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_notes FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON partner_notes
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- partner_activities
+ALTER TABLE partner_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_activities FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON partner_activities
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- Customer/supplier numbers: unique per tenant among active (non-archived) rows.
+CREATE UNIQUE INDEX ux_partners_tenant_customer_number ON partners
+    (tenant_id, customer_number) WHERE customer_number IS NOT NULL AND archived_at IS NULL;
+CREATE UNIQUE INDEX ux_partners_tenant_supplier_number ON partners
+    (tenant_id, supplier_number) WHERE supplier_number IS NOT NULL AND archived_at IS NULL;
+
 -- --- Self-scoped tenant table ------------------------------------------------
 -- tenants: the row IS the tenant, so isolate on id, not tenant_id.
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;

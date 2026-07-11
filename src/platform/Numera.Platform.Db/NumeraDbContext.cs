@@ -164,6 +164,16 @@ public class NumeraDbContext : DbContext
                 ? entityType.FindPrimaryKey()?.Properties
                 : null;
 
+            // Two owned instances of the same value type in one row (e.g. a partner's
+            // billing AND shipping Address) must not collide on identical column names.
+            // At this point EF has NOT yet applied its navigation-name prefix, so the
+            // value columns still carry their bare names (Street, City, …). Prefix them
+            // with the owning navigation before snake-casing so billing_address_street
+            // and shipping_address_street stay distinct.
+            var ownershipNavigation = entityType.IsOwned()
+                ? entityType.FindOwnership()?.PrincipalToDependent?.Name
+                : null;
+
             foreach (var property in entityType.GetProperties())
             {
                 if (ownedKeyProperties is not null
@@ -172,7 +182,13 @@ public class NumeraDbContext : DbContext
                     continue;
                 }
 
-                property.SetColumnName(ToSnakeCase(property.GetColumnName()));
+                var columnName = property.GetColumnName();
+                if (ownershipNavigation is not null)
+                {
+                    columnName = ownershipNavigation + columnName;
+                }
+
+                property.SetColumnName(ToSnakeCase(columnName));
             }
 
             foreach (var key in entityType.GetKeys())
