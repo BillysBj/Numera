@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 2 of 9 (Stammdaten) — IN PROGRESS
-Plan: 4 of 7 complete (02-01, 02-02, 02-03, 02-04)
-Status: Phase 2 wave 4 delivered. The partner management HTTP API is live — /api/partners CRUD + archive/unarchive (no hard delete), contacts + notes sub-resources, and a read-only per-partner activity timeline (CRM-01/02/03). FluentValidation (Apache-2.0) is wired via an Api-assembly scan (AddValidatorsFromAssemblyContaining<Program>), so the 02-05 Catalog API only appends its endpoint mapping. Every partner mutation writes an AuditEvent + PartnerActivity in one SaveChanges (atomic mutate->audit->activity). Ready for 02-05.
-Last activity: 2026-07-11 — Executed 02-04 (backend-only): PartnerContracts DTOs, PartnerValidators (role-required, offline VAT-ID plausibility, address/currency), PartnerEndpoints (list with {items,page,pageSize,total} + q/role/archived, get/create/update, archive/unarchive, contacts/notes CRUD, activity timeline). Build 0/0; unit 43/43; integration 25/25 (unchanged — no new tests). 2 Rule-3 deviations: adapted to the real IAuditWriter(IAuditEvent) signature via a PartnerAuditEvent adapter, and corrected the TaxCategory namespace. Commits 9f38b9a, b8ac581, 3820a42.
+Plan: 5 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05)
+Status: Phase 2 wave 5 delivered. The catalog (Artikelstamm) HTTP API is live — /api/catalog-items CRUD + archive/unarchive (no hard delete) plus the CATL-02 seam: GET /api/catalog-items?picker=true returns a capped CatalogLineItem[] (id, number, name, unit code, net price, tax category, VAT rate) the Phase-3 invoice line editor snapshots. Unit codes constrained to the curated UN/ECE Rec 20 set (BT-130); duplicate article numbers return a clean 409 (partial-unique index -> Postgres 23505 -> ValidationProblem, never a 500). Every catalog mutation writes an AuditEvent in one SaveChanges. Validators auto-registered by 02-04's assembly scan — zero DI edits, only app.MapCatalogEndpoints() appended. Ready for 02-06/02-07 (frontend).
+Last activity: 2026-07-11 — Executed 02-05 (backend-only, mirroring 02-04): CatalogContracts DTOs incl. CatalogLineItem, CatalogValidators (UN/ECE Rec 20 unit, price precision, VAT 0..100), CatalogEndpoints (list {items,page,pageSize,total} + q/archived, picker flag, get/create/update, archive/unarchive, duplicate->409). Build 0/0; unit 43/43; integration 25/25 (unchanged). No deviations. Commits aac2624, 678043e.
 
-Progress: [████░░░] 43% (Phase 2 of 9 — 4/7 plans)
+Progress: [████░░░] 50% (Phase 2 of 9 — 5/7 plans)
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Progress: [████░░░] 43% (Phase 2 of 9 — 4/7 plans)
 | 02-02 | 50 min | 3 | 18 |
 | 02-03 | 20 min | 3 | 14 |
 | 02-04 | 10 min | 3 | 5 |
+| 02-05 | 6 min | 2 | 4 |
 
 **Per-Plan (Phase 01):**
 
@@ -89,6 +90,7 @@ Recent decisions affecting current work:
 - [Phase 02-stammdaten]: 02-03: catalog prices are plain decimal [Precision(19,4)] columns (not an owned Money value object) — Money-precision numeric(19,4) with no owned-type mapping; article number unique per tenant only among non-archived rows (partial unique index), reusable across tenants and after archival; catalog_items RLS policy hand-written via migrationBuilder.Sql. The second Phase-2 table deliberately lands in its own wave so the two ef-migrations-add runs chain cleanly through the snapshot (no ordering race).
 - [Phase 02-stammdaten]: 02-04: partner API uses the atomic mutate->audit->activity pattern — one SaveChangesAsync commits the entity change, the AuditEvent (via IAuditWriter) AND the PartnerActivity together. IAuditWriter takes an IAuditEvent, so a small internal PartnerAuditEvent : IAuditEvent adapter carries action + JSON before/after snapshots (writer still stamps tenant + actor). No hard-delete route for partners (archive-only); contacts/notes are hard-deletable GoBD-irrelevant child data. Notes/contacts write no audit event, but note-create appends a NoteAdded timeline entry.
 - [Phase 02-stammdaten]: 02-04: archived partners stay reachable by id — GET-by-id, PUT, archive/unarchive and existence checks IgnoreQueryFilters([NotArchivedFilter]) (keeps tenant filter + RLS); only the default list hides archived rows, the list's archived=true toggle reveals them. FluentValidation registered once via AddValidatorsFromAssemblyContaining<Program>() so later Api-assembly validators (02-05 Catalog) need no DI edit; validators live in the Api project, not the modules.
+- [Phase 02-stammdaten]: 02-05: the CATL-02 seam is CatalogLineItem — a picker flag on the list route (GET /api/catalog-items?picker=true) returns a capped CatalogLineItem[] (number, name, unit code, net price, tax category, VAT rate) that Phase-3's invoice line editor SNAPSHOTS onto the line at creation; the catalog is not the source of truth once a line exists (editing/archiving an item never mutates a posted line). Keep the shape additive-only. Duplicate (tenant_id,item_number) among non-archived rows -> Postgres 23505 caught as DbUpdateException+PostgresException{UniqueViolation} -> 409 ValidationProblem (never a 500). Blank unit defaulted via UnitOfMeasure.DefaultFor(Kind) at the endpoint; catalog has no activity timeline so handlers take no ICurrentUser (audit still stamps the actor). 02-05 mirrored 02-04 exactly — zero DI edits, only app.MapCatalogEndpoints() appended.
 
 ### Pending Todos
 
@@ -106,7 +108,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-11
-Stopped at: Completed 02-04-PLAN.md (Phase 2 wave 4) — partner management HTTP API (backend-only): PartnerContracts DTOs, PartnerValidators (FluentValidation), PartnerEndpoints (CRUD + archive + contacts + notes + activity timeline). FluentValidation wired via Api-assembly scan. Build 0/0, unit 43/43, integration 25/25. Commits 9f38b9a, b8ac581, 3820a42.
+Stopped at: Completed 02-05-PLAN.md (Phase 2 wave 5) — catalog (Artikelstamm) HTTP API (backend-only): CatalogContracts DTOs incl. the CatalogLineItem CATL-02 seam, CatalogValidators (FluentValidation), CatalogEndpoints (CRUD + archive + picker + duplicate->409). Only app.MapCatalogEndpoints() appended (validators auto-scanned by 02-04). Build 0/0, unit 43/43, integration 25/25. Commits aac2624, 678043e. (02-06 frontend ran in parallel in web/.)
 Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless the user-local dotnet dir (/c/Users/Admin/AppData/Local/Microsoft/dotnet) is prepended to PATH with DOTNET_ROOT + DOTNET_MULTILEVEL_LOOKUP=0 — note $LOCALAPPDATA is empty under Git Bash, use the absolute path. gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
 Resume file: None
-Next: Execute 02-05-PLAN.md (Phase 2 wave 5) — Catalog API. It appends app.MapCatalogEndpoints() to Program.cs and drops validators into the Api assembly (no DI edit needed — the 02-04 AddValidatorsFromAssemblyContaining<Program> scan already covers them).
+Next: Execute the remaining Phase 2 wave — frontend stammdaten UI (02-06/02-07): partner + catalog management screens (TanStack Table manualPagination against {items,page,pageSize,total}; catalog item picker against ?picker=true).
