@@ -1,3 +1,5 @@
+using FluentValidation;
+
 using Hangfire;
 using Hangfire.PostgreSql;
 
@@ -43,6 +45,11 @@ builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 // filters must live in the request scope — AddFeatureManagement() would register them
 // as singletons and fail DI scope validation ("cannot consume scoped from singleton").
 builder.Services.AddScopedFeatureManagement().AddFeatureFilter<PlanFeatureFilter>();
+
+// --- Request validation (FluentValidation, Apache-2.0) ---------------------
+// Scans THIS Api assembly for every AbstractValidator<T>, so the later Catalog
+// plan (02-05) only needs to drop its validators into this assembly — no DI edit.
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // --- Registration (Keycloak Admin API) + background jobs -------------------
 builder.Services.AddHttpClient();
