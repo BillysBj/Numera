@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Numera.Modules.Catalog</RootNamespace>
+    <AssemblyName>Numera.Modules.Catalog</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <!-- TaxCategory (EN 16931 BT-151 seam) carried on each catalog item. -->
+    <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
+  </ItemGroup>
+
+</Project>
