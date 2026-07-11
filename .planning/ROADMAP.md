@@ -56,10 +56,16 @@ Plans:
   2. Nutzer sieht pro Kunde/Lieferant eine Historie der zugehörigen Belege und Aktivitäten
   3. Nutzer kann Notizen an Kunden/Lieferanten anheften
   4. Nutzer kann Standardprodukte und -services mit Preis, Einheit und USt-Satz verwalten und als Positionen in Belege übernehmen
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 02-01: TBD (verfeinert in plan-phase)
+- [ ] 02-01-PLAN.md — EF Core 10 named query filters (Tenant + NotArchived) + IArchivable marker in Platform.Db
+- [ ] 02-02-PLAN.md — Numera.Modules.Crm (BusinessPartner + contacts/notes/activities) + _Crm migration with per-table RLS + RLS/VAT-ID tests
+- [ ] 02-03-PLAN.md — Numera.Modules.Catalog (CatalogItem + UN/ECE Rec 20 units) + _Catalog migration with RLS + per-tenant unique article-number + RLS tests
+- [ ] 02-04-PLAN.md — Partner backend API (CRUD + archive + contacts + notes + activity timeline) + FluentValidation (CRM-01/02/03)
+- [ ] 02-05-PLAN.md — Catalog backend API (CRUD + archive + CatalogLineItem picker seam) (CATL-01/02)
+- [ ] 02-06-PLAN.md — Frontend UI stack (Tailwind v4/shadcn/TanStack Table/RHF/zod) + partner list/form/detail + partners i18n
+- [ ] 02-07-PLAN.md — Catalog frontend (list + form with UN/ECE unit dropdown) + catalog i18n
 
 ### Phase 3: Belegkette & Rechnungskern
 **Goal**: Nutzer kann rechtskonforme, unveränderbare Rechnungen mit korrekter USt-Behandlung erzeugen — das Herz von v1, inklusive der zweiten „jetzt oder nie"-Naht (Unveränderbarkeit + Nummernvergabe).
