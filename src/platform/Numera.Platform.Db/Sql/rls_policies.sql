@@ -87,6 +87,21 @@ CREATE UNIQUE INDEX ux_partners_tenant_customer_number ON partners
 CREATE UNIQUE INDEX ux_partners_tenant_supplier_number ON partners
     (tenant_id, supplier_number) WHERE supplier_number IS NOT NULL AND archived_at IS NULL;
 
+-- --- Catalog table (Phase 2, _Catalog migration) -----------------------------
+-- catalog_items: standard tenant_id isolation. Archived rows are deliberately NOT
+-- filtered by RLS (archival is app-level only, RESEARCH.md Pattern 1).
+-- catalog_items
+ALTER TABLE catalog_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE catalog_items FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON catalog_items
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- Article number: unique per tenant among active (non-archived) rows, so an archived
+-- item's number is reusable and a different tenant may reuse any number.
+CREATE UNIQUE INDEX ux_catalog_items_tenant_item_number ON catalog_items
+    (tenant_id, item_number) WHERE archived_at IS NULL;
+
 -- --- Self-scoped tenant table ------------------------------------------------
 -- tenants: the row IS the tenant, so isolate on id, not tenant_id.
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
