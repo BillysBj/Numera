@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 2 of 9 (Stammdaten) — IN PROGRESS
-Plan: 3 of 7 complete (02-01, 02-02, 02-03)
-Status: Phase 2 wave 3 delivered. Numera.Modules.Catalog exists — CatalogItem (article number, UN/ECE Rec 20 unit code, numeric(19,4) net/cost price, EN 16931 TaxCategory + VAT rate, archivable) with a curated UnitOfMeasure code helper. _Catalog migration (chained after _Crm) RLS-isolates catalog_items on real Postgres and enforces a per-tenant-unique article number among non-archived rows. Ready for 02-04.
-Last activity: 2026-07-11 — Executed 02-03: created the Catalog data layer + _Catalog migration with per-table hand-written RLS + partial-unique article-number index, and the UnitOfMeasure UN/ECE Rec 20 helper. Build 0/0; integration 25/25 (7 new Catalog RLS/uniqueness/archive assertions); unit 43/43 (12 new UnitOfMeasure). No deviations — the 02-02 owned-type-safe snake-caser meant no NumeraDbContext edit. Commits 86f7c09, 9c8139a, a51225c.
+Plan: 4 of 7 complete (02-01, 02-02, 02-03, 02-04)
+Status: Phase 2 wave 4 delivered. The partner management HTTP API is live — /api/partners CRUD + archive/unarchive (no hard delete), contacts + notes sub-resources, and a read-only per-partner activity timeline (CRM-01/02/03). FluentValidation (Apache-2.0) is wired via an Api-assembly scan (AddValidatorsFromAssemblyContaining<Program>), so the 02-05 Catalog API only appends its endpoint mapping. Every partner mutation writes an AuditEvent + PartnerActivity in one SaveChanges (atomic mutate->audit->activity). Ready for 02-05.
+Last activity: 2026-07-11 — Executed 02-04 (backend-only): PartnerContracts DTOs, PartnerValidators (role-required, offline VAT-ID plausibility, address/currency), PartnerEndpoints (list with {items,page,pageSize,total} + q/role/archived, get/create/update, archive/unarchive, contacts/notes CRUD, activity timeline). Build 0/0; unit 43/43; integration 25/25 (unchanged — no new tests). 2 Rule-3 deviations: adapted to the real IAuditWriter(IAuditEvent) signature via a PartnerAuditEvent adapter, and corrected the TaxCategory namespace. Commits 9f38b9a, b8ac581, 3820a42.
 
-Progress: [███░░░░] 32% (Phase 2 of 9 — 3/7 plans)
+Progress: [████░░░] 43% (Phase 2 of 9 — 4/7 plans)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [███░░░░] 32% (Phase 2 of 9 — 3/7 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
-| 02-stammdaten | 3 of 7 | ~73 min | ~24 min |
+| 02-stammdaten | 4 of 7 | ~83 min | ~21 min |
 
 **Per-Plan (Phase 02):**
 
@@ -37,6 +37,7 @@ Progress: [███░░░░] 32% (Phase 2 of 9 — 3/7 plans)
 | 02-01 | 3 min | 2 | 2 |
 | 02-02 | 50 min | 3 | 18 |
 | 02-03 | 20 min | 3 | 14 |
+| 02-04 | 10 min | 3 | 5 |
 
 **Per-Plan (Phase 01):**
 
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 02-stammdaten]: 02-02: USt-IdNr validation is offline-only (DE format + ISO 7064 MOD 11,10 checksum, EU shape check) and never gates a save on VIES; the reflective snake-caser was made owned-type-safe (skip owned PK columns, navigation-prefix owned value columns).
 - [Phase 02-stammdaten]: 02-03: ONE CatalogItem carries both Product and Service kinds (CatalogItemKind flag drives the default unit C62 vs HUR); store only the UN/ECE Rec 20 code (BT-130) — the curated allowed set + German labels live in code/frontend, not a DB code table.
 - [Phase 02-stammdaten]: 02-03: catalog prices are plain decimal [Precision(19,4)] columns (not an owned Money value object) — Money-precision numeric(19,4) with no owned-type mapping; article number unique per tenant only among non-archived rows (partial unique index), reusable across tenants and after archival; catalog_items RLS policy hand-written via migrationBuilder.Sql. The second Phase-2 table deliberately lands in its own wave so the two ef-migrations-add runs chain cleanly through the snapshot (no ordering race).
+- [Phase 02-stammdaten]: 02-04: partner API uses the atomic mutate->audit->activity pattern — one SaveChangesAsync commits the entity change, the AuditEvent (via IAuditWriter) AND the PartnerActivity together. IAuditWriter takes an IAuditEvent, so a small internal PartnerAuditEvent : IAuditEvent adapter carries action + JSON before/after snapshots (writer still stamps tenant + actor). No hard-delete route for partners (archive-only); contacts/notes are hard-deletable GoBD-irrelevant child data. Notes/contacts write no audit event, but note-create appends a NoteAdded timeline entry.
+- [Phase 02-stammdaten]: 02-04: archived partners stay reachable by id — GET-by-id, PUT, archive/unarchive and existence checks IgnoreQueryFilters([NotArchivedFilter]) (keeps tenant filter + RLS); only the default list hides archived rows, the list's archived=true toggle reveals them. FluentValidation registered once via AddValidatorsFromAssemblyContaining<Program>() so later Api-assembly validators (02-05 Catalog) need no DI edit; validators live in the Api project, not the modules.
 
 ### Pending Todos
 
@@ -103,7 +106,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-11
-Stopped at: Completed 02-03-PLAN.md (Phase 2 wave 3) — Numera.Modules.Catalog (CatalogItem + UnitOfMeasure UN/ECE Rec 20 helper) and _Catalog migration (chained after _Crm) with per-table RLS + partial-unique article number. Build 0/0, integration 25/25, unit 43/43.
+Stopped at: Completed 02-04-PLAN.md (Phase 2 wave 4) — partner management HTTP API (backend-only): PartnerContracts DTOs, PartnerValidators (FluentValidation), PartnerEndpoints (CRUD + archive + contacts + notes + activity timeline). FluentValidation wired via Api-assembly scan. Build 0/0, unit 43/43, integration 25/25. Commits 9f38b9a, b8ac581, 3820a42.
 Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless the user-local dotnet dir (/c/Users/Admin/AppData/Local/Microsoft/dotnet) is prepended to PATH with DOTNET_ROOT + DOTNET_MULTILEVEL_LOOKUP=0 — note $LOCALAPPDATA is empty under Git Bash, use the absolute path. gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
 Resume file: None
-Next: Execute 02-04-PLAN.md (Phase 2 wave 4).
+Next: Execute 02-05-PLAN.md (Phase 2 wave 5) — Catalog API. It appends app.MapCatalogEndpoints() to Program.cs and drops validators into the Api assembly (no DI edit needed — the 02-04 AddValidatorsFromAssemblyContaining<Program> scan already covers them).
