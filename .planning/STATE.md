@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 2 of 9 (Stammdaten) — IN PROGRESS
-Plan: 2 of 7 complete (02-01, 02-02)
-Status: Phase 2 wave 2 delivered. Numera.Modules.Crm exists — BusinessPartner (role flags, owned billing/shipping Address, EN 16931 buyer + B2G/bank/DATEV seams), partner_contacts/notes/activities, offline USt-IdNr validator. _Crm migration RLS-isolates all 4 CRM tables on real Postgres. Ready for 02-03.
-Last activity: 2026-07-11 — Executed 02-02: created the CRM data layer + _Crm migration with per-table hand-written RLS + partial-unique customer/supplier numbers, and the VatId offline validator. Build 0/0; integration 18/18 (10 new CRM RLS assertions); unit 31/31 (15 new VAT). Two auto-fixed owned-type bugs made the reflective snake-caser owned-type-safe. Commits 05f3b0a, 9a7b3f1, 6264f7b.
+Plan: 3 of 7 complete (02-01, 02-02, 02-03)
+Status: Phase 2 wave 3 delivered. Numera.Modules.Catalog exists — CatalogItem (article number, UN/ECE Rec 20 unit code, numeric(19,4) net/cost price, EN 16931 TaxCategory + VAT rate, archivable) with a curated UnitOfMeasure code helper. _Catalog migration (chained after _Crm) RLS-isolates catalog_items on real Postgres and enforces a per-tenant-unique article number among non-archived rows. Ready for 02-04.
+Last activity: 2026-07-11 — Executed 02-03: created the Catalog data layer + _Catalog migration with per-table hand-written RLS + partial-unique article-number index, and the UnitOfMeasure UN/ECE Rec 20 helper. Build 0/0; integration 25/25 (7 new Catalog RLS/uniqueness/archive assertions); unit 43/43 (12 new UnitOfMeasure). No deviations — the 02-02 owned-type-safe snake-caser meant no NumeraDbContext edit. Commits 86f7c09, 9c8139a, a51225c.
 
-Progress: [██░░░░░] 28% (Phase 2 of 9 — 2/7 plans)
+Progress: [███░░░░] 32% (Phase 2 of 9 — 3/7 plans)
 
 ## Performance Metrics
 
@@ -28,7 +28,7 @@ Progress: [██░░░░░] 28% (Phase 2 of 9 — 2/7 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
-| 02-stammdaten | 2 of 7 | ~53 min | ~27 min |
+| 02-stammdaten | 3 of 7 | ~73 min | ~24 min |
 
 **Per-Plan (Phase 02):**
 
@@ -36,6 +36,7 @@ Progress: [██░░░░░] 28% (Phase 2 of 9 — 2/7 plans)
 |------|----------|-------|-------|
 | 02-01 | 3 min | 2 | 2 |
 | 02-02 | 50 min | 3 | 18 |
+| 02-03 | 20 min | 3 | 14 |
 
 **Per-Plan (Phase 01):**
 
@@ -83,6 +84,8 @@ Recent decisions affecting current work:
 - [Phase 02-stammdaten]: 02-02: ONE BusinessPartner entity with IsCustomer/IsSupplier flags (not separate Customer/Supplier) — a dual-role partner is one master record; addresses are EF owned value types embedded in the partners row (no separate table/RLS/join), shipping optional/nullable.
 - [Phase 02-stammdaten]: 02-02: CRM RLS policies are hand-written per table via migrationBuilder.Sql (reflective ITenantEntity discovery never emits policies — the #1 silent-leak trap); customer/supplier numbers are unique per tenant only among non-archived rows (partial unique index) so archived numbers are reusable.
 - [Phase 02-stammdaten]: 02-02: USt-IdNr validation is offline-only (DE format + ISO 7064 MOD 11,10 checksum, EU shape check) and never gates a save on VIES; the reflective snake-caser was made owned-type-safe (skip owned PK columns, navigation-prefix owned value columns).
+- [Phase 02-stammdaten]: 02-03: ONE CatalogItem carries both Product and Service kinds (CatalogItemKind flag drives the default unit C62 vs HUR); store only the UN/ECE Rec 20 code (BT-130) — the curated allowed set + German labels live in code/frontend, not a DB code table.
+- [Phase 02-stammdaten]: 02-03: catalog prices are plain decimal [Precision(19,4)] columns (not an owned Money value object) — Money-precision numeric(19,4) with no owned-type mapping; article number unique per tenant only among non-archived rows (partial unique index), reusable across tenants and after archival; catalog_items RLS policy hand-written via migrationBuilder.Sql. The second Phase-2 table deliberately lands in its own wave so the two ef-migrations-add runs chain cleanly through the snapshot (no ordering race).
 
 ### Pending Todos
 
@@ -100,7 +103,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-11
-Stopped at: Completed 02-02-PLAN.md (Phase 2 wave 2) — Numera.Modules.Crm (BusinessPartner + owned Address + partner_contacts/notes/activities + VatId) and _Crm migration with per-table RLS. Build 0/0, integration 18/18, unit 31/31.
-Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless %LOCALAPPDATA%\Microsoft\dotnet is prepended to PATH (per RESOLVED caveat). gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
+Stopped at: Completed 02-03-PLAN.md (Phase 2 wave 3) — Numera.Modules.Catalog (CatalogItem + UnitOfMeasure UN/ECE Rec 20 helper) and _Catalog migration (chained after _Crm) with per-table RLS + partial-unique article number. Build 0/0, integration 25/25, unit 43/43.
+Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless the user-local dotnet dir (/c/Users/Admin/AppData/Local/Microsoft/dotnet) is prepended to PATH with DOTNET_ROOT + DOTNET_MULTILEVEL_LOOKUP=0 — note $LOCALAPPDATA is empty under Git Bash, use the absolute path. gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
 Resume file: None
-Next: Execute 02-03-PLAN.md (Phase 2 wave 3).
+Next: Execute 02-04-PLAN.md (Phase 2 wave 4).
