@@ -26,6 +26,21 @@ namespace Numera.Platform.Db;
 /// </remarks>
 public class NumeraDbContext : DbContext
 {
+    /// <summary>
+    /// Name of the per-<see cref="ITenantEntity"/> tenant query filter. EF Core 10
+    /// <b>named</b> filters (RESEARCH.md Pattern 1) let tenancy and archival coexist:
+    /// a second <i>unnamed</i> <c>HasQueryFilter</c> would silently OVERWRITE this one.
+    /// Disable selectively with <c>IgnoreQueryFilters([TenantFilter])</c>.
+    /// </summary>
+    public const string TenantFilter = "Tenant";
+
+    /// <summary>
+    /// Name of the per-<see cref="IArchivable"/> "hide archived rows" query filter.
+    /// Reveal archived rows with <c>IgnoreQueryFilters([NotArchivedFilter])</c> while
+    /// the tenant filter — and, above all, RLS — stay in force.
+    /// </summary>
+    public const string NotArchivedFilter = "NotArchived";
+
     private readonly ICurrentTenant _currentTenant;
 
     /// <summary>Creates the context bound to <paramref name="currentTenant"/>.</summary>
@@ -68,7 +83,11 @@ public class NumeraDbContext : DbContext
         ConfigureLedgerTableNames(modelBuilder);
         ConfigureAuditEvents(modelBuilder);
 
+        // Two independent NAMED query filters (never combined with &&): "Tenant"
+        // (defence-in-depth mirror of RLS) and "NotArchived" (app-level soft-delete).
+        // Order is irrelevant — named filters compose rather than overwrite.
         ApplyTenantQueryFilters(modelBuilder);
+        ApplyArchiveQueryFilters(modelBuilder);
         ApplySnakeCaseNaming(modelBuilder);
     }
 
@@ -293,7 +312,46 @@ public class NumeraDbContext : DbContext
                 currentTenantAccessor.Body);
 
             var filter = Expression.Lambda(body, parameter);
-            modelBuilder.Entity(entityType.ClrType).HasQueryFilter(filter);
+
+            // NAMED filter so the archive filter below can coexist instead of
+            // overwriting this one (RESEARCH.md Pattern 1 — EF Core 10 named filters).
+            modelBuilder.Entity(entityType.ClrType).HasQueryFilter(TenantFilter, filter);
+        }
+    }
+
+    /// <summary>
+    /// Registers the named <c>"NotArchived"</c> query filter on every mapped entity
+    /// whose CLR type implements <see cref="IArchivable"/>, hiding soft-deleted rows
+    /// (<c>ArchivedAt == null</c>) by default. Kept as a <b>separate</b> named filter
+    /// from the tenant filter — never combined with <c>&amp;&amp;</c> — so each can be
+    /// disabled independently (RESEARCH.md Pattern 1). The predicate is built the same
+    /// reflective way as the tenant filter because archivable entities are discovered
+    /// reflectively with no compile-time reference to them.
+    /// </summary>
+    private static void ApplyArchiveQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (!typeof(IArchivable).IsAssignableFrom(entityType.ClrType))
+            {
+                continue;
+            }
+
+            // e => EF.Property<DateTimeOffset?>(e, "ArchivedAt") == null
+            var parameter = Expression.Parameter(entityType.ClrType, "e");
+            var efProperty = Expression.Call(
+                typeof(EF),
+                nameof(EF.Property),
+                new[] { typeof(DateTimeOffset?) },
+                parameter,
+                Expression.Constant(nameof(IArchivable.ArchivedAt)));
+
+            var body = Expression.Equal(
+                efProperty,
+                Expression.Constant(null, typeof(DateTimeOffset?)));
+
+            var filter = Expression.Lambda(body, parameter);
+            modelBuilder.Entity(entityType.ClrType).HasQueryFilter(NotArchivedFilter, filter);
         }
     }
 
