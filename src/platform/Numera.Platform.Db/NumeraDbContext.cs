@@ -154,8 +154,24 @@ public class NumeraDbContext : DbContext
                 entityType.SetTableName(ToSnakeCase(tableName));
             }
 
+            // For an owned type sharing its owner's table (e.g. the CRM Address value
+            // objects embedded in partners), the primary-key property is the link to
+            // the owner's PK column. Renaming it would detach that shared-column
+            // mapping and make EF emit a SECOND, conflicting primary key on the table.
+            // Leave those key properties to EF's default so they keep sharing the
+            // owner's (already snake-cased) key column.
+            var ownedKeyProperties = entityType.IsOwned()
+                ? entityType.FindPrimaryKey()?.Properties
+                : null;
+
             foreach (var property in entityType.GetProperties())
             {
+                if (ownedKeyProperties is not null
+                    && ownedKeyProperties.Any(p => p.Name == property.Name))
+                {
+                    continue;
+                }
+
                 property.SetColumnName(ToSnakeCase(property.GetColumnName()));
             }
 

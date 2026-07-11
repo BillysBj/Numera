@@ -22,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
     <ProjectReference Include="..\..\src\platform\Numera.Platform.Entitlements\Numera.Platform.Entitlements.csproj" />
+    <!-- Offline VAT-ID validator (pure function) unit-tested here. -->
+    <ProjectReference Include="..\..\src\modules\Numera.Modules.Crm\Numera.Modules.Crm.csproj" />
   </ItemGroup>
 
   <ItemGroup>

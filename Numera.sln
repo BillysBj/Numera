@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numera.Platform.Money", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numera.Platform.Tests", "tests\Numera.Platform.Tests\Numera.Platform.Tests.csproj", "{76324FF1-A6F0-4E01-A2CE-F0946B924DC2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numera.Modules.Crm", "src\modules\Numera.Modules.Crm\Numera.Modules.Crm.csproj", "{AF94C9BC-28BA-4987-9E83-FE46819191BD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -163,6 +165,18 @@ Global
 		{76324FF1-A6F0-4E01-A2CE-F0946B924DC2}.Release|x64.Build.0 = Release|Any CPU
 		{76324FF1-A6F0-4E01-A2CE-F0946B924DC2}.Release|x86.ActiveCfg = Release|Any CPU
 		{76324FF1-A6F0-4E01-A2CE-F0946B924DC2}.Release|x86.Build.0 = Release|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Debug|x64.Build.0 = Debug|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Debug|x86.Build.0 = Debug|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Release|x64.ActiveCfg = Release|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Release|x64.Build.0 = Release|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Release|x86.ActiveCfg = Release|Any CPU
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -180,5 +194,6 @@ Global
 		{96EE3C20-4C8A-484E-A653-DB3657D5B5E3} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{177ACAAA-2F44-4738-B7D6-5E3770A56048} = {4DF80442-A1E5-CC28-AE7B-27B5F9BFE52B}
 		{76324FF1-A6F0-4E01-A2CE-F0946B924DC2} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{AF94C9BC-28BA-4987-9E83-FE46819191BD} = {EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}
 	EndGlobalSection
 EndGlobal

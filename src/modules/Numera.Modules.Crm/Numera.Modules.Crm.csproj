@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Numera.Modules.Crm</RootNamespace>
+    <AssemblyName>Numera.Modules.Crm</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <!-- TaxCategory (EN 16931 BT-151 seam) used as the partner's optional default. -->
+    <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
+  </ItemGroup>
+
+</Project>
