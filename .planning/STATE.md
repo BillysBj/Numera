@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-07-09)
 
 **Core value:** Ein Unternehmen erledigt seine komplette Auftrags- und Finanzverwaltung — von der Rechnung inkl. gesetzlicher E-Rechnung bis zur Buchhaltung — rechtskonform (GoBD, E-Rechnungspflicht) an einem Ort, auf jedem Gerät.
-**Current focus:** Phase 1 — Plattform-Kern
+**Current focus:** Phase 2 — Stammdaten
 
 ## Current Position
 
-Phase: 1 of 9 (Plattform-Kern) — ✓ COMPLETE + VERIFIED
-Plan: 8 of 8 complete (01-01 … 01-08)
-Status: Phase 1 verified (7/7 must-haves). Ready to plan Phase 2 (Stammdaten).
-Last activity: 2026-07-10 — Phase verification passed after remediating 1 gap: Numera.Platform.Money + Numera.Platform.Tests were missing from Numera.sln, so the CI `dotnet test --no-build` step would have failed before ever reaching the RLS/audit hard gate. Both projects registered, Money retargeted net8.0→net10.0, full CI sequence replayed green (build 0/0, unit 16/16, integration 8/8) — commit 3912848.
+Phase: 2 of 9 (Stammdaten) — IN PROGRESS
+Plan: 1 of 7 complete (02-01)
+Status: Phase 2 wave 1 delivered. EF Core 10 named query filters ("Tenant" + "NotArchived") + IArchivable marker in place — the query-filter foundation every later Phase-2 wave depends on. Ready for 02-02.
+Last activity: 2026-07-11 — Executed 02-01: converted the unnamed tenant query filter to a named "Tenant" filter and added a named "NotArchived" filter for IArchivable (two independent filters, never &&-combined). Build 0/0; integration 8/8; unit 16/16 — Phase-1 suites unaffected (IgnoreQueryFilters() no-arg still drops all named filters, leaving RLS sole control). Commits 7cfcd61, 0a4d09c.
 
-Progress: [██████████] 100% (Phase 1 of 9)
+Progress: [█░░░░░░] 14% (Phase 2 of 9 — 1/7 plans)
 
 ## Performance Metrics
 
@@ -28,6 +28,13 @@ Progress: [██████████] 100% (Phase 1 of 9)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
+| 02-stammdaten | 1 of 7 | ~3 min | ~3 min |
+
+**Per-Plan (Phase 02):**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| 02-01 | 3 min | 2 | 2 |
 
 **Per-Plan (Phase 01):**
 
@@ -69,6 +76,8 @@ Recent decisions affecting current work:
 - [Phase 01-plattform-kern]: 01-08: non-retrofittable foundations (tenant isolation, audit immutability, pool-safety) are proven on real postgres:18 via Testcontainers running as numera_app (NO BYPASSRLS) with IgnoreQueryFilters — a superuser silently bypasses FORCE RLS and would make isolation tests falsely pass; RLS+audit suites are non-continue-on-error CI steps (hard gates). CI validated locally only — first live GitHub Actions run pending a git remote
 - [Phase 01-plattform-kern]: 01-04: audit_events immutability is DB-enforced by TWO layers — REVOKE UPDATE/DELETE from numera_app (permission denied) + BEFORE UPDATE OR DELETE trigger raising 'audit_events is append-only' (unconditional, catches mis-grant/owner/superuser); app-code discipline deemed insufficient
 - [Phase 01-plattform-kern]: 01-04: ICurrentUser seam lives in Platform.Tenancy (not Api) so Platform.Audit avoids an Api dependency; AuditWriter appends into the caller's DbContext with no own transaction/scope/SaveChanges (atomic with the recorded change); prev_hash/row_hash reserved nullable for a non-breaking GoBD hash-chain later
+- [Phase 02-stammdaten]: 02-01: EF Core 10 NAMED query filters — tenant filter renamed to "Tenant", new "NotArchived" filter for IArchivable; two independent filters, never &&-combined (a second unnamed HasQueryFilter would silently overwrite the first — data-leak-class bug). IgnoreQueryFilters() no-arg drops all → RLS sole control (integration tests unaffected).
+- [Phase 02-stammdaten]: 02-01: archival is app-level only — RLS deliberately does NOT filter archived rows (an archived row is still the tenant's own data, RESEARCH.md Pattern 1); IArchivable.ArchivedAt (DateTimeOffset?) drives the NotArchived filter.
 
 ### Pending Todos
 
@@ -85,8 +94,8 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 
 ## Session Continuity
 
-Last session: 2026-07-10
-Stopped at: Phase 1 (Plattform-Kern) complete and verified — 8/8 plans, 7/7 must-haves, ROADMAP + REQUIREMENTS traceability updated (PLAT-01/02/04/05/06/07/09 = Complete). One verifier-found gap remediated (solution-registration of Money/unit-test projects; CI would have died before the RLS gate).
-Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo.
+Last session: 2026-07-11
+Stopped at: Completed 02-01-PLAN.md (Phase 2 wave 1) — named "Tenant" + "NotArchived" query filters + IArchivable marker in Platform.Db. Build 0/0, integration 8/8, unit 16/16.
+Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless %LOCALAPPDATA%\Microsoft\dotnet is prepended to PATH (per RESOLVED caveat).
 Resume file: None
-Next: /gsd:plan-phase 2 (Stammdaten — Kunden/Lieferanten + Produktkatalog).
+Next: Execute 02-02-PLAN.md (Phase 2 wave 2 — depends on this named-filter foundation).
