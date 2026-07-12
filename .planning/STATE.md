@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 ## Current Position
 
 Phase: 2 of 9 (Stammdaten) — IN PROGRESS
-Plan: 5 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05)
-Status: Phase 2 wave 5 delivered. The catalog (Artikelstamm) HTTP API is live — /api/catalog-items CRUD + archive/unarchive (no hard delete) plus the CATL-02 seam: GET /api/catalog-items?picker=true returns a capped CatalogLineItem[] (id, number, name, unit code, net price, tax category, VAT rate) the Phase-3 invoice line editor snapshots. Unit codes constrained to the curated UN/ECE Rec 20 set (BT-130); duplicate article numbers return a clean 409 (partial-unique index -> Postgres 23505 -> ValidationProblem, never a 500). Every catalog mutation writes an AuditEvent in one SaveChanges. Validators auto-registered by 02-04's assembly scan — zero DI edits, only app.MapCatalogEndpoints() appended. Ready for 02-06/02-07 (frontend).
-Last activity: 2026-07-11 — Executed 02-05 (backend-only, mirroring 02-04): CatalogContracts DTOs incl. CatalogLineItem, CatalogValidators (UN/ECE Rec 20 unit, price precision, VAT 0..100), CatalogEndpoints (list {items,page,pageSize,total} + q/archived, picker flag, get/create/update, archive/unarchive, duplicate->409). Build 0/0; unit 43/43; integration 25/25 (unchanged). No deviations. Commits aac2624, 678043e.
+Plan: 6 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05, 02-06)
+Status: Phase 2 wave 5 delivered — the FIRST frontend plan. The Phase-2 UI stack (Tailwind v4 as a Vite plugin, hand-authored shadcn/ui primitives with no Radix, TanStack Table v8, react-hook-form + zod) is installed and building, plus the full partner management UI over the 02-04 cookie-BFF API: a server-side paginated/searchable/role-filterable list (shared DataTable, manual* + rowCount=total), an RHF+zod create/edit form whose rules mirror the server FluentValidation and whose 400 ValidationProblem maps back onto fields, and a detail page with contacts CRUD, notes (CRM-03), the activity timeline (CRM-02) and archive/unarchive. New partners i18n namespace (DE default + EN). PWA /api NetworkOnly posture untouched. Ready for 02-07 (catalog frontend), which appends to App.tsx/i18n/index.css after this plan and reuses the shared DataTable + ui/* primitives.
+Last activity: 2026-07-11 — Executed 02-06 (frontend, web/* only, parallel with 02-05 backend): UI stack config (@tailwindcss/vite + @/ alias + shadcn tokens + 11 ui/* primitives + DataTable), lib/api/partners.ts (typed CRUD/archive/contacts/notes/activities, numeric enum maps, extractValidationErrors), PartnerListPage/FormPage/DetailPage, partnerSchema (+8 unit tests), partners DE/EN locales. Build green; typecheck clean; vitest 12/12. 4 deviations (2 Rule-3 blocking: @types/node for the vite alias, union-typed contact mutation; 2 Rule-1 bugs: shipping validated when toggle off, TextField dropped RHF ref). Commits e2fe8c8, b324cf0, 4023be5.
 
-Progress: [████░░░] 50% (Phase 2 of 9 — 5/7 plans)
+Progress: [█████░░] 71% (Phase 2 of 9 — 6/7 plans)
 
 ## Performance Metrics
 
