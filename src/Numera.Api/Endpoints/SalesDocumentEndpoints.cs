@@ -4,10 +4,18 @@ using FluentValidation;
 
 using Microsoft.EntityFrameworkCore;
 
+using Npgsql;
+
 using Numera.Api.Contracts;
+using Numera.Api.Validators;
+using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.Events;
+using Numera.Modules.Sales.Numbering;
+using Numera.Modules.Sales.Vat;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
+using Numera.Platform.Money;
 using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Endpoints;
@@ -298,6 +306,151 @@ public static class SalesDocumentEndpoints
             return Results.Created($"/api/documents/{doc.Id}", new { doc.Id });
         });
 
+        // POST /api/documents/{id}/finalize — the single most important transaction in v1
+        // (INV-01/INV-02/OPDN-01, RESEARCH.md Pattern 4). In ONE transaction it validates §14
+        // completeness, snapshots issuer + recipient as jsonb, computes + persists the BG-23
+        // VAT breakdown, assigns the race-safe number in the configured format, computes the
+        // due date + creates the open item, then flips status to Finalized LAST; AFTER commit
+        // it dispatches InvoiceFinalized. The breakdown/field writes happen while status is
+        // still Draft (first SaveChanges) so the child immutability trigger permits them; the
+        // status flip is a second SaveChanges (Pattern 4 step 7 / Pitfall 1).
+        g.MapPost("/{id:guid}/finalize", async (
+            Guid id,
+            NumeraDbContext db,
+            NumberingService numbering,
+            IDomainEventPublisher publisher,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            CancellationToken ct) =>
+        {
+            // 1. Load the draft TRACKED with its lines; reject a non-draft before any DB work.
+            var doc = await db.Set<SalesDocument>()
+                .Include(x => x.Lines)
+                .FirstOrDefaultAsync(x => x.Id == id, ct)
+                .ConfigureAwait(false);
+            if (doc is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (doc.Status != DocumentStatus.Draft)
+            {
+                return NonDraftConflict(doc.Status);
+            }
+
+            // 2. Load issuer (exactly one per tenant) + recipient; run the §14 completeness gate.
+            var profile = await db.Set<CompanyProfile>()
+                .FirstOrDefaultAsync(ct)
+                .ConfigureAwait(false);
+            var partner = doc.PartnerId is null
+                ? null
+                : await db.Set<BusinessPartner>()
+                    .FirstOrDefaultAsync(p => p.Id == doc.PartnerId, ct)
+                    .ConfigureAwait(false);
+
+            var errors = FinalizeValidation.Check(doc, profile, partner);
+            if (errors.Count > 0)
+            {
+                return Results.ValidationProblem(
+                    errors,
+                    statusCode: StatusCodes.Status422UnprocessableEntity,
+                    title: "Document is not ready to finalize");
+            }
+
+            // The gate guarantees a non-null issuer profile beyond this point.
+            var tenantId = tenant.TenantId!.Value;
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+            var before = Snapshot(doc);
+
+            // 3. Freeze issuer + recipient onto the document as jsonb (GoBD — a later master-data
+            //    edit must never mutate an issued invoice).
+            doc.IssuerSnapshot = SerializeIssuer(profile!);
+            doc.RecipientSnapshot = partner is null ? null : SerializeRecipient(partner);
+            doc.IsKleinunternehmer = profile!.IsKleinunternehmer;
+
+            // 4. VAT: bucket the lines into the BG-23 breakdown and persist one row per bucket.
+            var vatInputs = doc.Lines
+                .Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount));
+            var rows = VatCalculationService.Calculate(vatInputs, profile.IsKleinunternehmer);
+            foreach (var row in rows)
+            {
+                doc.TaxBreakdown.Add(new SalesDocumentTaxBreakdown
+                {
+                    TenantId = tenantId,
+                    DocumentId = doc.Id,
+                    TaxCategory = row.Category,
+                    VatRatePercent = row.RatePercent,
+                    TaxableBase = row.TaxableBase,
+                    TaxAmount = row.TaxAmount,
+                    ExemptionReasonCode = row.ExemptionCode,
+                    ExemptionReasonText = row.ExemptionText,
+                });
+            }
+
+            doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
+            doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
+            doc.TotalGross = doc.TotalNet + doc.TotalTax;
+            doc.AmountDue = doc.TotalGross;
+            doc.ReverseCharge = doc.Lines.Any(l => l.TaxCategory == TaxCategory.AE);
+
+            // 5. Number: atomic upsert-returning counter inside THIS transaction (Pattern 3).
+            doc.DocumentNumber = await numbering
+                .AssignAsync(doc.DocumentType, doc.DocumentDate.Year, ct)
+                .ConfigureAwait(false);
+
+            // 6. Due date + open item (OPDN-01). Only the Rechnung creates a receivable here;
+            //    Storno/Gutschrift handling (cancel/negate) lands in plan 03-06.
+            var netDays = partner?.PaymentTermsNetDays ?? profile.DefaultPaymentTermsNetDays ?? 14;
+            doc.DueDate = doc.DocumentDate.AddDays(netDays);
+
+            if (doc.DocumentType == DocumentType.Rechnung)
+            {
+                db.Add(BuildOpenItem(doc, partner, tenantId));
+            }
+
+            try
+            {
+                // 7. CRITICAL ordering (Pitfall 1): write the breakdown + all business columns
+                //    while status is still Draft so the child trigger sees the parent Draft.
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+                // Flip status LAST — the parent trigger allows this UPDATE because OLD.status = 0.
+                doc.Status = DocumentStatus.Finalized;
+                doc.FinalizedAt = DateTimeOffset.UtcNow;
+
+                // 8. Audit before the final SaveChanges (atomic with the status flip).
+                await audit.RecordAsync(
+                    new SalesDocumentAuditEvent("sales_document.finalized", doc.Id, before, Snapshot(doc)), ct)
+                    .ConfigureAwait(false);
+
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                await tx.CommitAsync(ct).ConfigureAwait(false);
+            }
+            catch (DbUpdateException ex) when (IsDuplicateNumber(ex))
+            {
+                // The partial unique (tenant, doc_type, document_number) index rejected a
+                // collision — should not happen given the atomic counter, but surface a clean
+                // 409 rather than a 500 (mirrors CatalogEndpoints.IsDuplicateNumber).
+                await tx.RollbackAsync(ct).ConfigureAwait(false);
+                return Results.Problem(
+                    title: "Document number collision",
+                    detail: "The assigned document number collided; please retry finalization.",
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
+            // 10. AFTER commit: dispatch the domain event (side-effect seam — the open item +
+            //     audit were done IN the transaction, not via the event).
+            await publisher.PublishAsync(
+                new InvoiceFinalized(
+                    tenantId, doc.Id, doc.DocumentNumber!,
+                    doc.TotalNet, doc.TotalTax, doc.TotalGross, doc.DocumentDate),
+                ct).ConfigureAwait(false);
+
+            return Results.Ok(ToDetail(doc));
+        });
+
         return app;
     }
 
@@ -384,6 +537,87 @@ public static class SalesDocumentEndpoints
             title: "Document is not a draft",
             detail: $"Only draft documents can be edited or deleted; this document is {status}.",
             statusCode: StatusCodes.Status409Conflict);
+
+    // --- Finalize helpers ----------------------------------------------------
+
+    // Frozen issuer snapshot (BG-4/BG-5 + tax identity + bank/imprint) captured at finalize.
+    private static string SerializeIssuer(CompanyProfile p) => JsonSerializer.Serialize(new
+    {
+        p.LegalName,
+        Address = new
+        {
+            p.Address.Street,
+            p.Address.Line2,
+            p.Address.PostalCode,
+            p.Address.City,
+            p.Address.CountryCode,
+            p.Address.PoBox,
+        },
+        p.VatId,
+        p.TaxNumber,
+        p.IsKleinunternehmer,
+        Bank = new { p.Iban, p.Bic, p.BankName },
+        p.RegisterCourt,
+        p.RegisterNumber,
+        p.ManagingDirector,
+        p.ContactEmail,
+        p.ContactPhone,
+    }, AuditJson);
+
+    // Frozen recipient snapshot (BG-7/BG-8 + tax identity) captured at finalize.
+    private static string SerializeRecipient(BusinessPartner b) => JsonSerializer.Serialize(new
+    {
+        b.Name,
+        b.LegalForm,
+        BillingAddress = new
+        {
+            b.BillingAddress.Street,
+            b.BillingAddress.Line2,
+            b.BillingAddress.PostalCode,
+            b.BillingAddress.City,
+            b.BillingAddress.CountryCode,
+            b.BillingAddress.PoBox,
+        },
+        b.VatId,
+        b.TaxNumber,
+        b.Email,
+    }, AuditJson);
+
+    // Builds the open item (OPDN-01, RESEARCH.md Pattern 5): OriginalAmount = OpenAmount =
+    // gross, snapshotting the partner's Skonto terms as the Phase-6 payment seam.
+    private static OpenItem BuildOpenItem(SalesDocument doc, BusinessPartner? partner, Guid tenantId)
+    {
+        var skontoDueDate = partner?.SkontoDays is int days
+            ? doc.DocumentDate.AddDays(days)
+            : (DateOnly?)null;
+
+        var skontoAmount = partner?.SkontoPercent is decimal percent
+            ? Math.Round(doc.TotalGross * percent / 100m, 2, MidpointRounding.AwayFromZero)
+            : (decimal?)null;
+
+        return new OpenItem
+        {
+            TenantId = tenantId,
+            DocumentId = doc.Id,
+            PartnerId = doc.PartnerId,
+            DocumentNumber = doc.DocumentNumber!,
+            Currency = doc.Currency,
+            OriginalAmount = doc.TotalGross,
+            OpenAmount = doc.TotalGross,
+            Status = OpenItemStatus.Open,
+            IssuedOn = doc.DocumentDate,
+            DueDate = doc.DueDate!.Value,
+            SkontoPercent = partner?.SkontoPercent,
+            SkontoDays = partner?.SkontoDays,
+            SkontoDueDate = skontoDueDate,
+            SkontoAmount = skontoAmount,
+        };
+    }
+
+    // A number collision violates the partial unique (tenant, doc_type, document_number)
+    // index → Postgres 23505. Return a clean 409 instead of a 500.
+    private static bool IsDuplicateNumber(DbUpdateException ex) =>
+        ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 }
 
 /// <summary>
