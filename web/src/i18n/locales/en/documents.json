@@ -1,0 +1,115 @@
+{
+  "title": "Documents",
+  "nav": "Documents",
+  "loadError": "Could not load the document.",
+  "actions": {
+    "create": "New document",
+    "save": "Save",
+    "saving": "Saving …",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "back": "Back",
+    "addLine": "Add line",
+    "addFromCatalog": "Add from catalog",
+    "removeLine": "Remove",
+    "convert": "Convert",
+    "view": "View"
+  },
+  "table": {
+    "loading": "Loading …",
+    "empty": "No documents found.",
+    "total": "{{count}} documents",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "columns": {
+    "type": "Type",
+    "number": "Document no.",
+    "status": "Status",
+    "date": "Date",
+    "gross": "Gross total",
+    "actions": "Actions"
+  },
+  "type": {
+    "0": "Quote",
+    "1": "Order confirmation",
+    "2": "Delivery note",
+    "3": "Invoice",
+    "4": "Cancellation",
+    "5": "Credit note"
+  },
+  "status": {
+    "0": "Draft",
+    "1": "Finalized",
+    "2": "Sent",
+    "3": "Cancelled",
+    "4": "Paid"
+  },
+  "filters": {
+    "search": "Search document number …",
+    "allTypes": "All types",
+    "allStatuses": "All statuses"
+  },
+  "form": {
+    "createTitle": "Create a new document",
+    "editTitle": "Edit document",
+    "sections": {
+      "header": "Header",
+      "lines": "Line items"
+    },
+    "fields": {
+      "documentType": "Document type",
+      "partnerId": "Business partner",
+      "documentDate": "Document date",
+      "buyerReference": "Buyer reference / Leitweg-ID",
+      "notes": "Notes",
+      "lineName": "Name",
+      "lineDescription": "Description",
+      "quantity": "Quantity",
+      "unitCode": "Unit",
+      "netUnitPrice": "Unit price (net)",
+      "taxCategory": "Tax category",
+      "vatRatePercent": "VAT rate (%)"
+    },
+    "taxCategory": {
+      "S": "Standard rate (S)",
+      "AE": "Reverse charge (AE)",
+      "K": "Intra-community supply (K)",
+      "E": "Tax exempt (E)",
+      "Z": "Zero-rated (Z)",
+      "G": "Export supply (G)",
+      "O": "Out of scope (O)"
+    },
+    "partnerPlaceholder": "Partner id (optional)",
+    "noLines": "No line items yet. Add a line to get started.",
+    "totals": {
+      "net": "Net total",
+      "tax": "VAT",
+      "gross": "Gross total",
+      "note": "Preview — final totals are computed on save."
+    },
+    "catalogPicker": {
+      "title": "Pick a catalog item",
+      "search": "Search catalog …",
+      "empty": "No catalog items found.",
+      "close": "Close"
+    },
+    "readonly": {
+      "notice": "This document is no longer a draft and cannot be edited.",
+      "toDetail": "View document"
+    },
+    "errors": {
+      "required": "Required",
+      "lineName": "A line name is required.",
+      "lineNameMax": "At most 400 characters.",
+      "quantityPositive": "Quantity must be greater than 0.",
+      "netPriceMin": "Price must not be negative.",
+      "unitCode": "A unit is required.",
+      "vatRange": "Value between 0 and 100.",
+      "linesRequired": "At least one line is required.",
+      "conflict": "This document is no longer a draft and cannot be changed.",
+      "server": "Saving failed."
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "title": "Belege",
+  "nav": "Belege",
+  "loadError": "Beleg konnte nicht geladen werden.",
+  "actions": {
+    "create": "Beleg anlegen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "back": "Zurück",
+    "addLine": "Position hinzufügen",
+    "addFromCatalog": "Aus Artikelstamm",
+    "removeLine": "Entfernen",
+    "convert": "Umwandeln",
+    "view": "Anzeigen"
+  },
+  "table": {
+    "loading": "Wird geladen …",
+    "empty": "Keine Belege gefunden.",
+    "total": "{{count}} Belege",
+    "page": "Seite {{page}} von {{pages}}",
+    "prev": "Zurück",
+    "next": "Weiter"
+  },
+  "columns": {
+    "type": "Belegart",
+    "number": "Belegnr.",
+    "status": "Status",
+    "date": "Datum",
+    "gross": "Bruttobetrag",
+    "actions": "Aktionen"
+  },
+  "type": {
+    "0": "Angebot",
+    "1": "Auftragsbestätigung",
+    "2": "Lieferschein",
+    "3": "Rechnung",
+    "4": "Storno",
+    "5": "Gutschrift"
+  },
+  "status": {
+    "0": "Entwurf",
+    "1": "Finalisiert",
+    "2": "Versendet",
+    "3": "Storniert",
+    "4": "Bezahlt"
+  },
+  "filters": {
+    "search": "Belegnummer suchen …",
+    "allTypes": "Alle Belegarten",
+    "allStatuses": "Alle Status"
+  },
+  "form": {
+    "createTitle": "Neuen Beleg anlegen",
+    "editTitle": "Beleg bearbeiten",
+    "sections": {
+      "header": "Kopfdaten",
+      "lines": "Positionen"
+    },
+    "fields": {
+      "documentType": "Belegart",
+      "partnerId": "Geschäftspartner",
+      "documentDate": "Belegdatum",
+      "buyerReference": "Leitweg-ID / Referenz",
+      "notes": "Anmerkungen",
+      "lineName": "Bezeichnung",
+      "lineDescription": "Beschreibung",
+      "quantity": "Menge",
+      "unitCode": "Einheit",
+      "netUnitPrice": "Einzelpreis (netto)",
+      "taxCategory": "Steuerkategorie",
+      "vatRatePercent": "USt-Satz (%)"
+    },
+    "taxCategory": {
+      "S": "Regelsteuersatz (S)",
+      "AE": "Reverse-Charge (AE)",
+      "K": "Innergemeinschaftliche Lieferung (K)",
+      "E": "Steuerbefreit (E)",
+      "Z": "Nullsatz (Z)",
+      "G": "Ausfuhrlieferung (G)",
+      "O": "Nicht steuerbar (O)"
+    },
+    "partnerPlaceholder": "Partner-ID (optional)",
+    "noLines": "Noch keine Positionen. Fügen Sie eine Position hinzu.",
+    "totals": {
+      "net": "Nettosumme",
+      "tax": "USt.",
+      "gross": "Bruttosumme",
+      "note": "Vorschau – die endgültigen Beträge werden beim Speichern berechnet."
+    },
+    "catalogPicker": {
+      "title": "Artikel auswählen",
+      "search": "Artikel suchen …",
+      "empty": "Keine Artikel gefunden.",
+      "close": "Schließen"
+    },
+    "readonly": {
+      "notice": "Dieser Beleg ist kein Entwurf mehr und kann nicht bearbeitet werden.",
+      "toDetail": "Beleg anzeigen"
+    },
+    "errors": {
+      "required": "Pflichtfeld",
+      "lineName": "Bezeichnung ist erforderlich.",
+      "lineNameMax": "Höchstens 400 Zeichen.",
+      "quantityPositive": "Die Menge muss größer als 0 sein.",
+      "netPriceMin": "Der Preis darf nicht negativ sein.",
+      "unitCode": "Einheit ist erforderlich.",
+      "vatRange": "Wert zwischen 0 und 100.",
+      "linesRequired": "Mindestens eine Position ist erforderlich.",
+      "conflict": "Dieser Beleg ist kein Entwurf mehr und kann nicht geändert werden.",
+      "server": "Speichern fehlgeschlagen."
+    }
+  }
+}

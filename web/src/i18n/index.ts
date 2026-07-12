@@ -10,6 +10,8 @@ import dePartners from './locales/de/partners.json'
 import enPartners from './locales/en/partners.json'
 import deCatalog from './locales/de/catalog.json'
 import enCatalog from './locales/en/catalog.json'
+import deDocuments from './locales/de/documents.json'
+import enDocuments from './locales/en/documents.json'
 
 // Supported UI languages. German is the default/fallback (Numera is a German
 // financial product); English is the secondary locale (success criterion 5).
@@ -18,8 +20,20 @@ export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 // Namespaces are split so future feature areas can lazy-load their own strings.
 export const resources = {
-  de: { common: deCommon, auth: deAuth, partners: dePartners, catalog: deCatalog },
-  en: { common: enCommon, auth: enAuth, partners: enPartners, catalog: enCatalog },
+  de: {
+    common: deCommon,
+    auth: deAuth,
+    partners: dePartners,
+    catalog: deCatalog,
+    documents: deDocuments,
+  },
+  en: {
+    common: enCommon,
+    auth: enAuth,
+    partners: enPartners,
+    catalog: enCatalog,
+    documents: enDocuments,
+  },
 } as const
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -31,7 +45,7 @@ i18n
     fallbackLng: 'de',
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
     nonExplicitSupportedLngs: true, // treat "de-DE" as "de"
-    ns: ['common', 'auth', 'partners', 'catalog'],
+    ns: ['common', 'auth', 'partners', 'catalog', 'documents'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false, // React already escapes
