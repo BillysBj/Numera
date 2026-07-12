@@ -1,0 +1,91 @@
+{
+  "title": "Catalog",
+  "nav": "Catalog",
+  "loadError": "Could not load the catalog item.",
+  "actions": {
+    "create": "New item",
+    "save": "Save",
+    "saving": "Saving …",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "archive": "Archive",
+    "unarchive": "Reactivate",
+    "back": "Back"
+  },
+  "table": {
+    "loading": "Loading …",
+    "empty": "No catalog items found.",
+    "total": "{{count}} items",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "columns": {
+    "itemNumber": "Article no.",
+    "name": "Name",
+    "kind": "Type",
+    "unit": "Unit",
+    "netPrice": "Net price",
+    "vatRate": "VAT rate",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "kind": {
+    "product": "Product",
+    "service": "Service"
+  },
+  "status": {
+    "active": "Active",
+    "archived": "Archived"
+  },
+  "filters": {
+    "search": "Search …",
+    "showArchived": "Show archived"
+  },
+  "form": {
+    "createTitle": "Create a new catalog item",
+    "editTitle": "Edit catalog item",
+    "sections": {
+      "master": "Master data",
+      "pricing": "Pricing & tax"
+    },
+    "fields": {
+      "itemNumber": "Article number",
+      "name": "Name",
+      "description": "Description",
+      "kind": "Type",
+      "unitCode": "Unit",
+      "netPrice": "Net price",
+      "currency": "Currency",
+      "taxCategory": "Tax category",
+      "vatRatePercent": "VAT rate (%)",
+      "costPrice": "Cost price"
+    },
+    "kind": {
+      "product": "Product",
+      "service": "Service"
+    },
+    "taxCategory": {
+      "S": "Standard rate (S)",
+      "AE": "Reverse charge (AE)",
+      "K": "Intra-community supply (K)",
+      "E": "Tax exempt (E)",
+      "Z": "Zero-rated (Z)",
+      "G": "Export supply (G)",
+      "O": "Out of scope (O)"
+    },
+    "errors": {
+      "required": "Required",
+      "itemNumberMax": "At most 64 characters.",
+      "nameMax": "At most 200 characters.",
+      "unitCode": "Please choose a valid unit.",
+      "netPriceMin": "Net price must not be negative.",
+      "currency": "3-letter ISO 4217 code.",
+      "vatRange": "Value between 0 and 100.",
+      "costPriceMin": "Cost price must not be negative.",
+      "server": "Saving failed."
+    }
+  },
+  "confirmArchive": "Archive this catalog item?",
+  "confirmUnarchive": "Reactivate this catalog item?"
+}

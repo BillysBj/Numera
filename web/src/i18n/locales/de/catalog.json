@@ -1,0 +1,91 @@
+{
+  "title": "Artikelstamm",
+  "nav": "Artikel",
+  "loadError": "Artikel konnte nicht geladen werden.",
+  "actions": {
+    "create": "Artikel anlegen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "cancel": "Abbrechen",
+    "edit": "Bearbeiten",
+    "archive": "Archivieren",
+    "unarchive": "Reaktivieren",
+    "back": "Zurück"
+  },
+  "table": {
+    "loading": "Wird geladen …",
+    "empty": "Keine Artikel gefunden.",
+    "total": "{{count}} Artikel",
+    "page": "Seite {{page}} von {{pages}}",
+    "prev": "Zurück",
+    "next": "Weiter"
+  },
+  "columns": {
+    "itemNumber": "Artikelnr.",
+    "name": "Bezeichnung",
+    "kind": "Art",
+    "unit": "Einheit",
+    "netPrice": "Nettopreis",
+    "vatRate": "USt-Satz",
+    "status": "Status",
+    "actions": "Aktionen"
+  },
+  "kind": {
+    "product": "Ware",
+    "service": "Dienstleistung"
+  },
+  "status": {
+    "active": "Aktiv",
+    "archived": "Archiviert"
+  },
+  "filters": {
+    "search": "Suchen …",
+    "showArchived": "Archivierte anzeigen"
+  },
+  "form": {
+    "createTitle": "Neuen Artikel anlegen",
+    "editTitle": "Artikel bearbeiten",
+    "sections": {
+      "master": "Stammdaten",
+      "pricing": "Preise & Steuer"
+    },
+    "fields": {
+      "itemNumber": "Artikelnummer",
+      "name": "Bezeichnung",
+      "description": "Beschreibung",
+      "kind": "Art",
+      "unitCode": "Einheit",
+      "netPrice": "Nettopreis",
+      "currency": "Währung",
+      "taxCategory": "Steuerkategorie",
+      "vatRatePercent": "USt-Satz (%)",
+      "costPrice": "Einkaufspreis"
+    },
+    "kind": {
+      "product": "Ware",
+      "service": "Dienstleistung"
+    },
+    "taxCategory": {
+      "S": "Regelsteuersatz (S)",
+      "AE": "Reverse-Charge (AE)",
+      "K": "Innergemeinschaftliche Lieferung (K)",
+      "E": "Steuerbefreit (E)",
+      "Z": "Nullsatz (Z)",
+      "G": "Ausfuhrlieferung (G)",
+      "O": "Nicht steuerbar (O)"
+    },
+    "errors": {
+      "required": "Pflichtfeld",
+      "itemNumberMax": "Höchstens 64 Zeichen.",
+      "nameMax": "Höchstens 200 Zeichen.",
+      "unitCode": "Bitte eine gültige Einheit wählen.",
+      "netPriceMin": "Der Nettopreis darf nicht negativ sein.",
+      "currency": "3-stelliger ISO-4217-Code.",
+      "vatRange": "Wert zwischen 0 und 100.",
+      "costPriceMin": "Der Einkaufspreis darf nicht negativ sein.",
+      "server": "Speichern fehlgeschlagen."
+    }
+  },
+  "confirmArchive": "Diesen Artikel archivieren?",
+  "confirmUnarchive": "Diesen Artikel reaktivieren?"
+}

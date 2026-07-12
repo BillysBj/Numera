@@ -34,6 +34,12 @@ export interface DataTableProps<TData, TValue> {
   onSortingChange?: OnChangeFn<SortingState>
   isLoading?: boolean
   emptyMessage?: string
+  /**
+   * i18n namespace holding the `table.*` pager strings. Defaults to `partners`
+   * (the first consumer); the catalog list passes `catalog` so its pager reads the
+   * catalog wording. Both namespaces expose the same `table.*` keys.
+   */
+  translationNs?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -46,8 +52,9 @@ export function DataTable<TData, TValue>({
   onSortingChange,
   isLoading,
   emptyMessage,
+  translationNs = 'partners',
 }: DataTableProps<TData, TValue>) {
-  const { t } = useTranslation('partners')
+  const { t } = useTranslation(translationNs)
 
   const table = useReactTable({
     data,
