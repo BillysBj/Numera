@@ -77,10 +77,19 @@ Plans:
   3. Rechnungen enthalten alle Pflichtangaben nach §14 UStG; Rechnungsnummern werden bei Finalisierung race-sicher, eindeutig und im konfigurierten Format vergeben
   4. USt wird als EN-16931-Kategorie modelliert und deckt 19/7/0 %, Kleinunternehmer §19, Reverse-Charge §13b und innergemeinschaftliche Lieferung mit korrekten Pflichttexten ab
   5. Nutzer kann finalisierte Rechnungen stornieren und Gutschriften erstellen; jede finalisierte Rechnung erzeugt einen offenen Posten mit Fälligkeit in der OP-Übersicht
-**Plans**: TBD
+**Plans**: 10 plans
 
 Plans:
-- [ ] 03-01: TBD (verfeinert in plan-phase)
+- [ ] 03-01-PLAN.md — Sales module + company_profile table + migration#1 + RLS + GET/PUT company-profile API
+- [ ] 03-02-PLAN.md — sales_documents schema (6 tables) + migration#2 + immutability triggers + RLS test
+- [ ] 03-03-PLAN.md — VatCalculationService (TDD, EN-16931 BG-23 + Pflichttexte)
+- [ ] 03-04-PLAN.md — sales-document HTTP surface: draft CRUD + convert + list/detail + OP list endpoint
+- [ ] 03-05-PLAN.md — finalize transaction (numbering + snapshots + breakdown + open item + audit + event)
+- [ ] 03-06-PLAN.md — Storno (384) + Gutschrift (381) correction documents
+- [ ] 03-07-PLAN.md — document frontend: list + RHF/zod draft editor with catalog-picker line array
+- [ ] 03-08-PLAN.md — integration tests: finalize side-effects, concurrent numbering, immutability, Storno
+- [ ] 03-09-PLAN.md — document detail page + finalize/storno/gutschrift/convert action bar (frontend)
+- [ ] 03-10-PLAN.md — OP-Übersicht page + company-profile settings form (frontend)
 
 ### Phase 4: PDF & Versand
 **Goal**: Nutzer kann Belege als professionelle PDFs im eigenen Layout erzeugen und direkt versenden — Rendering läuft asynchron, damit die Finalisierung schnell bleibt.
