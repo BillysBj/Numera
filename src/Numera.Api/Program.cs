@@ -10,6 +10,8 @@ using Numera.Api.Auth;
 using Numera.Api.Endpoints;
 using Numera.Api.Jobs;
 using Numera.Api.Services;
+using Numera.Modules.Sales.Events;
+using Numera.Modules.Sales.Numbering;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
 using Numera.Platform.Entitlements;
@@ -40,6 +42,13 @@ builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(conn
 // --- Audit + entitlements --------------------------------------------------
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
+
+// --- Sales finalize services (plan 03-05) ----------------------------------
+// NumberingService claims the race-safe document number inside the finalize
+// transaction; the domain-event publisher fires InvoiceFinalized after commit (a
+// no-op seam until a handler is registered). VatCalculationService is static.
+builder.Services.AddScoped<NumberingService>();
+builder.Services.AddScoped<IDomainEventPublisher, InProcessDomainEventPublisher>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them

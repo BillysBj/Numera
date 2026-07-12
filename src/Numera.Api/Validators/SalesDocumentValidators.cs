@@ -1,8 +1,102 @@
 using FluentValidation;
 
 using Numera.Api.Contracts;
+using Numera.Modules.Crm;
+using Numera.Modules.Sales;
+using Numera.Platform.Money;
 
 namespace Numera.Api.Validators;
+
+/// <summary>
+/// The §14 UStG completeness gate applied at finalize (plan 03-05). Unlike the request-body
+/// validators below, this checks the LOADED aggregate against the issuer
+/// <see cref="CompanyProfile"/> and the recipient <see cref="BusinessPartner"/> — finalize
+/// takes only an id, so there is no request body to validate. Blocks finalization of a
+/// document that could not produce a legal invoice (RESEARCH.md §14 table + Pitfall 4).
+/// </summary>
+internal static class FinalizeValidation
+{
+    /// <summary>
+    /// Returns the §14 completeness failures keyed by field group; an empty dictionary means
+    /// the document may be finalized.
+    /// </summary>
+    /// <param name="doc">The tracked draft (with its lines loaded).</param>
+    /// <param name="profile">The issuer company profile, or null when none exists yet.</param>
+    /// <param name="partner">The recipient partner, or null when none is set/found.</param>
+    public static Dictionary<string, string[]> Check(
+        SalesDocument doc,
+        CompanyProfile? profile,
+        BusinessPartner? partner)
+    {
+        var errors = new Dictionary<string, List<string>>();
+
+        void Add(string key, string message)
+        {
+            if (!errors.TryGetValue(key, out var list))
+            {
+                list = [];
+                errors[key] = list;
+            }
+
+            list.Add(message);
+        }
+
+        // --- Issuer (BG-4/BG-5 + tax identity) -------------------------------
+        if (profile is null)
+        {
+            Add("Issuer", "An issuer company profile is required before finalizing (§14 UStG).");
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(profile.LegalName))
+            {
+                Add("Issuer", "The issuer legal name is required (§14 UStG, BT-27).");
+            }
+
+            var hasVatId = !string.IsNullOrWhiteSpace(profile.VatId);
+            var hasTaxNumber = !string.IsNullOrWhiteSpace(profile.TaxNumber);
+            if (hasVatId == hasTaxNumber)
+            {
+                Add("Issuer", "Exactly one of the issuer VAT ID or tax number is required (§14 UStG, BT-31/BT-32).");
+            }
+
+            if (!IsAddressComplete(profile.Address?.Street, profile.Address?.PostalCode, profile.Address?.City))
+            {
+                Add("Issuer", "A complete issuer address (street, postal code, city) is required (§14 UStG, BG-5).");
+            }
+        }
+
+        // --- Lines -----------------------------------------------------------
+        if (doc.Lines.Count == 0)
+        {
+            Add("Lines", "A document must have at least one line before finalizing.");
+        }
+
+        // --- Recipient (BG-7/BG-8) -------------------------------------------
+        if (partner is null)
+        {
+            Add("Recipient", "A recipient partner is required before finalizing (§14 UStG, BG-7).");
+        }
+        else if (!IsAddressComplete(partner.BillingAddress?.Street, partner.BillingAddress?.PostalCode, partner.BillingAddress?.City))
+        {
+            Add("Recipient", "A complete recipient billing address (street, postal code, city) is required (§14 UStG, BG-8).");
+        }
+
+        // --- AE/K lines require the recipient VAT ID (§14a / §6a) ------------
+        var requiresRecipientVatId = doc.Lines.Any(l => l.TaxCategory is TaxCategory.AE or TaxCategory.K);
+        if (requiresRecipientVatId && string.IsNullOrWhiteSpace(partner?.VatId))
+        {
+            Add("Recipient", "Reverse-charge (AE) or intra-EU (K) lines require the recipient VAT ID (§14a UStG / §6a UStG).");
+        }
+
+        return errors.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray());
+    }
+
+    private static bool IsAddressComplete(string? street, string? postalCode, string? city)
+        => !string.IsNullOrWhiteSpace(street)
+        && !string.IsNullOrWhiteSpace(postalCode)
+        && !string.IsNullOrWhiteSpace(city);
+}
 
 /// <summary>
 /// Server-side validation for sales-document write requests (plan 03-04). A draft must
