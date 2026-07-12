@@ -8,6 +8,8 @@ import PartnerFormPage from './features/partners/PartnerFormPage'
 import PartnerDetailPage from './features/partners/PartnerDetailPage'
 import CatalogListPage from './features/catalog/CatalogListPage'
 import CatalogFormPage from './features/catalog/CatalogFormPage'
+import DocumentListPage from './features/documents/DocumentListPage'
+import DocumentFormPage from './features/documents/DocumentFormPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
 // reachable from Login, Dashboard and the partner pages.
@@ -15,6 +17,7 @@ function AppHeader() {
   const { t } = useTranslation('common')
   const { t: tp } = useTranslation('partners')
   const { t: tc } = useTranslation('catalog')
+  const { t: td } = useTranslation('documents')
   return (
     <header className="app-header">
       <span className="brand">{t('app.name')}</span>
@@ -22,6 +25,7 @@ function AppHeader() {
         <Link to="/dashboard">{t('dashboard.title')}</Link>
         <Link to="/partners">{tp('nav')}</Link>
         <Link to="/catalog">{tc('nav')}</Link>
+        <Link to="/documents">{td('nav')}</Link>
       </nav>
       <LanguageSwitcher />
     </header>
@@ -42,6 +46,9 @@ export default function App() {
         <Route path="/catalog" element={<CatalogListPage />} />
         <Route path="/catalog/new" element={<CatalogFormPage />} />
         <Route path="/catalog/:id" element={<CatalogFormPage />} />
+        <Route path="/documents" element={<DocumentListPage />} />
+        <Route path="/documents/new" element={<DocumentFormPage />} />
+        <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
