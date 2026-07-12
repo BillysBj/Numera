@@ -87,5 +87,7 @@ app.MapMeEndpoints();
 app.MapPartnerEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
+app.MapSalesDocumentEndpoints();
+app.MapOpenItemEndpoints();
 
 app.Run();
