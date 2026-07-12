@@ -37,6 +37,10 @@
          Platform.Db, letting NumeraDbContext discover its ITenantEntity type for the
          shared design-time migration. -->
     <ProjectReference Include="..\modules\Numera.Modules.Catalog\Numera.Modules.Catalog.csproj" />
+    <!-- Referenced so the Sales assembly (CompanyProfile issuer master data) is
+         deployed next to Platform.Db, letting NumeraDbContext discover its
+         ITenantEntity type for the shared design-time migration. -->
+    <ProjectReference Include="..\modules\Numera.Modules.Sales\Numera.Modules.Sales.csproj" />
     <!-- Referenced so Platform.Audit (AuditEvent + AuditWriter) is deployed next to
          Platform.Db, letting NumeraDbContext discover the audit_events entity for the
          shared migration and letting the host wire IAuditWriter (01-06). -->

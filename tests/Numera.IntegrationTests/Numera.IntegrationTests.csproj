@@ -58,6 +58,13 @@
       isolation and per-tenant article-number uniqueness on real Postgres.
     -->
     <ProjectReference Include="..\..\src\modules\Numera.Modules.Catalog\Numera.Modules.Catalog.csproj" />
+    <!--
+      Modules.Sales is referenced so its DLL is deployed next to the test assembly:
+      NumeraDbContext discovers the CompanyProfile ITenantEntity the same way the Api
+      host does, and CompanyProfileRlsTests use the entity class directly to prove
+      per-table RLS isolation on real Postgres.
+    -->
+    <ProjectReference Include="..\..\src\modules\Numera.Modules.Sales\Numera.Modules.Sales.csproj" />
   </ItemGroup>
 
 </Project>

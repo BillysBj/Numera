@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numera.Modules.Crm", "src\m
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numera.Modules.Catalog", "src\modules\Numera.Modules.Catalog\Numera.Modules.Catalog.csproj", "{C89940F5-2CF9-491A-BB74-B96041D1BD6D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numera.Modules.Sales", "src\modules\Numera.Modules.Sales\Numera.Modules.Sales.csproj", "{D644E326-9311-4D05-A722-2DD97A6333DD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -191,6 +193,18 @@ Global
 		{C89940F5-2CF9-491A-BB74-B96041D1BD6D}.Release|x64.Build.0 = Release|Any CPU
 		{C89940F5-2CF9-491A-BB74-B96041D1BD6D}.Release|x86.ActiveCfg = Release|Any CPU
 		{C89940F5-2CF9-491A-BB74-B96041D1BD6D}.Release|x86.Build.0 = Release|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Debug|x64.Build.0 = Debug|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Debug|x86.Build.0 = Debug|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Release|x64.ActiveCfg = Release|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Release|x64.Build.0 = Release|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Release|x86.ActiveCfg = Release|Any CPU
+		{D644E326-9311-4D05-A722-2DD97A6333DD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -210,5 +224,6 @@ Global
 		{76324FF1-A6F0-4E01-A2CE-F0946B924DC2} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{AF94C9BC-28BA-4987-9E83-FE46819191BD} = {EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}
 		{C89940F5-2CF9-491A-BB74-B96041D1BD6D} = {EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}
+		{D644E326-9311-4D05-A722-2DD97A6333DD} = {EC447DCF-ABFA-6E24-52A5-D7FD48A5C558}
 	EndGlobalSection
 EndGlobal
