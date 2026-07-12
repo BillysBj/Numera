@@ -116,6 +116,67 @@ CREATE POLICY tenant_isolation ON company_profile
 -- Exactly one company_profile per tenant (unique on tenant_id).
 CREATE UNIQUE INDEX ix_company_profile_tenant_id ON company_profile (tenant_id);
 
+-- --- Sales-document tables (Phase 3, _SalesDocuments migration) ---------------
+-- The polymorphic sales-document schema: one sales_documents header (a document_type
+-- discriminator), its sales_document_lines + sales_document_tax_breakdown (BG-23)
+-- children, and the numbering substrate (number_sequences, document_number_formats)
+-- plus open_items. Standard tenant_id isolation on all 6.
+-- NOTE: GoBD immutability is ALSO DB-enforced by hand-written triggers that live in
+-- the _SalesDocuments migration (NOT here): sales_document_immutable (status-guarded
+-- BEFORE UPDATE/DELETE on sales_documents — drafts mutable, finalized frozen) and
+-- sales_document_child_immutable (parent-status guard on lines + tax breakdown).
+-- Number reuse is blocked by a partial UNIQUE (tenant_id, document_type,
+-- document_number) WHERE document_number IS NOT NULL.
+-- sales_documents
+ALTER TABLE sales_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_documents FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON sales_documents
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- sales_document_lines
+ALTER TABLE sales_document_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_document_lines FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON sales_document_lines
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- sales_document_tax_breakdown
+ALTER TABLE sales_document_tax_breakdown ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_document_tax_breakdown FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON sales_document_tax_breakdown
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- number_sequences
+ALTER TABLE number_sequences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE number_sequences FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON number_sequences
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- document_number_formats
+ALTER TABLE document_number_formats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_number_formats FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON document_number_formats
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- open_items
+ALTER TABLE open_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE open_items FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON open_items
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- Document numbers unique per (tenant, doc_type) among numbered (non-draft) rows.
+CREATE UNIQUE INDEX ux_sales_documents_tenant_type_number ON sales_documents
+    (tenant_id, document_type, document_number) WHERE document_number IS NOT NULL;
+CREATE UNIQUE INDEX ux_number_sequences_tenant_type_year ON number_sequences
+    (tenant_id, doc_type, year);
+CREATE UNIQUE INDEX ux_document_number_formats_tenant_type ON document_number_formats
+    (tenant_id, doc_type);
+
 -- --- Self-scoped tenant table ------------------------------------------------
 -- tenants: the row IS the tenant, so isolate on id, not tenant_id.
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;

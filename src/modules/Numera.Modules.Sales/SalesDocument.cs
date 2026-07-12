@@ -138,9 +138,17 @@ public sealed class SalesDocument : ITenantEntity
 
     // --- Navigation ----------------------------------------------------------
 
+    // [ForeignKey] on the collection navigation binds it to the dependent's
+    // DocumentId FK column; without it EF convention invents a shadow
+    // sales_document_id column (the convention looks for {PrincipalType}Id, which
+    // DocumentId does not match). This keeps the schema on the intended FK with no
+    // NumeraDbContext edit.
+
     /// <summary>The document's line items (BG-25).</summary>
+    [ForeignKey(nameof(SalesDocumentLine.DocumentId))]
     public List<SalesDocumentLine> Lines { get; set; } = [];
 
     /// <summary>The EN 16931 VAT breakdown rows (BG-23), one per (category, rate).</summary>
+    [ForeignKey(nameof(SalesDocumentTaxBreakdown.DocumentId))]
     public List<SalesDocumentTaxBreakdown> TaxBreakdown { get; set; } = [];
 }
