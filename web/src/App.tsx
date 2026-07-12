@@ -7,6 +7,7 @@ import PartnerListPage from './features/partners/PartnerListPage'
 import PartnerFormPage from './features/partners/PartnerFormPage'
 import PartnerDetailPage from './features/partners/PartnerDetailPage'
 import CatalogListPage from './features/catalog/CatalogListPage'
+import CatalogFormPage from './features/catalog/CatalogFormPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
 // reachable from Login, Dashboard and the partner pages.
@@ -39,6 +40,8 @@ export default function App() {
         <Route path="/partners/:id/edit" element={<PartnerFormPage />} />
         <Route path="/partners/:id" element={<PartnerDetailPage />} />
         <Route path="/catalog" element={<CatalogListPage />} />
+        <Route path="/catalog/new" element={<CatalogFormPage />} />
+        <Route path="/catalog/:id" element={<CatalogFormPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
