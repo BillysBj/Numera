@@ -229,6 +229,75 @@ public static class SalesDocumentEndpoints
             return Results.NoContent();
         });
 
+        // POST /api/documents/{id}/convert — copy-forward the chain (DOCS-01).
+        // Creates a NEW Draft of the target type copying header + lines from the source
+        // and setting source_document_id. Any source status converts freely (a finalized
+        // Angebot can become a Rechnung draft); RESEARCH.md permits any target type in v1.
+        g.MapPost("/{id:guid}/convert", async (
+            Guid id,
+            ConvertDocumentRequest req,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            CancellationToken ct) =>
+        {
+            var source = await db.Set<SalesDocument>()
+                .AsNoTracking()
+                .Include(x => x.Lines)
+                .FirstOrDefaultAsync(x => x.Id == id, ct)
+                .ConfigureAwait(false);
+            if (source is null)
+            {
+                return Results.NotFound();
+            }
+
+            var tenantId = tenant.TenantId!.Value;
+            var doc = new SalesDocument
+            {
+                TenantId = tenantId,
+                DocumentType = req.TargetType,
+                Status = DocumentStatus.Draft,
+                DocumentNumber = null,
+                SourceDocumentId = source.Id,
+                PartnerId = source.PartnerId,
+                DocumentDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                Notes = source.Notes,
+                BuyerReference = source.BuyerReference,
+                Currency = source.Currency,
+            };
+
+            // Copy lines forward as fresh rows (new ids, same snapshot fields + order).
+            foreach (var l in source.Lines.OrderBy(l => l.LineNumber))
+            {
+                doc.Lines.Add(new SalesDocumentLine
+                {
+                    TenantId = tenantId,
+                    DocumentId = doc.Id,
+                    LineNumber = l.LineNumber,
+                    CatalogItemId = l.CatalogItemId,
+                    Name = l.Name,
+                    Description = l.Description,
+                    Quantity = l.Quantity,
+                    UnitCode = l.UnitCode,
+                    NetUnitPrice = l.NetUnitPrice,
+                    LineNetAmount = l.LineNetAmount,
+                    TaxCategory = l.TaxCategory,
+                    VatRatePercent = l.VatRatePercent,
+                });
+            }
+
+            doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
+
+            db.Add(doc);
+            await audit.RecordAsync(
+                new SalesDocumentAuditEvent("sales_document.converted", doc.Id, Before: null, After: Snapshot(doc)), ct)
+                .ConfigureAwait(false);
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/documents/{doc.Id}", new { doc.Id });
+        });
+
         return app;
     }
 
