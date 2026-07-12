@@ -5,11 +5,11 @@
 See: .planning/PROJECT.md (updated 2026-07-09)
 
 **Core value:** Ein Unternehmen erledigt seine komplette Auftrags- und Finanzverwaltung — von der Rechnung inkl. gesetzlicher E-Rechnung bis zur Buchhaltung — rechtskonform (GoBD, E-Rechnungspflicht) an einem Ort, auf jedem Gerät.
-**Current focus:** Phase 2 — Stammdaten
+**Current focus:** Phase 3 — Belegkette & Rechnungskern (next to plan)
 
 ## Current Position
 
-Phase: 2 of 9 (Stammdaten) — COMPLETE (7/7) — READY FOR VERIFICATION
+Phase: 2 of 9 (Stammdaten) — ✓ COMPLETE + VERIFIED (4/4 must-haves). Ready to plan Phase 3.
 Plan: 7 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-07)
 Status: Phase 2 complete. The final wave (02-07, web/* only) delivered the catalog (Artikelstamm) frontend over the 02-05 API, reusing the 02-06 UI stack with zero new deps: a typed catalog BFF client (lib/api/catalog.ts — CRUD + archive + the lookupCatalogItems CATL-02 picker seam), a curated UN/ECE Rec 20 code→German label map mirroring the server UnitOfMeasure set, a server-side paginated/searchable list with an archived toggle (shared DataTable, now namespace-aware via an optional translationNs prop), and an RHF+zod create/edit form (unit dropdown, TaxCategory, VAT rate, cost price) whose rules mirror the 02-05 FluentValidation and whose 400/409 (duplicate article number) map onto fields, plus archive/unarchive (no delete). New catalog i18n namespace (DE default + EN). PWA /api NetworkOnly posture untouched. Both partner (CRM-01/02/03) and catalog (CATL-01) management are usable end-to-end from the UI; the CATL-02 lookup seam is exported for Phase 3. Ready for phase verification, then Phase 3 (Belege/Rechnungen).
 Last activity: 2026-07-12 — Executed 02-07 (catalog frontend, web/* only): lib/api/catalog.ts (typed CRUD/archive + lookupCatalogItems picker), features/catalog/units.ts (UN/ECE Rec 20 labels), CatalogListPage (server-side list), CatalogFormPage (RHF+zod, unit dropdown, kind-driven default unit, 400/409 field mapping, archive), catalogSchema (+10 unit tests), catalog DE/EN locales; DataTable gained an optional translationNs prop; App.tsx +3 /catalog* routes + nav. Build green; vitest 22/22. 1 deviation (Rule-1 bug: DataTable pager showed partner wording on the catalog list → optional translationNs prop, backward-compatible). Commits b3d84f1, 2f8dac5.

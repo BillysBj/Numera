@@ -21,16 +21,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Kunden, Lieferanten & CRM (CRM)
 
-- [ ] **CRM-01**: Nutzer kann Kunden und Lieferanten mit Stammdaten anlegen, bearbeiten und archivieren (Anschrift, USt-ID, Zahlungsbedingungen, Kontakte)
-- [ ] **CRM-02**: Nutzer sieht pro Kunde eine Historie aller Belege und Aktivitäten
-- [ ] **CRM-03**: Nutzer kann Notizen an Kunden/Lieferanten anheften
+- [x] **CRM-01**: Nutzer kann Kunden und Lieferanten mit Stammdaten anlegen, bearbeiten und archivieren (Anschrift, USt-ID, Zahlungsbedingungen, Kontakte)
+- [x] **CRM-02**: Nutzer sieht pro Kunde eine Historie aller Belege und Aktivitäten
+- [x] **CRM-03**: Nutzer kann Notizen an Kunden/Lieferanten anheften
 - [ ] **CRM-04**: Nutzer kann Aufgaben mit Erinnerungen/Fälligkeiten zu Kunden anlegen
 - [ ] **CRM-05**: Nutzer kann Dateien am Kunden ablegen (Kundenakte)
 
 ### Produktkatalog (CATL)
 
-- [ ] **CATL-01**: Nutzer kann Standardprodukte und -services mit Preis, Einheit und USt-Satz verwalten
-- [ ] **CATL-02**: Nutzer kann Katalogeinträge als Positionen in Belege übernehmen
+- [x] **CATL-01**: Nutzer kann Standardprodukte und -services mit Preis, Einheit und USt-Satz verwalten
+- [x] **CATL-02**: Nutzer kann Katalogeinträge als Positionen in Belege übernehmen
 
 ### Belegkette & Dokumente (DOCS)
 
@@ -126,11 +126,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLAT-06 | Phase 1 | Complete |
 | PLAT-07 | Phase 1 | Complete |
 | PLAT-09 | Phase 1 | Complete |
-| CRM-01 | Phase 2 | Pending |
-| CRM-02 | Phase 2 | Pending |
-| CRM-03 | Phase 2 | Pending |
-| CATL-01 | Phase 2 | Pending |
-| CATL-02 | Phase 2 | Pending |
+| CRM-01 | Phase 2 | Complete |
+| CRM-02 | Phase 2 | Complete |
+| CRM-03 | Phase 2 | Complete |
+| CATL-01 | Phase 2 | Complete |
+| CATL-02 | Phase 2 | Complete |
 | DOCS-01 | Phase 3 | Pending |
 | DOCS-04 | Phase 3 | Pending |
 | INV-01 | Phase 3 | Pending |

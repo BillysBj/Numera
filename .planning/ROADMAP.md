@@ -13,7 +13,7 @@ Numera wird von den nicht-nachrüstbaren Fundamenten her aufgebaut: Zuerst der P
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Plattform-Kern** - Multi-Tenant-Fundament: Auth, RLS-Isolation, Geldtyp, Audit-Log, Tarif-Gates, i18n, PWA-Shell ✓ 2026-07-10
-- [ ] **Phase 2: Stammdaten** - Kunden/Lieferanten (Stammdaten, Historie, Notizen) und Produktkatalog
+- [x] **Phase 2: Stammdaten** - Kunden/Lieferanten (Stammdaten, Historie, Notizen) und Produktkatalog ✓ 2026-07-12
 - [ ] **Phase 3: Belegkette & Rechnungskern** - Angebot→Rechnung-Kette, Unveränderbarkeit, Nummernvergabe, USt-Kategorien, offene Posten
 - [ ] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand
 - [ ] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen
@@ -59,13 +59,13 @@ Plans:
 **Plans**: 7 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — EF Core 10 named query filters (Tenant + NotArchived) + IArchivable marker in Platform.Db
-- [ ] 02-02-PLAN.md — Numera.Modules.Crm (BusinessPartner + contacts/notes/activities) + _Crm migration with per-table RLS + RLS/VAT-ID tests
-- [ ] 02-03-PLAN.md — Numera.Modules.Catalog (CatalogItem + UN/ECE Rec 20 units) + _Catalog migration with RLS + per-tenant unique article-number + RLS tests
-- [ ] 02-04-PLAN.md — Partner backend API (CRUD + archive + contacts + notes + activity timeline) + FluentValidation (CRM-01/02/03)
-- [ ] 02-05-PLAN.md — Catalog backend API (CRUD + archive + CatalogLineItem picker seam) (CATL-01/02)
-- [ ] 02-06-PLAN.md — Frontend UI stack (Tailwind v4/shadcn/TanStack Table/RHF/zod) + partner list/form/detail + partners i18n
-- [ ] 02-07-PLAN.md — Catalog frontend (list + form with UN/ECE unit dropdown) + catalog i18n
+- [x] 02-01-PLAN.md — EF Core 10 named query filters (Tenant + NotArchived) + IArchivable marker in Platform.Db
+- [x] 02-02-PLAN.md — Numera.Modules.Crm (BusinessPartner + contacts/notes/activities) + _Crm migration with per-table RLS + RLS/VAT-ID tests
+- [x] 02-03-PLAN.md — Numera.Modules.Catalog (CatalogItem + UN/ECE Rec 20 units) + _Catalog migration with RLS + per-tenant unique article-number + RLS tests
+- [x] 02-04-PLAN.md — Partner backend API (CRUD + archive + contacts + notes + activity timeline) + FluentValidation (CRM-01/02/03)
+- [x] 02-05-PLAN.md — Catalog backend API (CRUD + archive + CatalogLineItem picker seam) (CATL-01/02)
+- [x] 02-06-PLAN.md — Frontend UI stack (Tailwind v4/shadcn/TanStack Table/RHF/zod) + partner list/form/detail + partners i18n
+- [x] 02-07-PLAN.md — Catalog frontend (list + form with UN/ECE unit dropdown) + catalog i18n
 
 ### Phase 3: Belegkette & Rechnungskern
 **Goal**: Nutzer kann rechtskonforme, unveränderbare Rechnungen mit korrekter USt-Behandlung erzeugen — das Herz von v1, inklusive der zweiten „jetzt oder nie"-Naht (Unveränderbarkeit + Nummernvergabe).
@@ -172,8 +172,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Plattform-Kern | 8/8 | ✓ Complete | 2026-07-10 |
-| 2. Stammdaten | 0/TBD | Next | - |
-| 3. Belegkette & Rechnungskern | 0/TBD | Not started | - |
+| 2. Stammdaten | 7/7 | ✓ Complete | 2026-07-12 |
+| 3. Belegkette & Rechnungskern | 0/TBD | Next | - |
 | 4. PDF & Versand | 0/TBD | Not started | - |
 | 5. E-Rechnung-Engine | 0/TBD | Not started | - |
 | 6. Offene Posten & Mahnwesen | 0/TBD | Not started | - |
