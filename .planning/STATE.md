@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-07-09)
 
 **Core value:** Ein Unternehmen erledigt seine komplette Auftrags- und Finanzverwaltung — von der Rechnung inkl. gesetzlicher E-Rechnung bis zur Buchhaltung — rechtskonform (GoBD, E-Rechnungspflicht) an einem Ort, auf jedem Gerät.
-**Current focus:** Phase 3 — Belegkette & Rechnungskern (next to plan)
+**Current focus:** Phase 3 — Belegkette & Rechnungskern (in progress, 1/10 plans)
 
 ## Current Position
 
-Phase: 2 of 9 (Stammdaten) — ✓ COMPLETE + VERIFIED (4/4 must-haves). Ready to plan Phase 3.
-Plan: 7 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-07)
-Status: Phase 2 complete. The final wave (02-07, web/* only) delivered the catalog (Artikelstamm) frontend over the 02-05 API, reusing the 02-06 UI stack with zero new deps: a typed catalog BFF client (lib/api/catalog.ts — CRUD + archive + the lookupCatalogItems CATL-02 picker seam), a curated UN/ECE Rec 20 code→German label map mirroring the server UnitOfMeasure set, a server-side paginated/searchable list with an archived toggle (shared DataTable, now namespace-aware via an optional translationNs prop), and an RHF+zod create/edit form (unit dropdown, TaxCategory, VAT rate, cost price) whose rules mirror the 02-05 FluentValidation and whose 400/409 (duplicate article number) map onto fields, plus archive/unarchive (no delete). New catalog i18n namespace (DE default + EN). PWA /api NetworkOnly posture untouched. Both partner (CRM-01/02/03) and catalog (CATL-01) management are usable end-to-end from the UI; the CATL-02 lookup seam is exported for Phase 3. Ready for phase verification, then Phase 3 (Belege/Rechnungen).
-Last activity: 2026-07-12 — Executed 02-07 (catalog frontend, web/* only): lib/api/catalog.ts (typed CRUD/archive + lookupCatalogItems picker), features/catalog/units.ts (UN/ECE Rec 20 labels), CatalogListPage (server-side list), CatalogFormPage (RHF+zod, unit dropdown, kind-driven default unit, 400/409 field mapping, archive), catalogSchema (+10 unit tests), catalog DE/EN locales; DataTable gained an optional translationNs prop; App.tsx +3 /catalog* routes + nav. Build green; vitest 22/22. 1 deviation (Rule-1 bug: DataTable pager showed partner wording on the catalog list → optional translationNs prop, backward-compatible). Commits b3d84f1, 2f8dac5.
+Phase: 3 of 9 (Belegkette & Rechnungskern) — IN PROGRESS (1/10 plans complete).
+Plan: 1 of 10 complete (03-01)
+Status: 03-01 landed the first vertical slice — the new Numera.Modules.Sales project (wired once into the sln, Api host, and both test projects) plus the §14 UStG issuer master data the lean tenants table lacks. CompanyProfile is an ITenantEntity (legal name, local owned BG-5 Address, USt-IdNr/Steuernummer, §19 Kleinunternehmer flag, plus nullable bank/registry/contact seams) with a UNIQUE tenant_id index (exactly one profile per tenant, doubling as the tenant-leading access index). Migration #1 of Phase 3 (_CompanyProfile) carries hand-written ENABLE+FORCE+tenant_isolation RLS and landed alone in its wave for a clean snapshot chain. GET + PUT (upsert — creates on first write, GET returns an all-nulls editable shell) /api/company-profile enforce §14 validation (legal name + billing address + EXACTLY ONE of VatId/TaxNumber; DE USt-IdNr shape-checked inline). CompanyProfileRlsTests prove cross-tenant isolation on real postgres:18 as numera_app (hard gate). Build green; full suite 28 integration + 43 platform green. This is the issuer data source plan 03-05 (finalize) will snapshot onto invoices (INV-01).
+Last activity: 2026-07-12 — Executed 03-01 (Sales module + CompanyProfile): new Numera.Modules.Sales project + wiring, CompanyProfile ITenantEntity + local owned Address, _CompanyProfile migration with hand-written RLS + unique tenant_id index, GET/PUT-upsert /api/company-profile + §14 validators, CompanyProfileRlsTests (3 tests). 1 deviation (Rule-3 blocking: duplicate AddressDto collision → reused the existing shared PartnerContracts AddressDto). Commits c9876df, 8090fe3, 2428a0f.
 
-Progress: [███████] 100% (Phase 2 of 9 — 7/7 plans complete)
+Progress: [█▁▁▁▁▁▁▁▁▁] 10% (Phase 3 of 9 — 1/10 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (Phase 1: 01-01 … 01-08; Phase 2: 02-01 … 02-07)
-- Average duration: ~25 min (over 14 recorded plans; 01-03 not recorded)
-- Total execution time: ~5.8 hours (recorded plans)
+- Total plans completed: 16 (Phase 1: 01-01 … 01-08; Phase 2: 02-01 … 02-07; Phase 3: 03-01)
+- Average duration: ~24 min (over 15 recorded plans; 01-03 not recorded)
+- Total execution time: ~6.0 hours (recorded plans)
 
 **By Phase:**
 
@@ -29,6 +29,13 @@ Progress: [███████] 100% (Phase 2 of 9 — 7/7 plans complete)
 |-------|-------|-------|----------|
 | 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
 | 02-stammdaten | 7 of 7 | ~131 min | ~19 min |
+| 03-belegkette-rechnungskern | 1 of 10 | ~9 min | ~9 min |
+
+**Per-Plan (Phase 03):**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| 03-01 | 9 min | 3 | 15 |
 
 **Per-Plan (Phase 02):**
 
@@ -92,6 +99,8 @@ Recent decisions affecting current work:
 - [Phase 02-stammdaten]: 02-04: partner API uses the atomic mutate->audit->activity pattern — one SaveChangesAsync commits the entity change, the AuditEvent (via IAuditWriter) AND the PartnerActivity together. IAuditWriter takes an IAuditEvent, so a small internal PartnerAuditEvent : IAuditEvent adapter carries action + JSON before/after snapshots (writer still stamps tenant + actor). No hard-delete route for partners (archive-only); contacts/notes are hard-deletable GoBD-irrelevant child data. Notes/contacts write no audit event, but note-create appends a NoteAdded timeline entry.
 - [Phase 02-stammdaten]: 02-04: archived partners stay reachable by id — GET-by-id, PUT, archive/unarchive and existence checks IgnoreQueryFilters([NotArchivedFilter]) (keeps tenant filter + RLS); only the default list hides archived rows, the list's archived=true toggle reveals them. FluentValidation registered once via AddValidatorsFromAssemblyContaining<Program>() so later Api-assembly validators (02-05 Catalog) need no DI edit; validators live in the Api project, not the modules.
 - [Phase 02-stammdaten]: 02-07: catalog frontend reuses the 02-06 UI stack with ZERO new deps. The shared DataTable was made namespace-aware via an optional `translationNs` prop (default 'partners') so the catalog and partner lists share one server-side table without partner-string leakage — backward-compatible, no partner churn. Catalog has NO detail page (no notes/timeline), so `/catalog/:id` opens the form in edit mode. Catalog enums cross the wire as NUMBERS (CatalogItemKind Product=1/Service=2; TaxCategory reused S=0..O=6). The unit dropdown offers only the curated UN/ECE Rec 20 codes; switching kind snaps the unit to the kind default (C62 product / HUR service), mirroring UnitOfMeasure.DefaultFor. The catalog form maps BOTH 400 ValidationProblem and the 409 duplicate-article-number Conflict onto RHF fields (local extractor, since the shared partner extractor only handles 400). lookupCatalogItems(q) is exported as the fixed CATL-02 frontend boundary Phase-3 invoice-line UI imports (hits ?picker=true, snapshots CatalogLineItem onto a line).
+- [Phase 03-belegkette-rechnungskern]: 03-01: new Numera.Modules.Sales project holds the §14 UStG issuer master data the lean tenants table lacks. Sales.Address is a LOCAL [Owned] value type deliberately duplicated from Crm.Address (modules must not reference each other, RESEARCH.md Q4 — duplicate a small value type over a cross-module dependency). A tenant has EXACTLY ONE company_profile, enforced by a UNIQUE index on tenant_id that also serves as the tenant-leading access index (reflective RegisterModuleTenantEntities therefore adds no second index). Migration #1 of Phase 3 landed alone in its wave so the snapshot chains cleanly.
+- [Phase 03-belegkette-rechnungskern]: 03-01: /api/company-profile PUT is an UPSERT (creates on first write, updates thereafter) so one verb serves the settings form's create+edit; GET returns an all-nulls editable shell when no profile exists yet. §14 requires EXACTLY ONE of VatId/TaxNumber (FluentValidation XOR Must); DE USt-IdNr is shape-checked inline (^DE[1-9]\d{8}$) — the full ISO 7064 checksum in Crm.VatId is NOT reused to keep Sales module-isolated. Reused the existing shared AddressDto (PartnerContracts) rather than defining a duplicate (Rule-3 deviation: CS0101 collision, same namespace + identical BG-5 shape). Follows the 02-04/02-05 mutate->audit->single-SaveChanges idiom; validators auto-register via AddValidatorsFromAssemblyContaining<Program>() (no DI edit). This is the issuer source plan 03-05 (finalize) snapshots onto invoices (INV-01).
 - [Phase 02-stammdaten]: 02-05: the CATL-02 seam is CatalogLineItem — a picker flag on the list route (GET /api/catalog-items?picker=true) returns a capped CatalogLineItem[] (number, name, unit code, net price, tax category, VAT rate) that Phase-3's invoice line editor SNAPSHOTS onto the line at creation; the catalog is not the source of truth once a line exists (editing/archiving an item never mutates a posted line). Keep the shape additive-only. Duplicate (tenant_id,item_number) among non-archived rows -> Postgres 23505 caught as DbUpdateException+PostgresException{UniqueViolation} -> 409 ValidationProblem (never a 500). Blank unit defaulted via UnitOfMeasure.DefaultFor(Kind) at the endpoint; catalog has no activity timeline so handlers take no ICurrentUser (audit still stamps the actor). 02-05 mirrored 02-04 exactly — zero DI edits, only app.MapCatalogEndpoints() appended.
 
 ### Pending Todos
@@ -110,7 +119,7 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 ## Session Continuity
 
 Last session: 2026-07-12
-Stopped at: Completed 02-07-PLAN.md (Phase 2 wave 6, final) — catalog (Artikelstamm) frontend (web/* only): lib/api/catalog.ts (typed CRUD/archive + lookupCatalogItems CATL-02 picker seam), features/catalog/units.ts (UN/ECE Rec 20 code→German labels), CatalogListPage (server-side list, archived toggle), CatalogFormPage (RHF+zod, unit dropdown, kind-driven default unit, TaxCategory/VAT/cost, archive, 400/409 field mapping), catalogSchema (+10 unit tests), catalog DE/EN i18n; DataTable gained an optional translationNs prop; App.tsx +3 /catalog* routes + nav. Build green; vitest 22/22. Commits b3d84f1, 2f8dac5. PHASE 2 COMPLETE (7/7) — ready for phase verification.
+Stopped at: Completed 03-01-PLAN.md (Phase 3 wave 1) — Numera.Modules.Sales project + §14 CompanyProfile issuer master data. Created the Sales project (wired into sln + Api + both test projects), CompanyProfile ITenantEntity (legal name, local owned BG-5 Address, VatId/TaxNumber, §19 Kleinunternehmer flag, bank/registry/contact seams, unique tenant_id index), _CompanyProfile migration (#1 of Phase 3) with hand-written ENABLE+FORCE+tenant_isolation RLS, GET/PUT-upsert /api/company-profile + §14 validators (legal name + address + XOR tax id), CompanyProfileRlsTests (3 tests, cross-tenant isolation hard gate). Build green; full suite 28 integration + 43 platform green. 1 deviation (Rule-3 blocking: duplicate AddressDto collision → reused shared PartnerContracts AddressDto). Commits c9876df, 8090fe3, 2428a0f.
 Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless the user-local dotnet dir (/c/Users/Admin/AppData/Local/Microsoft/dotnet) is prepended to PATH with DOTNET_ROOT + DOTNET_MULTILEVEL_LOOKUP=0 — note $LOCALAPPDATA is empty under Git Bash, use the absolute path. gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
 Resume file: None
-Next: Phase 2 verification (verifier workflow), then Phase 3 (Belege/Rechnungen) — the invoice-line editor imports lookupCatalogItems (?picker=true) and snapshots CatalogLineItem onto lines; Phase-3 also lands unveränderbarkeit + Nummernvergabe (non-retrofittable foundations).
+Next: Phase 3 plan 03-02 (per the 7-wave plan). Numera.Modules.Sales is now the home for the invoice/document entities the rest of Phase 3 adds; its project references are wired once. company_profile is the issuer source plan 03-05 (finalize) snapshots onto invoices (INV-01). Phase-3 also lands unveränderbarkeit + Nummernvergabe (non-retrofittable foundations); the invoice-line editor imports lookupCatalogItems (?picker=true) and snapshots CatalogLineItem onto lines.
