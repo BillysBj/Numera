@@ -1,0 +1,14 @@
+{
+  "description": "Document-level proof of round-per-category-then-sum (EN 16931 BR-CO-14). 1.50 @ 19% = 0.285 -> 0.29 and 1.50 @ 7% = 0.105 -> 0.11; sum of rounded = 0.40. Rounding the combined un-rounded VAT (0.285 + 0.105 = 0.39) would give 0.39 — the service must NEVER do that.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "S", "ratePercent": 19, "lineNetAmount": 1.50 },
+    { "category": "S", "ratePercent": 7, "lineNetAmount": 1.50 }
+  ],
+  "expectedRows": [
+    { "category": "S", "ratePercent": 19, "taxableBase": 1.50, "taxAmount": 0.29, "exemptionCode": null, "exemptionText": null },
+    { "category": "S", "ratePercent": 7, "taxableBase": 1.50, "taxAmount": 0.11, "exemptionCode": null, "exemptionText": null }
+  ],
+  "expectedDocumentVatTotal": 0.40,
+  "naiveRoundOfGrandTotal": 0.39
+}

@@ -1,0 +1,11 @@
+{
+  "description": "§13b reverse charge: one AE line, rate forced to 0, zero tax, carries VATEX-EU-AE + the mandatory Steuerschuldnerschaft note.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "AE", "ratePercent": 0, "lineNetAmount": 1000.00 }
+  ],
+  "expectedRows": [
+    { "category": "AE", "ratePercent": 0, "taxableBase": 1000.00, "taxAmount": 0.00, "exemptionCode": "VATEX-EU-AE", "exemptionText": "Steuerschuldnerschaft des Leistungsempfängers (§13b UStG)" }
+  ],
+  "expectedDocumentVatTotal": 0.00
+}

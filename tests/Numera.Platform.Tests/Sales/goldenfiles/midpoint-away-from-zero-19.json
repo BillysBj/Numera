@@ -1,0 +1,12 @@
+{
+  "description": "Rounding edge: 1.50 net @ 19% = 0.285 exactly, a true midpoint whose preceding digit (8) is even. Half-away-from-zero rounds UP to 0.29; banker's ToEven would give 0.28. Proves the service delegates to RoundingPolicy.RoundTax (kaufmaennisch), not Math.Round ToEven.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "S", "ratePercent": 19, "lineNetAmount": 1.50 }
+  ],
+  "expectedRows": [
+    { "category": "S", "ratePercent": 19, "taxableBase": 1.50, "taxAmount": 0.29, "exemptionCode": null, "exemptionText": null }
+  ],
+  "expectedDocumentVatTotal": 0.29,
+  "naiveToEvenTax": 0.28
+}

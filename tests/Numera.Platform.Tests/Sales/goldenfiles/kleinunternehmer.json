@@ -1,0 +1,11 @@
+{
+  "description": "Kleinunternehmer §19 is document-wide (issuer property). The flag overrides per-line categories: a 19% line collapses into ONE category-E, rate-0 bucket with the sum of all line nets, zero tax, and the §19 note. doc VAT = 0.",
+  "isKleinunternehmer": true,
+  "lines": [
+    { "category": "S", "ratePercent": 19, "lineNetAmount": 100.00 }
+  ],
+  "expectedRows": [
+    { "category": "E", "ratePercent": 0, "taxableBase": 100.00, "taxAmount": 0.00, "exemptionCode": "VATEX-EU-D", "exemptionText": "Kein Ausweis von Umsatzsteuer, da Kleinunternehmer gemäß §19 UStG" }
+  ],
+  "expectedDocumentVatTotal": 0.00
+}

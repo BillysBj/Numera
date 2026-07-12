@@ -37,6 +37,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>Money\goldenfiles\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
+    <None Include="Sales\goldenfiles\**\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Sales\goldenfiles\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
   </ItemGroup>
 
 </Project>

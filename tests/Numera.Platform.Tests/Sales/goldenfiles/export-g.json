@@ -1,0 +1,11 @@
+{
+  "description": "Ausfuhrlieferung (export): one G line, rate 0, zero tax, VATEX-EU-G + the §4 Nr. 1a / §6 note.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "G", "ratePercent": 0, "lineNetAmount": 800.00 }
+  ],
+  "expectedRows": [
+    { "category": "G", "ratePercent": 0, "taxableBase": 800.00, "taxAmount": 0.00, "exemptionCode": "VATEX-EU-G", "exemptionText": "Steuerfreie Ausfuhrlieferung (§4 Nr. 1a i.V.m. §6 UStG)" }
+  ],
+  "expectedDocumentVatTotal": 0.00
+}

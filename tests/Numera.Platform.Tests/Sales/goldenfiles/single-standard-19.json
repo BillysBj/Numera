@@ -1,0 +1,11 @@
+{
+  "description": "Single 19% standard-rated line: base = net, tax = 19%, doc VAT = category tax.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "S", "ratePercent": 19, "lineNetAmount": 100.00 }
+  ],
+  "expectedRows": [
+    { "category": "S", "ratePercent": 19, "taxableBase": 100.00, "taxAmount": 19.00, "exemptionCode": null, "exemptionText": null }
+  ],
+  "expectedDocumentVatTotal": 19.00
+}

@@ -1,0 +1,13 @@
+{
+  "description": "Mixed document: one 19% and one 7% standard line bucket into two BG-23 rows; doc VAT = sum of the two rounded category amounts.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "S", "ratePercent": 19, "lineNetAmount": 100.00 },
+    { "category": "S", "ratePercent": 7, "lineNetAmount": 50.00 }
+  ],
+  "expectedRows": [
+    { "category": "S", "ratePercent": 19, "taxableBase": 100.00, "taxAmount": 19.00, "exemptionCode": null, "exemptionText": null },
+    { "category": "S", "ratePercent": 7, "taxableBase": 50.00, "taxAmount": 3.50, "exemptionCode": null, "exemptionText": null }
+  ],
+  "expectedDocumentVatTotal": 22.50
+}

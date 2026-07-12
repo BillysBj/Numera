@@ -1,0 +1,11 @@
+{
+  "description": "Innergemeinschaftliche Lieferung: one K line, rate 0, zero tax, VATEX-EU-IC + the §4 Nr. 1b / §6a note.",
+  "isKleinunternehmer": false,
+  "lines": [
+    { "category": "K", "ratePercent": 0, "lineNetAmount": 500.00 }
+  ],
+  "expectedRows": [
+    { "category": "K", "ratePercent": 0, "taxableBase": 500.00, "taxAmount": 0.00, "exemptionCode": "VATEX-EU-IC", "exemptionText": "Steuerfreie innergemeinschaftliche Lieferung (§4 Nr. 1b i.V.m. §6a UStG)" }
+  ],
+  "expectedDocumentVatTotal": 0.00
+}
