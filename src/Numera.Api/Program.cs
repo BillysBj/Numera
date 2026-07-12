@@ -86,5 +86,6 @@ app.MapAuthEndpoints();
 app.MapMeEndpoints();
 app.MapPartnerEndpoints();
 app.MapCatalogEndpoints();
+app.MapCompanyProfileEndpoints();
 
 app.Run();
