@@ -9,26 +9,26 @@ See: .planning/PROJECT.md (updated 2026-07-09)
 
 ## Current Position
 
-Phase: 2 of 9 (Stammdaten) — IN PROGRESS
-Plan: 6 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05, 02-06)
-Status: Phase 2 wave 5 delivered — the FIRST frontend plan. The Phase-2 UI stack (Tailwind v4 as a Vite plugin, hand-authored shadcn/ui primitives with no Radix, TanStack Table v8, react-hook-form + zod) is installed and building, plus the full partner management UI over the 02-04 cookie-BFF API: a server-side paginated/searchable/role-filterable list (shared DataTable, manual* + rowCount=total), an RHF+zod create/edit form whose rules mirror the server FluentValidation and whose 400 ValidationProblem maps back onto fields, and a detail page with contacts CRUD, notes (CRM-03), the activity timeline (CRM-02) and archive/unarchive. New partners i18n namespace (DE default + EN). PWA /api NetworkOnly posture untouched. Ready for 02-07 (catalog frontend), which appends to App.tsx/i18n/index.css after this plan and reuses the shared DataTable + ui/* primitives.
-Last activity: 2026-07-11 — Executed 02-06 (frontend, web/* only, parallel with 02-05 backend): UI stack config (@tailwindcss/vite + @/ alias + shadcn tokens + 11 ui/* primitives + DataTable), lib/api/partners.ts (typed CRUD/archive/contacts/notes/activities, numeric enum maps, extractValidationErrors), PartnerListPage/FormPage/DetailPage, partnerSchema (+8 unit tests), partners DE/EN locales. Build green; typecheck clean; vitest 12/12. 4 deviations (2 Rule-3 blocking: @types/node for the vite alias, union-typed contact mutation; 2 Rule-1 bugs: shipping validated when toggle off, TextField dropped RHF ref). Commits e2fe8c8, b324cf0, 4023be5.
+Phase: 2 of 9 (Stammdaten) — COMPLETE (7/7) — READY FOR VERIFICATION
+Plan: 7 of 7 complete (02-01, 02-02, 02-03, 02-04, 02-05, 02-06, 02-07)
+Status: Phase 2 complete. The final wave (02-07, web/* only) delivered the catalog (Artikelstamm) frontend over the 02-05 API, reusing the 02-06 UI stack with zero new deps: a typed catalog BFF client (lib/api/catalog.ts — CRUD + archive + the lookupCatalogItems CATL-02 picker seam), a curated UN/ECE Rec 20 code→German label map mirroring the server UnitOfMeasure set, a server-side paginated/searchable list with an archived toggle (shared DataTable, now namespace-aware via an optional translationNs prop), and an RHF+zod create/edit form (unit dropdown, TaxCategory, VAT rate, cost price) whose rules mirror the 02-05 FluentValidation and whose 400/409 (duplicate article number) map onto fields, plus archive/unarchive (no delete). New catalog i18n namespace (DE default + EN). PWA /api NetworkOnly posture untouched. Both partner (CRM-01/02/03) and catalog (CATL-01) management are usable end-to-end from the UI; the CATL-02 lookup seam is exported for Phase 3. Ready for phase verification, then Phase 3 (Belege/Rechnungen).
+Last activity: 2026-07-12 — Executed 02-07 (catalog frontend, web/* only): lib/api/catalog.ts (typed CRUD/archive + lookupCatalogItems picker), features/catalog/units.ts (UN/ECE Rec 20 labels), CatalogListPage (server-side list), CatalogFormPage (RHF+zod, unit dropdown, kind-driven default unit, 400/409 field mapping, archive), catalogSchema (+10 unit tests), catalog DE/EN locales; DataTable gained an optional translationNs prop; App.tsx +3 /catalog* routes + nav. Build green; vitest 22/22. 1 deviation (Rule-1 bug: DataTable pager showed partner wording on the catalog list → optional translationNs prop, backward-compatible). Commits b3d84f1, 2f8dac5.
 
-Progress: [█████░░] 71% (Phase 2 of 9 — 6/7 plans)
+Progress: [███████] 100% (Phase 2 of 9 — 7/7 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8 (Phase 1: 01-01 … 01-08)
-- Average duration: ~31 min (over 7 recorded plans; 01-03 not recorded)
-- Total execution time: ~3.6 hours (recorded plans)
+- Total plans completed: 15 (Phase 1: 01-01 … 01-08; Phase 2: 02-01 … 02-07)
+- Average duration: ~25 min (over 14 recorded plans; 01-03 not recorded)
+- Total execution time: ~5.8 hours (recorded plans)
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-plattform-kern | 8 | ~218 min (7 recorded) | ~31 min |
-| 02-stammdaten | 4 of 7 | ~83 min | ~21 min |
+| 02-stammdaten | 7 of 7 | ~131 min | ~19 min |
 
 **Per-Plan (Phase 02):**
 
@@ -39,6 +39,8 @@ Progress: [█████░░] 71% (Phase 2 of 9 — 6/7 plans)
 | 02-03 | 20 min | 3 | 14 |
 | 02-04 | 10 min | 3 | 5 |
 | 02-05 | 6 min | 2 | 4 |
+| 02-06 | 18 min | 3 | 30 |
+| 02-07 | 24 min | 2 | 11 |
 
 **Per-Plan (Phase 01):**
 
@@ -54,11 +56,10 @@ Progress: [█████░░] 71% (Phase 2 of 9 — 6/7 plans)
 | 01-08 | 60 min | 3 (2 code) | 7 |
 
 **Recent Trend:**
-- Last 5 plans: 10, 15, 45, 18, 60 min
-- Trend: stable; 01-08 longer due to the human-verify checkpoint
+- Last 5 plans: 10 (02-04), 6 (02-05), 18 (02-06), 24 (02-07) — frontend plans; stable
+- Trend: stable; the two Phase-2 frontend plans (02-06/02-07) ran ~18–24 min each
 
 *Updated after each plan completion*
-| Phase 02 P02 | 50min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,7 @@ Recent decisions affecting current work:
 - [Phase 02-stammdaten]: 02-03: catalog prices are plain decimal [Precision(19,4)] columns (not an owned Money value object) — Money-precision numeric(19,4) with no owned-type mapping; article number unique per tenant only among non-archived rows (partial unique index), reusable across tenants and after archival; catalog_items RLS policy hand-written via migrationBuilder.Sql. The second Phase-2 table deliberately lands in its own wave so the two ef-migrations-add runs chain cleanly through the snapshot (no ordering race).
 - [Phase 02-stammdaten]: 02-04: partner API uses the atomic mutate->audit->activity pattern — one SaveChangesAsync commits the entity change, the AuditEvent (via IAuditWriter) AND the PartnerActivity together. IAuditWriter takes an IAuditEvent, so a small internal PartnerAuditEvent : IAuditEvent adapter carries action + JSON before/after snapshots (writer still stamps tenant + actor). No hard-delete route for partners (archive-only); contacts/notes are hard-deletable GoBD-irrelevant child data. Notes/contacts write no audit event, but note-create appends a NoteAdded timeline entry.
 - [Phase 02-stammdaten]: 02-04: archived partners stay reachable by id — GET-by-id, PUT, archive/unarchive and existence checks IgnoreQueryFilters([NotArchivedFilter]) (keeps tenant filter + RLS); only the default list hides archived rows, the list's archived=true toggle reveals them. FluentValidation registered once via AddValidatorsFromAssemblyContaining<Program>() so later Api-assembly validators (02-05 Catalog) need no DI edit; validators live in the Api project, not the modules.
+- [Phase 02-stammdaten]: 02-07: catalog frontend reuses the 02-06 UI stack with ZERO new deps. The shared DataTable was made namespace-aware via an optional `translationNs` prop (default 'partners') so the catalog and partner lists share one server-side table without partner-string leakage — backward-compatible, no partner churn. Catalog has NO detail page (no notes/timeline), so `/catalog/:id` opens the form in edit mode. Catalog enums cross the wire as NUMBERS (CatalogItemKind Product=1/Service=2; TaxCategory reused S=0..O=6). The unit dropdown offers only the curated UN/ECE Rec 20 codes; switching kind snaps the unit to the kind default (C62 product / HUR service), mirroring UnitOfMeasure.DefaultFor. The catalog form maps BOTH 400 ValidationProblem and the 409 duplicate-article-number Conflict onto RHF fields (local extractor, since the shared partner extractor only handles 400). lookupCatalogItems(q) is exported as the fixed CATL-02 frontend boundary Phase-3 invoice-line UI imports (hits ?picker=true, snapshots CatalogLineItem onto a line).
 - [Phase 02-stammdaten]: 02-05: the CATL-02 seam is CatalogLineItem — a picker flag on the list route (GET /api/catalog-items?picker=true) returns a capped CatalogLineItem[] (number, name, unit code, net price, tax category, VAT rate) that Phase-3's invoice line editor SNAPSHOTS onto the line at creation; the catalog is not the source of truth once a line exists (editing/archiving an item never mutates a posted line). Keep the shape additive-only. Duplicate (tenant_id,item_number) among non-archived rows -> Postgres 23505 caught as DbUpdateException+PostgresException{UniqueViolation} -> 409 ValidationProblem (never a 500). Blank unit defaulted via UnitOfMeasure.DefaultFor(Kind) at the endpoint; catalog has no activity timeline so handlers take no ICurrentUser (audit still stamps the actor). 02-05 mirrored 02-04 exactly — zero DI edits, only app.MapCatalogEndpoints() appended.
 
 ### Pending Todos
@@ -107,8 +109,8 @@ Offene Entscheidungen aus Research (nicht blockierend, aber vor betroffener Phas
 
 ## Session Continuity
 
-Last session: 2026-07-11
-Stopped at: Completed 02-05-PLAN.md (Phase 2 wave 5) — catalog (Artikelstamm) HTTP API (backend-only): CatalogContracts DTOs incl. the CatalogLineItem CATL-02 seam, CatalogValidators (FluentValidation), CatalogEndpoints (CRUD + archive + picker + duplicate->409). Only app.MapCatalogEndpoints() appended (validators auto-scanned by 02-04). Build 0/0, unit 43/43, integration 25/25. Commits aac2624, 678043e. (02-06 frontend ran in parallel in web/.)
+Last session: 2026-07-12
+Stopped at: Completed 02-07-PLAN.md (Phase 2 wave 6, final) — catalog (Artikelstamm) frontend (web/* only): lib/api/catalog.ts (typed CRUD/archive + lookupCatalogItems CATL-02 picker seam), features/catalog/units.ts (UN/ECE Rec 20 code→German labels), CatalogListPage (server-side list, archived toggle), CatalogFormPage (RHF+zod, unit dropdown, kind-driven default unit, TaxCategory/VAT/cost, archive, 400/409 field mapping), catalogSchema (+10 unit tests), catalog DE/EN i18n; DataTable gained an optional translationNs prop; App.tsx +3 /catalog* routes + nav. Build green; vitest 22/22. Commits b3d84f1, 2f8dac5. PHASE 2 COMPLETE (7/7) — ready for phase verification.
 Open caveats: no git remote yet, so the GitHub Actions workflow has never run live — validated locally only. Docker stack (postgres + keycloak) left running. Keycloak BFF client secret lives in dotnet user-secrets, not in the repo. Git Bash still resolves SDK 8.0.303 unless the user-local dotnet dir (/c/Users/Admin/AppData/Local/Microsoft/dotnet) is prepended to PATH with DOTNET_ROOT + DOTNET_MULTILEVEL_LOOKUP=0 — note $LOCALAPPDATA is empty under Git Bash, use the absolute path. gsd-tools `state` subcommands cannot parse this narrative STATE.md format — STATE.md is maintained by hand.
 Resume file: None
-Next: Execute the remaining Phase 2 wave — frontend stammdaten UI (02-06/02-07): partner + catalog management screens (TanStack Table manualPagination against {items,page,pageSize,total}; catalog item picker against ?picker=true).
+Next: Phase 2 verification (verifier workflow), then Phase 3 (Belege/Rechnungen) — the invoice-line editor imports lookupCatalogItems (?picker=true) and snapshots CatalogLineItem onto lines; Phase-3 also lands unveränderbarkeit + Nummernvergabe (non-retrofittable foundations).
