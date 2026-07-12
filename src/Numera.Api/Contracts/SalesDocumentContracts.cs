@@ -54,6 +54,13 @@ public sealed record SalesLineRequest(
 /// <summary>Body of <c>POST /api/documents/{id}/convert</c> — the target kind of the new draft.</summary>
 public sealed record ConvertDocumentRequest(DocumentType TargetType);
 
+/// <summary>
+/// Response of <c>POST /api/documents/{id}/storno</c> — the newly created Storno (EN 16931
+/// type 384). Unlike a credit note, the Storno is finalized in the same request, so it
+/// already carries its own <see cref="DocumentNumber"/> from the Storno series.
+/// </summary>
+public sealed record StornoResponse(Guid Id, string DocumentNumber);
+
 /// <summary>Compact projection for the paged document list (GET /api/documents).</summary>
 public sealed record SalesDocumentListItem(
     Guid Id,

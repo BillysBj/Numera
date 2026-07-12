@@ -360,72 +360,16 @@ public static class SalesDocumentEndpoints
             // The gate guarantees a non-null issuer profile beyond this point.
             var tenantId = tenant.TenantId!.Value;
 
+            // 3-7. Everything below runs inside ONE transaction via the shared finalize core
+            //      (extracted so Storno can reuse it, plan 03-06): freeze snapshots, persist the
+            //      BG-23 breakdown + frozen totals, assign the race-safe number, create the open
+            //      item (Rechnung only), then flip status LAST. The caller commits + publishes.
             await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
-
-            var before = Snapshot(doc);
-
-            // 3. Freeze issuer + recipient onto the document as jsonb (GoBD — a later master-data
-            //    edit must never mutate an issued invoice).
-            doc.IssuerSnapshot = SerializeIssuer(profile!);
-            doc.RecipientSnapshot = partner is null ? null : SerializeRecipient(partner);
-            doc.IsKleinunternehmer = profile!.IsKleinunternehmer;
-
-            // 4. VAT: bucket the lines into the BG-23 breakdown and persist one row per bucket.
-            var vatInputs = doc.Lines
-                .Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount));
-            var rows = VatCalculationService.Calculate(vatInputs, profile.IsKleinunternehmer);
-            foreach (var row in rows)
-            {
-                doc.TaxBreakdown.Add(new SalesDocumentTaxBreakdown
-                {
-                    TenantId = tenantId,
-                    DocumentId = doc.Id,
-                    TaxCategory = row.Category,
-                    VatRatePercent = row.RatePercent,
-                    TaxableBase = row.TaxableBase,
-                    TaxAmount = row.TaxAmount,
-                    ExemptionReasonCode = row.ExemptionCode,
-                    ExemptionReasonText = row.ExemptionText,
-                });
-            }
-
-            doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
-            doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
-            doc.TotalGross = doc.TotalNet + doc.TotalTax;
-            doc.AmountDue = doc.TotalGross;
-            doc.ReverseCharge = doc.Lines.Any(l => l.TaxCategory == TaxCategory.AE);
-
-            // 5. Number: atomic upsert-returning counter inside THIS transaction (Pattern 3).
-            doc.DocumentNumber = await numbering
-                .AssignAsync(doc.DocumentType, doc.DocumentDate.Year, ct)
-                .ConfigureAwait(false);
-
-            // 6. Due date + open item (OPDN-01). Only the Rechnung creates a receivable here;
-            //    Storno/Gutschrift handling (cancel/negate) lands in plan 03-06.
-            var netDays = partner?.PaymentTermsNetDays ?? profile.DefaultPaymentTermsNetDays ?? 14;
-            doc.DueDate = doc.DocumentDate.AddDays(netDays);
-
-            if (doc.DocumentType == DocumentType.Rechnung)
-            {
-                db.Add(BuildOpenItem(doc, partner, tenantId));
-            }
-
             try
             {
-                // 7. CRITICAL ordering (Pitfall 1): write the breakdown + all business columns
-                //    while status is still Draft so the child trigger sees the parent Draft.
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-                // Flip status LAST — the parent trigger allows this UPDATE because OLD.status = 0.
-                doc.Status = DocumentStatus.Finalized;
-                doc.FinalizedAt = DateTimeOffset.UtcNow;
-
-                // 8. Audit before the final SaveChanges (atomic with the status flip).
-                await audit.RecordAsync(
-                    new SalesDocumentAuditEvent("sales_document.finalized", doc.Id, before, Snapshot(doc)), ct)
-                    .ConfigureAwait(false);
-
-                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                await FinalizeCoreAsync(
+                    doc, profile!, partner, db, numbering, audit, tenantId,
+                    "sales_document.finalized", ct).ConfigureAwait(false);
                 await tx.CommitAsync(ct).ConfigureAwait(false);
             }
             catch (DbUpdateException ex) when (IsDuplicateNumber(ex))
@@ -434,14 +378,11 @@ public static class SalesDocumentEndpoints
                 // collision — should not happen given the atomic counter, but surface a clean
                 // 409 rather than a 500 (mirrors CatalogEndpoints.IsDuplicateNumber).
                 await tx.RollbackAsync(ct).ConfigureAwait(false);
-                return Results.Problem(
-                    title: "Document number collision",
-                    detail: "The assigned document number collided; please retry finalization.",
-                    statusCode: StatusCodes.Status409Conflict);
+                return DuplicateNumberConflict();
             }
 
-            // 10. AFTER commit: dispatch the domain event (side-effect seam — the open item +
-            //     audit were done IN the transaction, not via the event).
+            // AFTER commit: dispatch the domain event (side-effect seam — the open item + audit
+            // were done IN the transaction, not via the event).
             await publisher.PublishAsync(
                 new InvoiceFinalized(
                     tenantId, doc.Id, doc.DocumentNumber!,
@@ -449,6 +390,146 @@ public static class SalesDocumentEndpoints
                 ct).ConfigureAwait(false);
 
             return Results.Ok(ToDetail(doc));
+        });
+
+        // POST /api/documents/{id}/storno — cancel a finalized invoice (INV-03 + DOCS-04).
+        // Creates a Storno (EN 16931 type 384): a NEGATIVE MIRROR of the original, finalized
+        // with its OWN number from the Storno series, referencing the original; the original
+        // flips to Cancelled with a back-link and its open item is closed — all in ONE
+        // transaction. The original stays DB-immutable: only its whitelisted lifecycle columns
+        // (status, cancelled_by_document_id) change (RESEARCH.md Pattern 5/6).
+        g.MapPost("/{id:guid}/storno", async (
+            Guid id,
+            NumeraDbContext db,
+            NumberingService numbering,
+            IDomainEventPublisher publisher,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            CancellationToken ct) =>
+        {
+            // 1. Load the original TRACKED with its lines. It MUST be a finalized Rechnung
+            //    (Finalized or Sent); a draft, already-cancelled or non-invoice is 409'd.
+            var original = await db.Set<SalesDocument>()
+                .Include(x => x.Lines)
+                .FirstOrDefaultAsync(x => x.Id == id, ct)
+                .ConfigureAwait(false);
+            if (original is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (original.DocumentType != DocumentType.Rechnung
+                || original.Status is not (DocumentStatus.Finalized or DocumentStatus.Sent))
+            {
+                return Results.Problem(
+                    title: "Document cannot be cancelled",
+                    detail: $"Only a finalized invoice can be cancelled by a Storno; this is a "
+                          + $"{original.DocumentType} in status {original.Status}.",
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
+            // 2. Load issuer + recipient and re-run the §14 gate (a Storno is itself a legal
+            //    document). The original passed once; this guards against since-deleted data.
+            var profile = await db.Set<CompanyProfile>().FirstOrDefaultAsync(ct).ConfigureAwait(false);
+            var partner = original.PartnerId is null
+                ? null
+                : await db.Set<BusinessPartner>()
+                    .FirstOrDefaultAsync(p => p.Id == original.PartnerId, ct)
+                    .ConfigureAwait(false);
+
+            var tenantId = tenant.TenantId!.Value;
+
+            // 3. Build the Storno as a Draft negative mirror (so the finalize machinery + child
+            //    trigger work): copy the lines forward with NEGATED quantity + line net so it is
+            //    a full negative mirror (same tax category/rate → a negated BG-23 breakdown).
+            var storno = new SalesDocument
+            {
+                TenantId = tenantId,
+                DocumentType = DocumentType.Storno,
+                Status = DocumentStatus.Draft,
+                CorrectsDocumentId = original.Id,
+                PartnerId = original.PartnerId,
+                DocumentDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                ServiceDate = original.ServiceDate,
+                Currency = original.Currency,
+                BuyerReference = original.BuyerReference,
+                Notes = original.Notes,
+            };
+            foreach (var l in original.Lines.OrderBy(l => l.LineNumber))
+            {
+                storno.Lines.Add(new SalesDocumentLine
+                {
+                    TenantId = tenantId,
+                    DocumentId = storno.Id,
+                    LineNumber = l.LineNumber,
+                    CatalogItemId = l.CatalogItemId,
+                    Name = l.Name,
+                    Description = l.Description,
+                    Quantity = -l.Quantity,
+                    UnitCode = l.UnitCode,
+                    NetUnitPrice = l.NetUnitPrice,
+                    LineNetAmount = -l.LineNetAmount,
+                    TaxCategory = l.TaxCategory,
+                    VatRatePercent = l.VatRatePercent,
+                });
+            }
+
+            var errors = FinalizeValidation.Check(storno, profile, partner);
+            if (errors.Count > 0)
+            {
+                return Results.ValidationProblem(
+                    errors,
+                    statusCode: StatusCodes.Status422UnprocessableEntity,
+                    title: "Invoice cannot be cancelled (issuer/recipient data incomplete)");
+            }
+
+            db.Add(storno);
+
+            await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+            try
+            {
+                // 4. Finalize the Storno via the SAME core (own Storno-series number, negative
+                //    breakdown + totals, snapshots). Storno is not a Rechnung → NO open item.
+                await FinalizeCoreAsync(
+                    storno, profile!, partner, db, numbering, audit, tenantId,
+                    "sales_document.storno", ct).ConfigureAwait(false);
+
+                // 5. Mutate the ORIGINAL using ONLY whitelisted lifecycle columns (the DB
+                //    immutability trigger permits status + cancelled_by_document_id).
+                var origBefore = Snapshot(original);
+                original.Status = DocumentStatus.Cancelled;
+                original.CancelledByDocumentId = storno.Id;
+
+                // Close the original's open item (RESEARCH.md Pattern 5): no positive receivable
+                // survives a cancellation.
+                var openItem = await db.Set<OpenItem>()
+                    .FirstOrDefaultAsync(o => o.DocumentId == original.Id, ct)
+                    .ConfigureAwait(false);
+                if (openItem is not null)
+                {
+                    openItem.Status = OpenItemStatus.Cancelled;
+                    openItem.OpenAmount = 0m;
+                }
+
+                await audit.RecordAsync(
+                    new SalesDocumentAuditEvent("sales_document.cancelled", original.Id, origBefore, Snapshot(original)), ct)
+                    .ConfigureAwait(false);
+
+                await db.SaveChangesAsync(ct).ConfigureAwait(false);
+                await tx.CommitAsync(ct).ConfigureAwait(false);
+            }
+            catch (DbUpdateException ex) when (IsDuplicateNumber(ex))
+            {
+                await tx.RollbackAsync(ct).ConfigureAwait(false);
+                return DuplicateNumberConflict();
+            }
+
+            // 6. AFTER commit: dispatch the cancellation event (post-commit side-effect seam).
+            await publisher.PublishAsync(new InvoiceCancelled(tenantId, original.Id, storno.Id), ct)
+                .ConfigureAwait(false);
+
+            return Results.Created(
+                $"/api/documents/{storno.Id}", new StornoResponse(storno.Id, storno.DocumentNumber!));
         });
 
         return app;
@@ -539,6 +620,95 @@ public static class SalesDocumentEndpoints
             statusCode: StatusCodes.Status409Conflict);
 
     // --- Finalize helpers ----------------------------------------------------
+
+    // The shared finalize core (extracted from 03-05 so Storno reuses one code path, plan
+    // 03-06). Runs INSIDE the caller's open transaction (NumberingService enlists the ambient
+    // transaction); the caller owns BeginTransaction/Commit + the post-commit event. It freezes
+    // the issuer + recipient snapshots, computes + persists the BG-23 VAT breakdown and the
+    // frozen totals, assigns the race-safe number from the type's OWN series, computes the due
+    // date, and creates the open item for a Rechnung ONLY — a Storno cancels and a Gutschrift
+    // credits, so NEITHER creates a positive receivable (RESEARCH.md Pattern 5).
+    // CRITICAL ordering (Pitfall 1): the breakdown rows + all frozen business columns are
+    // written while status is still Draft (first SaveChanges) so the child immutability trigger
+    // permits the child INSERTs; the status flip is a SECOND SaveChanges (OLD.status = 0 passes
+    // the parent trigger). Audit is recorded before the final SaveChanges (atomic).
+    private static async Task FinalizeCoreAsync(
+        SalesDocument doc,
+        CompanyProfile profile,
+        BusinessPartner? partner,
+        NumeraDbContext db,
+        NumberingService numbering,
+        IAuditWriter audit,
+        Guid tenantId,
+        string auditAction,
+        CancellationToken ct)
+    {
+        var before = Snapshot(doc);
+
+        // Freeze issuer + recipient onto the document as jsonb (GoBD).
+        doc.IssuerSnapshot = SerializeIssuer(profile);
+        doc.RecipientSnapshot = partner is null ? null : SerializeRecipient(partner);
+        doc.IsKleinunternehmer = profile.IsKleinunternehmer;
+
+        // VAT: bucket the lines into the BG-23 breakdown (negative lines → a negated breakdown).
+        var vatInputs = doc.Lines
+            .Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount));
+        var rows = VatCalculationService.Calculate(vatInputs, profile.IsKleinunternehmer);
+        foreach (var row in rows)
+        {
+            doc.TaxBreakdown.Add(new SalesDocumentTaxBreakdown
+            {
+                TenantId = tenantId,
+                DocumentId = doc.Id,
+                TaxCategory = row.Category,
+                VatRatePercent = row.RatePercent,
+                TaxableBase = row.TaxableBase,
+                TaxAmount = row.TaxAmount,
+                ExemptionReasonCode = row.ExemptionCode,
+                ExemptionReasonText = row.ExemptionText,
+            });
+        }
+
+        doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
+        doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
+        doc.TotalGross = doc.TotalNet + doc.TotalTax;
+        doc.AmountDue = doc.TotalGross;
+        doc.ReverseCharge = doc.Lines.Any(l => l.TaxCategory == TaxCategory.AE);
+
+        // Number: atomic upsert-returning counter from the type's own series (Pattern 3).
+        doc.DocumentNumber = await numbering
+            .AssignAsync(doc.DocumentType, doc.DocumentDate.Year, ct)
+            .ConfigureAwait(false);
+
+        var netDays = partner?.PaymentTermsNetDays ?? profile.DefaultPaymentTermsNetDays ?? 14;
+        doc.DueDate = doc.DocumentDate.AddDays(netDays);
+
+        // Open item (OPDN-01) for a Rechnung ONLY.
+        if (doc.DocumentType == DocumentType.Rechnung)
+        {
+            db.Add(BuildOpenItem(doc, partner, tenantId));
+        }
+
+        // Write breakdown + frozen columns while status is still Draft (child trigger permits).
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        // Flip status LAST — the parent trigger allows this UPDATE because OLD.status = 0.
+        doc.Status = DocumentStatus.Finalized;
+        doc.FinalizedAt = DateTimeOffset.UtcNow;
+
+        await audit.RecordAsync(
+            new SalesDocumentAuditEvent(auditAction, doc.Id, before, Snapshot(doc)), ct)
+            .ConfigureAwait(false);
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    // A collision on the partial unique (tenant, doc_type, document_number) index → clean 409.
+    private static IResult DuplicateNumberConflict() =>
+        Results.Problem(
+            title: "Document number collision",
+            detail: "The assigned document number collided; please retry.",
+            statusCode: StatusCodes.Status409Conflict);
 
     // Frozen issuer snapshot (BG-4/BG-5 + tax identity + bank/imprint) captured at finalize.
     private static string SerializeIssuer(CompanyProfile p) => JsonSerializer.Serialize(new
