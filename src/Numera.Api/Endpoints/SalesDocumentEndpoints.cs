@@ -532,6 +532,92 @@ public static class SalesDocumentEndpoints
                 $"/api/documents/{storno.Id}", new StornoResponse(storno.Id, storno.DocumentNumber!));
         });
 
+        // POST /api/documents/{id}/credit-note — issue a kaufmännische Gutschrift (EN 16931
+        // type 381) referencing the original invoice (INV-03). This is the COMMERCIAL credit
+        // note that reduces what the customer owes — NOT the self-billed VAT Gutschrift (type
+        // 389), which is out of scope for v1. It is created as a DRAFT with POSITIVE amounts
+        // (RESEARCH.md Pattern 6 — a credit note is not a negative invoice; the "credit" sense
+        // is carried by the document type, not a minus sign on the total). The user edits it
+        // (a credit note is often partial), then finalizes it via the normal /finalize — which
+        // assigns a Gutschrift-series number and, per the finalize open-item rule, creates NO
+        // positive receivable (only a Rechnung does).
+        g.MapPost("/{id:guid}/credit-note", async (
+            Guid id,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            CancellationToken ct) =>
+        {
+            // The original must be an issued (non-draft) invoice; you correct an issued
+            // Rechnung, not a draft (a draft is simply edited in place).
+            var original = await db.Set<SalesDocument>()
+                .AsNoTracking()
+                .Include(x => x.Lines)
+                .FirstOrDefaultAsync(x => x.Id == id, ct)
+                .ConfigureAwait(false);
+            if (original is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (original.DocumentType != DocumentType.Rechnung || original.Status == DocumentStatus.Draft)
+            {
+                return Results.Problem(
+                    title: "Document cannot be credited",
+                    detail: $"A credit note references an issued invoice; this is a "
+                          + $"{original.DocumentType} in status {original.Status}.",
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
+            var tenantId = tenant.TenantId!.Value;
+
+            var creditNote = new SalesDocument
+            {
+                TenantId = tenantId,
+                DocumentType = DocumentType.Gutschrift,
+                Status = DocumentStatus.Draft,
+                CorrectsDocumentId = original.Id,
+                PartnerId = original.PartnerId,
+                DocumentDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                ServiceDate = original.ServiceDate,
+                Currency = original.Currency,
+                BuyerReference = original.BuyerReference,
+                Notes = original.Notes,
+            };
+
+            // Copy the lines forward with POSITIVE amounts (a commercial credit note carries
+            // positive amounts; it is finalized/edited before it takes effect).
+            foreach (var l in original.Lines.OrderBy(l => l.LineNumber))
+            {
+                creditNote.Lines.Add(new SalesDocumentLine
+                {
+                    TenantId = tenantId,
+                    DocumentId = creditNote.Id,
+                    LineNumber = l.LineNumber,
+                    CatalogItemId = l.CatalogItemId,
+                    Name = l.Name,
+                    Description = l.Description,
+                    Quantity = l.Quantity,
+                    UnitCode = l.UnitCode,
+                    NetUnitPrice = l.NetUnitPrice,
+                    LineNetAmount = l.LineNetAmount,
+                    TaxCategory = l.TaxCategory,
+                    VatRatePercent = l.VatRatePercent,
+                });
+            }
+
+            creditNote.TotalNet = creditNote.Lines.Sum(l => l.LineNetAmount);
+
+            db.Add(creditNote);
+            await audit.RecordAsync(
+                new SalesDocumentAuditEvent("sales_document.credit_note_created", creditNote.Id, Before: null, After: Snapshot(creditNote)), ct)
+                .ConfigureAwait(false);
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/documents/{creditNote.Id}", new { creditNote.Id });
+        });
+
         return app;
     }
 
