@@ -102,6 +102,20 @@ CREATE POLICY tenant_isolation ON catalog_items
 CREATE UNIQUE INDEX ux_catalog_items_tenant_item_number ON catalog_items
     (tenant_id, item_number) WHERE archived_at IS NULL;
 
+-- --- Sales table (Phase 3, _CompanyProfile migration) ------------------------
+-- company_profile: the §14 UStG issuer master data (legal name, address, VAT/tax
+-- id, §19 flag). Standard tenant_id isolation. A tenant has exactly one profile,
+-- enforced by a unique index on tenant_id (also the tenant-leading access index).
+-- company_profile
+ALTER TABLE company_profile ENABLE ROW LEVEL SECURITY;
+ALTER TABLE company_profile FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON company_profile
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- Exactly one company_profile per tenant (unique on tenant_id).
+CREATE UNIQUE INDEX ix_company_profile_tenant_id ON company_profile (tenant_id);
+
 -- --- Self-scoped tenant table ------------------------------------------------
 -- tenants: the row IS the tenant, so isolate on id, not tenant_id.
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
