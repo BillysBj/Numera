@@ -100,10 +100,14 @@ Plans:
   1. Nutzer kann Belege als PDF mit eigenem Logo/Briefpapier erzeugen, in deutschem und englischem Layout
   2. Nutzer kann einen Beleg direkt per E-Mail an den Kunden versenden (mit PDF-Anhang)
   3. PDF-Erzeugung läuft über einen Worker-Tier und blockiert die Finalisierung nicht
-**Plans**: TBD
+**Plans**: 5 plans in 4 waves
 
 Plans:
-- [ ] 04-01: TBD (verfeinert in plan-phase)
+- [ ] 04-01-PLAN.md — Delivery persistence schema + RLS (document_render, document_email, logo columns) [wave 1]
+- [ ] 04-02-PLAN.md — QuestPDF §14 invoice layout (DE/EN) from the frozen snapshot [wave 1]
+- [ ] 04-03-PLAN.md — Async render job + enqueue-on-finalize + GET /pdf + logo endpoint [wave 2]
+- [ ] 04-04-PLAN.md — Email dispatch: Mailpit + MailKit + send job + POST /send + SentAt [wave 3]
+- [ ] 04-05-PLAN.md — Frontend: PDF download + send + status + logo upload UI [wave 4]
 
 ### Phase 5: E-Rechnung-Engine
 **Goal**: Nutzer kann gesetzlich verpflichtende E-Rechnungen EN-16931-konform erzeugen, validieren und empfangen — der strategische Compliance-Kern von Numera.
