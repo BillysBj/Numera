@@ -12,6 +12,10 @@ import deCatalog from './locales/de/catalog.json'
 import enCatalog from './locales/en/catalog.json'
 import deDocuments from './locales/de/documents.json'
 import enDocuments from './locales/en/documents.json'
+import deOpenItems from './locales/de/openItems.json'
+import enOpenItems from './locales/en/openItems.json'
+import deSettings from './locales/de/settings.json'
+import enSettings from './locales/en/settings.json'
 
 // Supported UI languages. German is the default/fallback (Numera is a German
 // financial product); English is the secondary locale (success criterion 5).
@@ -26,6 +30,8 @@ export const resources = {
     partners: dePartners,
     catalog: deCatalog,
     documents: deDocuments,
+    openItems: deOpenItems,
+    settings: deSettings,
   },
   en: {
     common: enCommon,
@@ -33,6 +39,8 @@ export const resources = {
     partners: enPartners,
     catalog: enCatalog,
     documents: enDocuments,
+    openItems: enOpenItems,
+    settings: enSettings,
   },
 } as const
 
@@ -45,7 +53,7 @@ i18n
     fallbackLng: 'de',
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
     nonExplicitSupportedLngs: true, // treat "de-DE" as "de"
-    ns: ['common', 'auth', 'partners', 'catalog', 'documents'],
+    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'settings'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false, // React already escapes
