@@ -70,6 +70,7 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueuePdfOnFi
 // the PDF; POST /api/documents/{id}/send enqueues it after recording a Queued document_email.
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
+builder.Services.AddTransient<SendDocumentEmailJob>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them

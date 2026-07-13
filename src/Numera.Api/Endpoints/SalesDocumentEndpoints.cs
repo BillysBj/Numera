@@ -2,15 +2,19 @@ using System.Text.Json;
 
 using FluentValidation;
 
+using Hangfire;
+
 using Microsoft.EntityFrameworkCore;
 
 using Npgsql;
 
 using Numera.Api.Contracts;
+using Numera.Api.Jobs;
 using Numera.Api.Services;
 using Numera.Api.Validators;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.Email;
 using Numera.Modules.Sales.Events;
 using Numera.Modules.Sales.Numbering;
 using Numera.Modules.Sales.Vat;
@@ -125,6 +129,86 @@ public static class SalesDocumentEndpoints
                     statusCode: StatusCodes.Status409Conflict),
                 _ => Results.File(result.PdfBytes!, "application/pdf", $"{result.DocumentNumber}.pdf"),
             };
+        });
+
+        // POST /api/documents/{id}/send — e-mail the finalized document's PDF to the customer
+        // (DOCS-03). Records a Queued document_email row (RLS + audit) and ENQUEUES
+        // SendDocumentEmailJob after the row commits — never sends inline on the request thread.
+        // The job renders-if-absent, sends via MailKit, advances the row and flips SentAt. 404 when
+        // the document is not found under RLS; 409 when it is still a Draft (nothing to send); 422
+        // when no recipient e-mail is available (neither an override nor a frozen recipient e-mail).
+        g.MapPost("/{id:guid}/send", async (
+            Guid id,
+            SendDocumentEmailRequest? req,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            IBackgroundJobClient jobs,
+            CancellationToken ct) =>
+        {
+            var doc = await db.Set<SalesDocument>()
+                .AsNoTracking()
+                .Select(d => new { d.Id, d.Status, d.DocumentNumber, d.RecipientSnapshot })
+                .FirstOrDefaultAsync(d => d.Id == id, ct)
+                .ConfigureAwait(false);
+            if (doc is null)
+            {
+                return Results.NotFound();
+            }
+
+            if (doc.Status == DocumentStatus.Draft)
+            {
+                return NonDraftConflict(doc.Status);
+            }
+
+            var toAddress = string.IsNullOrWhiteSpace(req?.ToAddress)
+                ? ResolveRecipientEmail(doc.RecipientSnapshot)
+                : req!.ToAddress!.Trim();
+            if (string.IsNullOrWhiteSpace(toAddress))
+            {
+                return Results.ValidationProblem(
+                    new Dictionary<string, string[]>
+                    {
+                        ["toAddress"] = ["No recipient e-mail: supply toAddress or set the customer's e-mail."],
+                    },
+                    statusCode: StatusCodes.Status422UnprocessableEntity,
+                    title: "No recipient e-mail address");
+            }
+
+            var language = string.Equals(req?.Language, "en", StringComparison.OrdinalIgnoreCase)
+                ? "en"
+                : "de";
+            var subject = DocumentEmailTemplates
+                .Build(language, doc.DocumentNumber ?? doc.Id.ToString())
+                .Subject;
+
+            var tenantId = tenant.TenantId!.Value;
+            var email = new DocumentEmail
+            {
+                TenantId = tenantId,
+                DocumentId = doc.Id,
+                ToAddress = toAddress,
+                Subject = subject,
+                Status = EmailStatus.Queued,
+                CreatedAt = DateTimeOffset.UtcNow,
+            };
+
+            db.Add(email);
+            await audit.RecordAsync(
+                new SalesDocumentAuditEvent(
+                    "sales_document.email_queued", doc.Id, Before: null,
+                    After: JsonSerializer.Serialize(new { email.Id, email.ToAddress, language }, AuditJson)),
+                ct).ConfigureAwait(false);
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            // Enqueue AFTER the row commits (enqueue-after-commit) so the job never races an
+            // uncommitted document_email. The job runs on the Api default queue (Pitfall 2, LOCKED).
+            jobs.Enqueue<SendDocumentEmailJob>(
+                j => j.RunAsync(tenantId, email.Id, language, CancellationToken.None));
+
+            return Results.Accepted(
+                $"/api/documents/{doc.Id}/send", new { id = email.Id, status = email.Status });
         });
 
         // POST /api/documents — create a Draft.
@@ -863,6 +947,35 @@ public static class SalesDocumentEndpoints
         b.TaxNumber,
         b.Email,
     }, AuditJson);
+
+    // Reads the frozen recipient e-mail (BT-43) from the RecipientSnapshot jsonb (serialized with
+    // Web camelCase at finalize; PascalCase tolerated). Returns null when absent so the send
+    // endpoint can 422 rather than enqueue an undeliverable message.
+    private static string? ResolveRecipientEmail(string? recipientSnapshot)
+    {
+        if (string.IsNullOrWhiteSpace(recipientSnapshot))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var json = JsonDocument.Parse(recipientSnapshot);
+            var root = json.RootElement;
+            if ((root.TryGetProperty("email", out var e) || root.TryGetProperty("Email", out e))
+                && e.ValueKind == JsonValueKind.String)
+            {
+                var value = e.GetString();
+                return string.IsNullOrWhiteSpace(value) ? null : value;
+            }
+        }
+        catch (JsonException)
+        {
+            // A malformed snapshot is treated as "no recipient e-mail" (endpoint 422s cleanly).
+        }
+
+        return null;
+    }
 
     // Builds the open item (OPDN-01, RESEARCH.md Pattern 5): OriginalAmount = OpenAmount =
     // gross, snapshotting the partner's Skonto terms as the Phase-6 payment seam.

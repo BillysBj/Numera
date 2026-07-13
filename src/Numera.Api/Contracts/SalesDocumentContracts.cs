@@ -123,3 +123,13 @@ public sealed record SalesTaxBreakdownDto(
     decimal TaxAmount,
     string? ExemptionReasonCode,
     string? ExemptionReasonText);
+
+/// <summary>
+/// The body of <c>POST /api/documents/{id}/send</c> (plan 04-04, DOCS-03). Both fields are
+/// optional: <see cref="ToAddress"/> defaults to the frozen recipient e-mail from the document's
+/// RecipientSnapshot, and <see cref="Language"/> defaults to <c>de</c> (the label + covering-copy
+/// language; the frozen §14 Pflichttexte stay German regardless).
+/// </summary>
+/// <param name="ToAddress">Override recipient address; null → the frozen recipient e-mail.</param>
+/// <param name="Language">Send language (<c>de</c>/<c>en</c>); null → <c>de</c>.</param>
+public sealed record SendDocumentEmailRequest(string? ToAddress, string? Language);
