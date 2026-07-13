@@ -95,6 +95,8 @@ public sealed record SalesDocumentDetail(
     Guid? SourceDocumentId,
     Guid? CorrectsDocumentId,
     Guid? CancelledByDocumentId,
+    string? IssuerSnapshot,
+    string? RecipientSnapshot,
     IReadOnlyList<SalesLineDto> Lines,
     IReadOnlyList<SalesTaxBreakdownDto> TaxBreakdown);
 

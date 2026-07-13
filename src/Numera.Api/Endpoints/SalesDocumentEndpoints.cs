@@ -654,6 +654,7 @@ public static class SalesDocumentEndpoints
         d.Currency, d.TotalNet, d.TotalTax, d.TotalGross, d.AmountDue,
         d.IsKleinunternehmer, d.ReverseCharge, d.BuyerReference, d.Notes,
         d.SourceDocumentId, d.CorrectsDocumentId, d.CancelledByDocumentId,
+        d.IssuerSnapshot, d.RecipientSnapshot,
         d.Lines
             .OrderBy(l => l.LineNumber)
             .Select(l => new SalesLineDto(
@@ -742,10 +743,10 @@ public static class SalesDocumentEndpoints
         var rows = VatCalculationService.Calculate(vatInputs, profile.IsKleinunternehmer);
         foreach (var row in rows)
         {
-            doc.TaxBreakdown.Add(new SalesDocumentTaxBreakdown
+            db.Add(new SalesDocumentTaxBreakdown
             {
                 TenantId = tenantId,
-                DocumentId = doc.Id,
+                DocumentId = doc.Id,      // FK already set — the navigation is not needed to force Added
                 TaxCategory = row.Category,
                 VatRatePercent = row.RatePercent,
                 TaxableBase = row.TaxableBase,
