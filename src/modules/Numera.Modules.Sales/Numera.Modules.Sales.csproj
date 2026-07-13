@@ -11,4 +11,8 @@
     <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="QuestPDF" Version="2026.7.1" />
+  </ItemGroup>
+
 </Project>
