@@ -29,6 +29,11 @@ public static class CompanyProfileEndpoints
 {
     private static readonly JsonSerializerOptions AuditJson = new(JsonSerializerDefaults.Web);
 
+    // The tenant logo is presentation, not §14 legal content, so it lives on the RLS-scoped
+    // company_profile (one per tenant) as bytea. Keep it modest — it prints on the letterhead.
+    private const long MaxLogoBytes = 1024 * 1024; // 1 MB
+    private static readonly string[] AllowedLogoTypes = ["image/png", "image/jpeg"];
+
     /// <summary>Maps <c>/api/company-profile</c> GET (read) and PUT (upsert).</summary>
     public static IEndpointRouteBuilder MapCompanyProfileEndpoints(this IEndpointRouteBuilder app)
     {
@@ -98,6 +103,73 @@ public static class CompanyProfileEndpoints
             return Results.Ok(ToDto(profile));
         });
 
+        // PUT /api/company-profile/logo — upload the tenant letterhead logo (PNG/JPG, <= 1 MB).
+        // Attaches to the existing profile (the §14 settings must exist first — a profile requires
+        // a legal name + address that a logo upload cannot supply). Validated content-type + size;
+        // 400 on an invalid image, 409 when no profile exists yet.
+        g.MapPut("/logo", async (
+            IFormFile file,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            CancellationToken ct) =>
+        {
+            var contentType = file.ContentType?.Trim().ToLowerInvariant();
+            if (string.IsNullOrEmpty(contentType) || Array.IndexOf(AllowedLogoTypes, contentType) < 0)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["file"] = ["The logo must be a PNG or JPEG image."],
+                });
+            }
+
+            if (file.Length <= 0 || file.Length > MaxLogoBytes)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["file"] = [$"The logo must be between 1 byte and {MaxLogoBytes} bytes."],
+                });
+            }
+
+            var profile = await db.Set<CompanyProfile>().FirstOrDefaultAsync(ct).ConfigureAwait(false);
+            if (profile is null)
+            {
+                return Results.Problem(
+                    title: "No company profile",
+                    detail: "Create the company profile (§14 issuer data) before uploading a logo.",
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
+            using var ms = new MemoryStream();
+            await file.CopyToAsync(ms, ct).ConfigureAwait(false);
+            var bytes = ms.ToArray();
+
+            var before = LogoSnapshot(profile);
+            profile.LogoBytes = bytes;
+            profile.LogoContentType = contentType;
+
+            await audit.RecordAsync(
+                new CompanyProfileAuditEvent("company_profile.logo_updated", profile.Id, before, LogoSnapshot(profile)), ct)
+                .ConfigureAwait(false);
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Ok(new { contentType, size = bytes.Length });
+        }).DisableAntiforgery();
+
+        // GET /api/company-profile/logo — serve the stored logo bytes with their content-type.
+        g.MapGet("/logo", async (NumeraDbContext db, CancellationToken ct) =>
+        {
+            var logo = await db.Set<CompanyProfile>()
+                .AsNoTracking()
+                .Select(p => new { p.LogoBytes, p.LogoContentType })
+                .FirstOrDefaultAsync(ct)
+                .ConfigureAwait(false);
+
+            return logo?.LogoBytes is { Length: > 0 } bytes
+                ? Results.File(bytes, logo.LogoContentType ?? "application/octet-stream")
+                : Results.NotFound();
+        });
+
         return app;
     }
 
@@ -151,6 +223,13 @@ public static class CompanyProfileEndpoints
         ManagingDirector: null, ContactEmail: null, ContactPhone: null, LogoRef: null);
 
     private static string? Trim(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    // Audit the logo change by content-type + size, never the bytes themselves.
+    private static string LogoSnapshot(CompanyProfile p) => JsonSerializer.Serialize(new
+    {
+        p.LogoContentType,
+        LogoSize = p.LogoBytes?.Length ?? 0,
+    }, AuditJson);
 
     private static string Snapshot(CompanyProfile p) => JsonSerializer.Serialize(new
     {
