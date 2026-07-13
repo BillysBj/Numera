@@ -24,7 +24,22 @@
     "confirmStorno": "Cancel this invoice? A cancellation document will be created and the invoice marked as cancelled.",
     "creditNote": "Credit note",
     "confirmCreditNote": "Create a credit note for this invoice? A credit-note draft will be created.",
+    "downloadPdf": "Download PDF",
+    "downloading": "Preparing …",
+    "send": "Send by e-mail",
+    "sending": "Sending …",
+    "confirmSend": "Send this document as a PDF by e-mail to the recipient?",
+    "sendQueued": "The e-mail is being sent. The status updates once delivery completes.",
     "working": "Working …"
+  },
+  "lang": {
+    "de": "German",
+    "en": "English"
+  },
+  "sendStatus": {
+    "queued": "Sending",
+    "sent": "Sent",
+    "failed": "Send failed"
   },
   "table": {
     "loading": "Loading …",

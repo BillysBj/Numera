@@ -5,9 +5,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   convertSalesDocument,
   createCreditNote,
+  downloadDocumentPdf,
   finalizeSalesDocument,
   getSalesDocument,
   parseSnapshot,
+  sendDocumentEmail,
   stornoSalesDocument,
   ApiError,
   DocumentStatus,
@@ -163,6 +165,7 @@ export default function DocumentDetailPage() {
   const [convertTarget, setConvertTarget] = useState<DocumentType>(
     DocumentType.Rechnung,
   )
+  const [pdfLang, setPdfLang] = useState<'de' | 'en'>('de')
 
   const doc = useQuery({
     queryKey: ['document', id],
@@ -214,11 +217,41 @@ export default function DocumentDetailPage() {
     onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
   })
 
+  // Download the stored/rendered §14 PDF (04-03) and trigger a browser save. The filename
+  // is the legal document number; fall back gracefully if it is somehow absent.
+  const download = useMutation({
+    mutationFn: (lang: 'de' | 'en') => downloadDocumentPdf(id, lang),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${doc.data?.documentNumber?.trim() || 'beleg'}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    },
+    onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
+  })
+
+  // Enqueue the async e-mail send (04-04). The response is Queued; the detail refresh reflects
+  // SentAt once the Hangfire job delivers. 422 (no recipient) / 409 surface in the banner.
+  const send = useMutation({
+    mutationFn: () => sendDocumentEmail(id),
+    onSuccess: () => {
+      setBanner({ kind: 'success', text: t('actions.sendQueued') })
+      refresh()
+    },
+    onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
+  })
+
   const busy =
     finalize.isPending ||
     storno.isPending ||
     creditNote.isPending ||
-    convert.isPending
+    convert.isPending ||
+    download.isPending ||
+    send.isPending
 
   const money = useMemo(
     () => makeMoney(doc.data?.currency ?? 'EUR'),
@@ -249,6 +282,15 @@ export default function DocumentDetailPage() {
     (d.status === DocumentStatus.Finalized || d.status === DocumentStatus.Sent)
   const title = d.documentNumber?.trim() || t('detail.draftTitle')
 
+  // Send status shown next to the header: 'sent' once SentAt/Status flips (the async job
+  // delivered), 'queued' immediately after enqueuing (optimistic, before the job runs).
+  const sendStatus: 'sent' | 'queued' | null =
+    d.sentAt || d.status === DocumentStatus.Sent
+      ? 'sent'
+      : send.isPending || send.isSuccess
+        ? 'queued'
+        : null
+
   const issuer = readSnapshot(d.issuerSnapshot, false)
   const recipient = readSnapshot(d.recipientSnapshot, true)
 
@@ -266,6 +308,11 @@ export default function DocumentDetailPage() {
           <Badge variant={STATUS_VARIANT[d.status] ?? 'secondary'}>
             {t(`status.${d.status}`)}
           </Badge>
+          {sendStatus && (
+            <Badge variant={sendStatus === 'sent' ? 'default' : 'secondary'}>
+              {t(`sendStatus.${sendStatus}`)}
+            </Badge>
+          )}
         </h1>
 
         <Link
@@ -319,6 +366,49 @@ export default function DocumentDetailPage() {
             >
               {t('actions.creditNote')}
             </Button>
+          </>
+        )}
+
+        {/* PDF download + e-mail send — only on finalized documents (a Draft has no frozen
+            snapshot / render). Language is chosen per download; send uses the frozen recipient. */}
+        {!isDraft && (
+          <>
+            <div className="flex items-center gap-1">
+              <Select
+                className="h-9 w-[5.5rem]"
+                value={pdfLang}
+                disabled={busy}
+                onChange={(e) => setPdfLang(e.target.value as 'de' | 'en')}
+              >
+                <option value="de">{t('lang.de')}</option>
+                <option value="en">{t('lang.en')}</option>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  setBanner(null)
+                  download.mutate(pdfLang)
+                }}
+              >
+                {download.isPending
+                  ? t('actions.downloading')
+                  : t('actions.downloadPdf')}
+              </Button>
+            </div>
+            {!isCancelled && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() =>
+                  confirmRun(t('actions.confirmSend'), () => send.mutate())
+                }
+              >
+                {send.isPending ? t('actions.sending') : t('actions.send')}
+              </Button>
+            )}
           </>
         )}
 

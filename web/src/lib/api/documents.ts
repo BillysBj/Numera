@@ -48,6 +48,18 @@ export const DocumentStatus = {
 } as const
 export type DocumentStatus = (typeof DocumentStatus)[keyof typeof DocumentStatus]
 
+/**
+ * Numera.Modules.Sales.EmailStatus — the send-status the POST /{id}/send endpoint returns
+ * for the freshly-queued document_email row (Queued=0; the async Hangfire job advances it to
+ * Sent/Failed). Numeric ordinals cross the wire (no JsonStringEnumConverter server-side).
+ */
+export const EmailStatus = {
+  Queued: 0,
+  Sent: 1,
+  Failed: 2,
+} as const
+export type EmailStatus = (typeof EmailStatus)[keyof typeof EmailStatus]
+
 // ---- DTOs (match Numera.Api.Contracts.SalesDocumentContracts, camelCased) --
 
 /** Compact projection for the paged document list (GET /api/documents). */
@@ -328,5 +340,58 @@ export function stornoSalesDocument(
 export function createCreditNote(id: string): Promise<{ id: string }> {
   return request<{ id: string }>(`/documents/${id}/credit-note`, {
     method: 'POST',
+  })
+}
+
+// ---- PDF download + e-mail send (04-03 / 04-04 surfaces) --------------------
+
+/**
+ * GET /api/documents/{id}/pdf?lang=de|en — download the finalized document's §14 PDF (04-03).
+ * The server returns the stored render or renders-on-demand from the frozen snapshot, so a
+ * download never fails on a not-yet-async-rendered document. Returns the raw `Blob` (the
+ * shared JSON `request` helper is bypassed on purpose); throws {@link ApiError} on non-2xx.
+ * 409 when the document is still a Draft (no frozen snapshot), 404 when unknown under RLS.
+ */
+export async function downloadDocumentPdf(
+  id: string,
+  lang: 'de' | 'en' = 'de',
+): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/documents/${id}/pdf?lang=${lang}`, {
+    credentials: 'include',
+    headers: { Accept: 'application/pdf' },
+  })
+  if (!res.ok) {
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch {
+      body = await res.text().catch(() => undefined)
+    }
+    throw new ApiError(res.status, `Request failed: ${res.status}`, body)
+  }
+  return res.blob()
+}
+
+/** Optional overrides for {@link sendDocumentEmail}. */
+export interface SendDocumentEmailRequest {
+  /** Override recipient address; omit → the frozen recipient e-mail on the document. */
+  toAddress?: string
+  /** Covering-mail language (de/en); omit → de. The PDF's legal content is unaffected. */
+  language?: 'de' | 'en'
+}
+
+/**
+ * POST /api/documents/{id}/send — e-mail the finalized document's PDF to the customer (04-04).
+ * The endpoint records a Queued `document_email` row and enqueues the async send job, then
+ * returns 202 with the row id + status (Queued). 409 if the document is a Draft; 404 if
+ * unknown; 422 (ValidationProblem) when no recipient e-mail is available.
+ */
+export function sendDocumentEmail(
+  id: string,
+  body: SendDocumentEmailRequest = {},
+): Promise<{ id: string; status: EmailStatus }> {
+  return request<{ id: string; status: EmailStatus }>(`/documents/${id}/send`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   })
 }

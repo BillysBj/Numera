@@ -24,7 +24,22 @@
     "confirmStorno": "Diese Rechnung stornieren? Es wird ein Storno-Beleg erstellt und die Rechnung als storniert markiert.",
     "creditNote": "Gutschrift",
     "confirmCreditNote": "Gutschrift zu dieser Rechnung erstellen? Es wird ein Gutschrift-Entwurf angelegt.",
+    "downloadPdf": "PDF herunterladen",
+    "downloading": "Wird erstellt …",
+    "send": "Per E-Mail senden",
+    "sending": "Wird gesendet …",
+    "confirmSend": "Diesen Beleg als PDF per E-Mail an den Empfänger senden?",
+    "sendQueued": "E-Mail wird versendet. Der Status aktualisiert sich, sobald der Versand abgeschlossen ist.",
     "working": "Wird verarbeitet …"
+  },
+  "lang": {
+    "de": "Deutsch",
+    "en": "Englisch"
+  },
+  "sendStatus": {
+    "queued": "Versand läuft",
+    "sent": "Gesendet",
+    "failed": "Versand fehlgeschlagen"
   },
   "table": {
     "loading": "Wird geladen …",
