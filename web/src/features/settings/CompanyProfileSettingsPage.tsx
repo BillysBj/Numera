@@ -3,6 +3,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ChangeEvent,
   type ComponentProps,
 } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -10,9 +11,14 @@ import { useForm, type Path, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  companyLogoUrl,
   extractValidationErrors,
   getCompanyProfile,
   updateCompanyProfile,
+  uploadCompanyLogo,
+  ApiError,
+  LOGO_ACCEPTED_TYPES,
+  LOGO_MAX_BYTES,
   TaxCategory,
   type CompanyProfileDto,
 } from '@/lib/api/companyProfile'
@@ -306,7 +312,128 @@ export default function CompanyProfileSettingsPage() {
           </div>
         </form>
       </Form>
+
+      {/* Logo upload lives OUTSIDE the RHF §14 form — it is a separate binary upload with its
+          own endpoint (PUT /company-profile/logo), not part of the profile submit. */}
+      <div className="mt-5">
+        <LogoSection />
+      </div>
     </main>
+  )
+}
+
+// --- Logo / Briefpapier upload (separate binary upload, its own endpoint) -----
+function LogoSection() {
+  const { t } = useTranslation('settings')
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const [logoSaved, setLogoSaved] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  // Cache-bust token for the current-logo preview; 0 → plain URL (first render).
+  const [version, setVersion] = useState(0)
+  const [hasLogo, setHasLogo] = useState(true)
+
+  const upload = useMutation({
+    mutationFn: (f: File) => uploadCompanyLogo(f),
+    onSuccess: () => {
+      setLogoSaved(true)
+      setLogoError(null)
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      setFile(null)
+      setPreviewUrl(null)
+      setHasLogo(true)
+      setVersion(Date.now())
+    },
+    onError: (err) => {
+      setLogoSaved(false)
+      if (err instanceof ApiError && err.status === 409) {
+        setLogoError(t('logo.noProfile'))
+      } else if (err instanceof ApiError && err.status === 400) {
+        setLogoError(t('logo.invalidType'))
+      } else {
+        setLogoError(t('errors.server'))
+      }
+    },
+  })
+
+  const onPick = (e: ChangeEvent<HTMLInputElement>) => {
+    setLogoSaved(false)
+    setLogoError(null)
+    const picked = e.target.files?.[0] ?? null
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    if (!picked) {
+      setFile(null)
+      setPreviewUrl(null)
+      return
+    }
+    // Client-side validation mirroring the server (PNG/JPG, <= 1 MB).
+    if (!LOGO_ACCEPTED_TYPES.includes(picked.type as (typeof LOGO_ACCEPTED_TYPES)[number])) {
+      setFile(null)
+      setPreviewUrl(null)
+      setLogoError(t('logo.invalidType'))
+      return
+    }
+    if (picked.size > LOGO_MAX_BYTES) {
+      setFile(null)
+      setPreviewUrl(null)
+      setLogoError(t('logo.tooLarge'))
+      return
+    }
+    setFile(picked)
+    setPreviewUrl(URL.createObjectURL(picked))
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('logo.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <p className="text-sm text-muted-foreground">{t('logo.hint')}</p>
+
+        <div className="flex items-center gap-4">
+          <div className="flex h-24 w-40 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt=""
+                className="max-h-24 max-w-full object-contain"
+              />
+            ) : hasLogo ? (
+              <img
+                src={companyLogoUrl(version || undefined)}
+                alt=""
+                className="max-h-24 max-w-full object-contain"
+                onError={() => setHasLogo(false)}
+              />
+            ) : (
+              <span className="px-2 text-center text-xs text-muted-foreground">
+                {t('logo.none')}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Input
+              type="file"
+              accept="image/png,image/jpeg"
+              onChange={onPick}
+              className="max-w-xs"
+            />
+            <Button
+              type="button"
+              disabled={!file || upload.isPending}
+              onClick={() => file && upload.mutate(file)}
+            >
+              {upload.isPending ? t('logo.uploading') : t('logo.upload')}
+            </Button>
+          </div>
+        </div>
+
+        {logoError && <p className="text-sm text-destructive">{logoError}</p>}
+        {logoSaved && <p className="text-sm text-emerald-600">{t('logo.saved')}</p>}
+      </CardContent>
+    </Card>
   )
 }
 

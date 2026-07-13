@@ -38,6 +38,18 @@
   "hints": {
     "kleinunternehmer": "Bei aktivem §19 wird auf allen Rechnungen keine Umsatzsteuer ausgewiesen."
   },
+  "logo": {
+    "title": "Logo / Briefpapier",
+    "hint": "PNG oder JPG, höchstens 1 MB. Das Logo erscheint oben auf der erzeugten Rechnungs-PDF.",
+    "upload": "Logo hochladen",
+    "uploading": "Wird hochgeladen …",
+    "replace": "Logo ersetzen",
+    "saved": "Logo gespeichert.",
+    "none": "Noch kein Logo hinterlegt.",
+    "invalidType": "Bitte eine PNG- oder JPG-Datei wählen.",
+    "tooLarge": "Die Datei darf höchstens 1 MB groß sein.",
+    "noProfile": "Bitte zuerst das Firmenprofil speichern, dann das Logo hochladen."
+  },
   "taxCategory": {
     "S": "Regelsteuersatz (S)",
     "AE": "Reverse-Charge (AE)",

@@ -128,3 +128,44 @@ export function updateCompanyProfile(
     body: JSON.stringify(body),
   })
 }
+
+// ---- Logo / Briefpapier (04-03 PUT/GET /api/company-profile/logo) ----------
+
+/** Accepted logo types + size cap — mirrors the server rule (PNG/JPG, <= 1 MB). */
+export const LOGO_ACCEPTED_TYPES = ['image/png', 'image/jpeg'] as const
+export const LOGO_MAX_BYTES = 1024 * 1024
+
+/**
+ * PUT /api/company-profile/logo — upload the tenant letterhead logo (multipart, field `file`).
+ * The BFF session cookie is the CSRF story (the endpoint disables antiforgery), so no token is
+ * sent. Throws {@link ApiError} on non-2xx: 400 invalid type/size, 409 when no profile exists
+ * yet (the §14 profile must be saved first — a logo cannot supply the required legal name).
+ */
+export async function uploadCompanyLogo(file: File): Promise<void> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${API_BASE}/company-profile/logo`, {
+    method: 'PUT',
+    credentials: 'include',
+    body: form,
+  })
+  if (!res.ok) {
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch {
+      body = await res.text().catch(() => undefined)
+    }
+    throw new ApiError(res.status, `Request failed: ${res.status}`, body)
+  }
+}
+
+/**
+ * URL for the current logo (GET /api/company-profile/logo) to use as an `<img src>`. Pass a
+ * cache-busting token (e.g. `Date.now()` after an upload) so the preview refreshes; the GET
+ * 404s when no logo is stored (the `<img>` onError then hides the preview).
+ */
+export function companyLogoUrl(cacheBust?: number | string): string {
+  const base = `${API_BASE}/company-profile/logo`
+  return cacheBust != null ? `${base}?v=${cacheBust}` : base
+}

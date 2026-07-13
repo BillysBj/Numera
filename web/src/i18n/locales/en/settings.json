@@ -38,6 +38,18 @@
   "hints": {
     "kleinunternehmer": "With §19 enabled, no VAT is shown on any invoice."
   },
+  "logo": {
+    "title": "Logo / letterhead",
+    "hint": "PNG or JPG, at most 1 MB. The logo appears at the top of the generated invoice PDF.",
+    "upload": "Upload logo",
+    "uploading": "Uploading …",
+    "replace": "Replace logo",
+    "saved": "Logo saved.",
+    "none": "No logo uploaded yet.",
+    "invalidType": "Please choose a PNG or JPG file.",
+    "tooLarge": "The file must be at most 1 MB.",
+    "noProfile": "Please save the company profile first, then upload the logo."
+  },
   "taxCategory": {
     "S": "Standard rate (S)",
     "AE": "Reverse charge (AE)",
