@@ -74,3 +74,22 @@ public enum OpenItemStatus
     /// <summary>Cancelled — the underlying invoice was cancelled by a Storno.</summary>
     Cancelled,
 }
+
+/// <summary>
+/// The dispatch state of a <see cref="Email.DocumentEmail"/> send record (DOCS-03). Numeric
+/// ordinals cross the wire (mirroring the <see cref="DocumentStatus"/> convention). A send
+/// starts <see cref="Queued"/>, flips to <see cref="Sent"/> on the first successful SMTP
+/// delivery (also flipping <c>SalesDocument.SentAt</c>) or to <see cref="Failed"/> once
+/// Hangfire's retries are exhausted.
+/// </summary>
+public enum EmailStatus
+{
+    /// <summary>Queued — the send job is enqueued or retrying; nothing delivered yet.</summary>
+    Queued = 0,
+
+    /// <summary>Sent — the message was accepted by the SMTP server.</summary>
+    Sent = 1,
+
+    /// <summary>Failed — delivery failed after Hangfire exhausted its retry attempts.</summary>
+    Failed = 2,
+}

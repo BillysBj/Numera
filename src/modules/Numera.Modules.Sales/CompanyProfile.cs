@@ -99,4 +99,18 @@ public sealed class CompanyProfile : ITenantEntity
 
     /// <summary>Reference/key to the issuer logo asset for PDF rendering (Phase 4 seam).</summary>
     public string? LogoRef { get; set; }
+
+    // --- Logo asset (Phase 4 — presentation, RLS-scoped, stored in Postgres) -
+
+    /// <summary>
+    /// The tenant logo bytes shown on the rendered PDF letterhead (Phase-4 DOCS-02).
+    /// Stored as <c>bytea</c> on the already-RLS-scoped, one-per-tenant profile per the LOCKED
+    /// decision (object storage is out of scope for v1). The logo is presentation, not part of
+    /// the frozen §14 legal snapshot, so reading it live at render time is fine. The existing
+    /// <see cref="LogoRef"/> seam is left untouched. Nullable.
+    /// </summary>
+    public byte[]? LogoBytes { get; set; }
+
+    /// <summary>MIME content type of <see cref="LogoBytes"/> (e.g. image/png, image/jpeg). Nullable.</summary>
+    public string? LogoContentType { get; set; }
 }
