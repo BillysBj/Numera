@@ -35,5 +35,15 @@ services:
     ports:
       - "8080:8080"
 
+  mailpit:
+    # Local SMTP sink + web UI / HTTP API so dev + integration tests capture outbound
+    # mail WITHOUT sending anything real (Phase-4 DOCS-03). MailKit sends to SMTP :1025;
+    # the UI + assertable HTTP API answer on :8025. No auth (Mailpit accepts anonymously).
+    image: axllent/mailpit:latest
+    container_name: numera-mailpit
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web UI + HTTP API
+
 volumes:
   numera-postgres-data:
