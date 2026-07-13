@@ -1,51 +1,32 @@
 ---
 phase: 03-belegkette-rechnungskern
-verified: 2026-07-13T07:54:27Z
-status: gaps_found
-score: 1/5 must-haves verified
-gaps:
-  - truth: "Entwuerfe sind frei bearbeitbar; finalisierte Belege sind unveraenderbar - Korrekturen erzeugen Storno-/Korrekturbelege (GoBD, DB-seitig erzwungen)"
-    status: failed
-    reason: "The single shared FinalizeCoreAsync (used by /finalize, /storno and the Gutschrift finalize) throws DbUpdateConcurrencyException at runtime the instant it persists the BG-23 tax-breakdown rows, so no document can ever actually reach Finalized status through the running application. Empirically reproduced against real Postgres (Testcontainers) using the exact production load pattern (tracked existing SalesDocument loaded via Include(Lines), then doc.TaxBreakdown.Add(...) then SaveChangesAsync) - confirmed DbUpdateConcurrencyException, 0 rows affected. The DB-side immutability triggers themselves (sales_document_immutable / sales_document_child_immutable, migration 20260712151258_SalesDocuments.cs) are correctly written, but are unreachable in practice because no document ever leaves Draft."
-    artifacts:
-      - path: "src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs"
-        issue: "Line 745: doc.TaxBreakdown.Add(new SalesDocumentTaxBreakdown row) adds a new child with a client-set UUIDv7 PK (ValueGeneratedOnAdd, Guid.CreateVersion7()) via a navigation-collection fixup on an already-tracked existing parent (doc loaded via db.Set of SalesDocument .Include(Lines).FirstOrDefaultAsync). EF Core relationship-fixup heuristic marks the child Modified instead of Added, emits an UPDATE matching 0 rows, and SaveChangesAsync throws. Every other Add site in the same file (lines 141, 299, 486, 611, 775) uses explicit db.Add, which is the only reliable way to force an Added state for a client-set-key entity added via navigation on a tracked parent."
-    missing:
-      - "One-line fix in FinalizeCoreAsync: replace the navigation .Add with db.Add(new SalesDocumentTaxBreakdown row with DocumentId set), matching the pattern already used for the open item (line 775) and already encoded correctly in tests/Numera.IntegrationTests/SalesTestData.cs line 352."
-  - truth: "Rechnungen enthalten alle Pflichtangaben nach Paragraph 14 UStG; Rechnungsnummern werden bei Finalisierung race-sicher, eindeutig und im konfigurierten Format vergeben"
-    status: failed
-    reason: "Blocked by the same finalize crash: NumberingService.AssignAsync (proven race-safe and atomic in isolation via the real production class under SalesNumberingConcurrencyTests) runs inside the same ambient transaction as the breakdown persist; when the breakdown SaveChanges throws, the whole finalize transaction rolls back, so no number is ever durably assigned by the running application. Additionally, on the read side, the frozen Paragraph-14 issuer and recipient snapshots are never exposed by the API: SalesDocumentDetail (src/Numera.Api/Contracts/SalesDocumentContracts.cs lines 76-99) and SalesDocumentEndpoints.ToDetail (line 651) omit IssuerSnapshot and RecipientSnapshot entirely, even though the frontend DocumentDetailPage (web/src/features/documents/DocumentDetailPage.tsx lines 252-253) already reads d.issuerSnapshot and d.recipientSnapshot and is written defensively to handle their absence - meaning the issuer and recipient cards always render empty (a dash or the pre-finalize hint), never the real data, for every document that would otherwise finalize successfully."
-    artifacts:
-      - path: "src/Numera.Api/Contracts/SalesDocumentContracts.cs"
-        issue: "SalesDocumentDetail record (lines 76-99) has no IssuerSnapshot or RecipientSnapshot fields"
-      - path: "src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs"
-        issue: "ToDetail (line 651) does not project d.IssuerSnapshot or d.RecipientSnapshot into the DTO"
-    missing:
-      - "Fix the finalize crash (see gap 1) so a document number can actually be assigned"
-      - "Add IssuerSnapshot and RecipientSnapshot (raw jsonb string) to SalesDocumentDetail and populate them in ToDetail so the already-built frontend Paragraph-14 cards render real data"
-  - truth: "Nutzer kann finalisierte Rechnungen stornieren und Gutschriften erstellen; jede finalisierte Rechnung erzeugt einen offenen Posten mit Faelligkeit in der OP-Uebersicht"
-    status: failed
-    reason: "Storno (POST id storno) and the Gutschrift finalize both reuse the identical FinalizeCoreAsync and therefore hit the identical DbUpdateConcurrencyException. A Rechnung can never be finalized in the first place (gap 1), so there is nothing to Storno; even a hand-seeded finalized Rechnung would crash the same way when its Storno call finalizes the Storno mirror. No open item is ever created by the running app because BuildOpenItem is added in the same SaveChangesAsync call that throws - the whole transaction, including the number claim, rolls back."
-    artifacts:
-      - path: "src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs"
-        issue: "FinalizeCoreAsync (lines 721-790), shared by finalize, storno and the Gutschrift finalize, is the single point of failure"
-    missing:
-      - "Same one-line fix as gap 1 (FinalizeCoreAsync uses db.Add for the breakdown row); no Storno, Gutschrift or open-item-specific code changes are needed once the shared core is fixed"
+verified: 2026-07-13T12:19:45Z
+status: passed
+score: 5/5 must-haves verified
+re_verification:
+  previous_status: gaps_found
+  previous_score: 1/5
+  gaps_closed:
+    - "Entwuerfe sind frei bearbeitbar; finalisierte Belege sind unveraenderbar - Korrekturen erzeugen Storno-/Korrekturbelege (GoBD, DB-seitig erzwungen)"
+    - "Rechnungen enthalten alle Pflichtangaben nach Paragraph 14 UStG; Rechnungsnummern werden bei Finalisierung race-sicher, eindeutig und im konfigurierten Format vergeben"
+    - "Nutzer kann finalisierte Rechnungen stornieren und Gutschriften erstellen; jede finalisierte Rechnung erzeugt einen offenen Posten mit Faelligkeit in der OP-Uebersicht"
+  gaps_remaining: []
+  regressions: []
 human_verification:
-  - test: "After applying the db.Add fix to FinalizeCoreAsync, manually finalize a draft Rechnung through the running app (POST api documents id finalize or the UI Finalize button) and confirm a success response with an assigned RE-YYYY-##### number, a persisted BG-23 breakdown, and an open item appearing in the OP-Uebersicht."
-    expected: "Finalize succeeds without a server error; the invoice becomes read-only in the UI; Storno and Gutschrift then work end-to-end from the detail page action bar."
-    why_human: "Requires running the live API and UI stack (not just the isolated EF Core repro used for this verification) to confirm no other issue surfaces once the known blocker is removed."
-  - test: "After adding IssuerSnapshot and RecipientSnapshot to SalesDocumentDetail and ToDetail, open a finalized invoice detail page and visually confirm the issuer and recipient cards render the frozen legal name, address, VAT ID or tax number instead of the empty-state hint."
+  - test: "Finalize a real draft end-to-end through the running app (POST /api/documents/{id}/finalize or the UI Finalize button)."
+    expected: "Finalize succeeds without a server error; the invoice becomes read-only in the UI; an RE-YYYY-##### number, a persisted BG-23 breakdown and an open item in the OP-Uebersicht are visible; Storno and Gutschrift then work end-to-end from the detail page action bar."
+    why_human: "Requires the live API and UI stack (auth/session, real HTTP round-trip), not just the integration-test invocation of the internal core used for this verification."
+  - test: "Open a finalized invoice detail page in the browser and visually confirm the issuer and recipient cards render the frozen legal name, address, VAT ID or tax number instead of the empty-state hint."
     expected: "Issuer and recipient cards show real, frozen data matching what was captured at finalize time, not live partner or company-profile data."
-    why_human: "Visual confirmation of card rendering and defensive PascalCase and camelCase snapshot parsing is best done in a browser."
+    why_human: "Visual confirmation of card rendering and defensive PascalCase/camelCase snapshot parsing is best done in a browser."
 ---
 
 # Phase 3: Belegkette und Rechnungskern Verification Report
 
 **Phase Goal:** Nutzer kann rechtskonforme, unveraenderbare Rechnungen mit korrekter USt-Behandlung erzeugen - das Herz von v1, inklusive der zweiten "jetzt oder nie"-Naht (Unveraenderbarkeit + Nummernvergabe).
-**Verified:** 2026-07-13T07:54:27Z
-**Status:** gaps_found
-**Re-verification:** No - initial verification
+**Verified:** 2026-07-13T12:19:45Z
+**Status:** passed
+**Re-verification:** Yes - after gap-closure plan 03-11
 
 ## Goal Achievement
 
@@ -53,75 +34,79 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Nutzer kann Angebote erstellen und ueber AB/Lieferschein in Rechnungen ueberfuehren (Belegkette mit Statusverfolgung) | VERIFIED, draft mechanics only | POST id convert (SalesDocumentEndpoints.cs lines 229-303) correctly copies header and lines forward, sets SourceDocumentId, any source status converts freely - the draft-level chain works. Caveat: the chain terminal step (finalizing the resulting Rechnung) is blocked by gap 1, so full status tracking through to Finalized is not actually observable end-to-end. |
-| 2 | Entwuerfe frei bearbeitbar; finalisierte Belege unveraenderbar (DB-erzwungen); Korrekturen erzeugen Storno/Korrekturbelege | FAILED | Draft PUT/DELETE 409-gate confirmed working (lines 702-706). DB immutability triggers (sales_document_immutable, sales_document_child_immutable) are correctly implemented in migration 20260712151258_SalesDocuments.cs but are unreachable: FinalizeCoreAsync crashes with DbUpdateConcurrencyException before any document ever reaches Finalized status. Empirically reproduced. |
-| 3 | Rechnungen enthalten alle Paragraph-14-Pflichtangaben; Rechnungsnummern race-sicher, eindeutig, im konfigurierten Format bei Finalisierung vergeben | FAILED | NumberingService (atomic ON CONFLICT RETURNING) is correct and race-safe in isolation, but is enlisted in the same transaction that FinalizeCoreAsync rolls back on crash, so no number is ever durably assigned in production. Additionally the detail-read DTO omits IssuerSnapshot and RecipientSnapshot entirely (Paragraph-14 data is frozen server-side but never surfaced to the UI). |
-| 4 | USt als EN-16931-Kategorie modelliert, deckt 19/7/0%, Paragraph 19, Paragraph 13b, innergemeinschaftliche Lieferung mit Pflichttexten ab | VERIFIED, engine only, not reachable end-to-end | VatCalculationService and Pflichttext (src/modules/Numera.Modules.Sales/Vat/) correctly implement all required categories (S, AE, K, E, Z, G, O), per-category rounding, Kleinunternehmer Paragraph-19 override, and the mandated German Pflichttexte with VATEX codes - this is real production code, proven by TDD unit tests (03-03), not a reimplementation. However, VatCalculationService.Calculate result is only ever persisted inside FinalizeCoreAsync, which crashes before commit - so no invoice in the running app ever actually carries a persisted, correct VAT breakdown. |
-| 5 | Nutzer kann finalisierte Rechnungen stornieren und Gutschriften erstellen; jede finalisierte Rechnung erzeugt einen offenen Posten mit Faelligkeit in der OP-Uebersicht | FAILED | Storno and Gutschrift finalize both reuse the crashing FinalizeCoreAsync. BuildOpenItem is correct in isolation but is included in the same SaveChangesAsync call that throws, so the whole transaction, open item included, rolls back. The separate, unaffected GET api open-items read endpoint (OpenItemEndpoints.cs) and OpenItemsListPage frontend are fine, but will only ever show items in this codebase if seeded directly (never via the app). |
+| 1 | Nutzer kann Angebote erstellen und ueber AB/Lieferschein in Rechnungen ueberfuehren (Belegkette mit Statusverfolgung) | VERIFIED | Draft-level conversion (POST /{id}/convert, SalesDocumentEndpoints.cs 229-303) was already correct. The previously-blocking terminal step - finalizing the resulting Rechnung - now succeeds: FinalizeCoreAsync persists the breakdown via db.Add and no longer throws, so a document genuinely reaches Finalized status. The full chain (Angebot to AB to Lieferschein to finalized Rechnung) is now observable end-to-end, exercised by the integration suite. |
+| 2 | Entwuerfe frei bearbeitbar; finalisierte Belege unveraenderbar (DB-erzwungen); Korrekturen erzeugen Storno/Korrekturbelege | VERIFIED | Draft PUT/DELETE 409-gate unchanged (lines 702-706). FinalizeCoreAsync (SalesDocumentEndpoints.cs ~722-791) now persists the BG-23 breakdown via explicit db.Add(new SalesDocumentTaxBreakdown{ TenantId, DocumentId = doc.Id, ... }) instead of the navigation-collection doc.TaxBreakdown.Add(...) that previously crashed with DbUpdateConcurrencyException. Independently re-ran dotnet test tests/Numera.IntegrationTests against real Postgres (Testcontainers postgres:18): 59/59 green, including Finalized_invoice_business_column_update_is_rejected_by_the_db and Finalized_invoice_delete_is_rejected_by_the_db (SalesFinalizeTests.cs 174-195), which now actually exercise the DB immutability triggers because documents can finally reach Finalized status. |
+| 3 | Rechnungen enthalten alle Paragraph-14-Pflichtangaben; Rechnungsnummern race-sicher, eindeutig, im konfigurierten Format bei Finalisierung vergeben | VERIFIED | Finalize_creates_open_item_breakdown_snapshots_and_a_formatted_number (SalesFinalizeTests.cs 32-90) asserts doc.DocumentNumber == "RE-2026-00001", a persisted 2-row BG-23 breakdown, and non-null Issuer/RecipientSnapshot containing "Aussteller GmbH" / "Empfaenger AG" - all against the real FinalizeCoreAsync. SalesNumberingConcurrencyTests (parallel finalizations) still pass, now against the real core. On the read side, SalesDocumentDetail (SalesDocumentContracts.cs 98-99) now carries IssuerSnapshot/RecipientSnapshot, and ToDetail (SalesDocumentEndpoints.cs 651-657) projects d.IssuerSnapshot, d.RecipientSnapshot in the exact positional slot the record expects - confirmed by direct code read; build is 0-warning so positional arity is proven. Frontend DocumentDetailPage.tsx (already built, reads d.issuerSnapshot/d.recipientSnapshot via parseSnapshot) requires zero changes. |
+| 4 | USt als EN-16931-Kategorie modelliert, deckt 19/7/0%, Paragraph 19, Paragraph 13b, innergemeinschaftliche Lieferung mit Pflichttexten ab | VERIFIED | VatCalculationService and Pflichttext (unit-tested in 03-03) are now reachable end-to-end: Finalize_per_category_rounding_sums_rounded_rows_not_the_grand_total and Kleinunternehmer_finalize_produces_a_zero_vat_exempt_breakdown_with_the_para19_note (SalesFinalizeTests.cs 94-246) confirm real per-category rounding and the Paragraph-19 Kleinunternehmer exemption text are actually persisted through the real finalize core, not just computed in isolation. |
+| 5 | Nutzer kann finalisierte Rechnungen stornieren und Gutschriften erstellen; jede finalisierte Rechnung erzeugt einen offenen Posten mit Faelligkeit in der OP-Uebersicht | VERIFIED | Storno and Gutschrift-finalize both reuse the now-fixed FinalizeCoreAsync (fixed for free). Finalize_creates_open_item_breakdown_snapshots_and_a_formatted_number asserts a persisted open item (DueDate, OriginalAmount == OpenAmount == TotalGross, Status == Open, DocumentNumber). SalesStornoTests.cs is part of the 59/59 green run. GET /api/open-items and OpenItemsListPage.tsx (unaffected by the gap, already verified) will now show real data end-to-end. |
 
-**Score:** 1/5 truths fully verified (2 more partially verified at the isolated-component level but not end-to-end; 3 fully failed)
+**Score:** 5/5 truths fully verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs (FinalizeCoreAsync) | Finalize transaction: snapshots, VAT breakdown, numbering, open item, status flip | STUB-LIKE, present but crashes | Line 745 navigation Add on tracked parent leads to DbUpdateConcurrencyException, empirically reproduced against real Postgres. |
-| src/Numera.Api/Contracts/SalesDocumentContracts.cs (SalesDocumentDetail) | Paragraph-14-complete detail projection | INCOMPLETE | Missing IssuerSnapshot and RecipientSnapshot fields (lines 76-99). |
-| src/platform/Numera.Platform.Db/Migrations/20260712151258_SalesDocuments.cs | DB-enforced GoBD immutability triggers | VERIFIED | Correctly implemented (status-guarded parent trigger plus parent-status-lookup child trigger); confirmed present, but unreachable via the app due to the finalize crash. |
-| src/modules/Numera.Modules.Sales/Vat/VatCalculationService.cs and Pflichttext.cs | EN-16931 BG-23 breakdown and Pflichttexte | VERIFIED | All required categories, correct rounding policy, Kleinunternehmer override, mandatory German notes and VATEX codes present. |
-| src/modules/Numera.Modules.Sales/Numbering/NumberingService.cs | Race-safe atomic numbering | VERIFIED, isolated | Correct atomic INSERT ON CONFLICT DO UPDATE RETURNING; not reachable end-to-end due to finalize rollback. |
-| web/src/features/documents/DocumentDetailPage.tsx | Paragraph-14 detail view plus lifecycle actions | PARTIAL | Correctly built, forward-compatible with the missing snapshot fields, but currently always renders empty issuer and recipient cards because the backend never sends the data. |
-| web/src/features/openItems/OpenItemsListPage.tsx | OP-Uebersicht | VERIFIED | Correctly built read view over GET api open-items; will show real data once finalize is fixed. |
+| src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs (FinalizeCoreAsync) | Finalize transaction: snapshots, VAT breakdown, numbering, open item, status flip | VERIFIED | Line 746: db.Add(new SalesDocumentTaxBreakdown{...}) with DocumentId = doc.Id explicitly set. No doc.TaxBreakdown.Add( remains anywhere in the file (grepped, confirmed absent). Method signature changed private static -> internal static (line 722) to allow test invocation. |
+| src/Numera.Api/Contracts/SalesDocumentContracts.cs (SalesDocumentDetail) | Paragraph-14-complete detail projection | VERIFIED | Lines 98-99: string? IssuerSnapshot, / string? RecipientSnapshot, added in positional order between CancelledByDocumentId and Lines. |
+| src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs (ToDetail) | Projects the frozen snapshots into the DTO | VERIFIED | Line 657: d.IssuerSnapshot, d.RecipientSnapshot, placed in the matching positional slot. Build is 0-warning, confirming positional arity is correct. |
+| src/Numera.Api/Numera.Api.csproj | InternalsVisibleTo grants the test assembly access to the internal finalize core | VERIFIED | Lines 9-14: InternalsVisibleTo Include="Numera.IntegrationTests". |
+| tests/Numera.IntegrationTests/Numera.IntegrationTests.csproj | ProjectReference to Numera.Api so tests bind to the real host finalize code | VERIFIED | Line 74: ProjectReference Include="..\..\src\Numera.Api\Numera.Api.csproj". |
+| tests/Numera.IntegrationTests/SalesTestData.cs | Finalize harness delegates to the real production core; no parallel reimplementation | VERIFIED | ApplyFinalizeAsync (lines 332-343) now calls Numera.Api.Endpoints.SalesDocumentEndpoints.FinalizeCoreAsync(doc, profile, partner, db, numbering, audit, doc.TenantId, "FinalizeTest", ct) via a NoOpAuditWriter : IAuditWriter. Grepped the whole file: no db.Add(new SalesDocumentTaxBreakdown and no doc.TaxBreakdown.Add(new SalesDocumentTaxBreakdown reimplementation remains - only a benign doc-comment mention of the pattern name (line 32) describing the regression it now guards against. Class-level docstring (lines 16-38) rewritten to state the harness delegates to the real core; the old "faithful mirror ... lives as a private method, not referenced by this test project" claim is gone. |
+| src/platform/Numera.Platform.Db/Migrations/20260712151258_SalesDocuments.cs | DB-enforced GoBD immutability triggers | VERIFIED, now reachable | Unchanged from initial verification (already correct); now actually exercised because documents reach Finalized status - confirmed by the passing Finalized_invoice_*_is_rejected_by_the_db tests. |
+| web/src/features/documents/DocumentDetailPage.tsx | Paragraph-14 detail view plus lifecycle actions | VERIFIED (code-complete; visual confirmation still human) | Reads d.issuerSnapshot/d.recipientSnapshot via parseSnapshot/readSnapshot (lines 10, 119, 252-253); backend now populates these fields so the cards will render real data. No frontend change was required or made. |
+| web/src/features/openItems/OpenItemsListPage.tsx | OP-Uebersicht | VERIFIED | Unaffected by the gaps; now backed by real data since open items are durably created. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| POST id finalize | SalesDocumentTaxBreakdown persistence | navigation Add plus SaveChangesAsync | NOT WIRED, throws | Empirically confirmed DbUpdateConcurrencyException via a Postgres-backed repro using the exact production load and add pattern. |
-| POST id storno, POST id credit-note finalize | FinalizeCoreAsync | shared code path | NOT WIRED, throws | Both reuse the broken core. |
-| DocumentDetailPage.tsx | GET api documents id issuer and recipient snapshot | d.issuerSnapshot, d.recipientSnapshot | NOT WIRED | Backend DTO never populates these fields; frontend code is correct but has nothing to read. |
-| FinalizeCoreAsync | NumberingService.AssignAsync | ambient transaction | WIRED, in isolation | Correct atomic claim; rolled back as a side effect of the breakdown crash. |
-| FinalizeCoreAsync | BuildOpenItem persistence | db.Add plus same SaveChangesAsync | WIRED, in isolation | Correct pattern; rolled back as a side effect of the breakdown crash. |
+| POST /{id}/finalize | SalesDocumentTaxBreakdown persistence | explicit db.Add + SaveChangesAsync | WIRED | Confirmed by direct code read and by 59/59 green integration tests independently re-run against real Postgres, including tests that assert the breakdown rows and their values. |
+| POST /{id}/storno, POST /{id}/credit-note/finalize | FinalizeCoreAsync | shared code path | WIRED | Both reuse the fixed core; SalesStornoTests.cs is part of the green 59/59 run. |
+| DocumentDetailPage.tsx | GET /api/documents/{id} issuer/recipient snapshot | d.issuerSnapshot, d.recipientSnapshot | WIRED | Backend DTO now populates both fields (ToDetail line 657); frontend was already correct and reads them defensively. |
+| FinalizeCoreAsync | NumberingService.AssignAsync | ambient transaction | WIRED | Confirmed by Finalize_creates_open_item_breakdown_snapshots_and_a_formatted_number asserting doc.DocumentNumber == "RE-2026-00001" and by the concurrency suite. |
+| FinalizeCoreAsync | BuildOpenItem persistence | db.Add + same SaveChangesAsync | WIRED | Confirmed by the same test asserting open-item fields (DueDate, amounts, status, document number). |
+| tests/Numera.IntegrationTests/SalesTestData.cs (ApplyFinalizeAsync) | src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs (FinalizeCoreAsync) | direct invocation of the internal production method via InternalsVisibleTo + ProjectReference | WIRED | Confirmed by reading the delegation call and by the SUMMARY documented regression guard (reverting to the navigation-add pattern made 6/8 SalesFinalizeTests fail with DbUpdateConcurrencyException thrown from SalesDocumentEndpoints.FinalizeCoreAsync; restoring db.Add produced 59/59 green again). Not independently re-executed by this verifier (would require a temporary source mutation); accepted on the strength of (a) the delegation being directly visible in the current source, (b) the current 59/59 green run independently reproduced against the delegating code, and (c) the documented crash signature exactly matching the original empirically-reproduced GAP-1 defect (03-08-SUMMARY.md). |
 
 ### Requirements Coverage
 
 | Requirement | Status | Blocking Issue |
 |-------------|--------|-----------------|
-| DOCS-01 (Belegkette Angebot to AB to Lieferschein to Rechnung) | PARTIAL | Draft-level conversion works; full chain to a Finalized Rechnung is blocked by the finalize crash. |
-| DOCS-04 (Entwuerfe mutable, finalisierte Belege unveraenderbar via Storno) | BLOCKED | Finalize never succeeds, so immutability, though DB-enforced and correct, is never exercised by real users. |
-| INV-01 (Paragraph-14 Pflichtangaben) | BLOCKED | Finalize crash plus missing detail-DTO snapshot fields. |
-| INV-02 (race-sichere Nummernvergabe) | BLOCKED | NumberingService itself correct, but never durably committed due to the finalize rollback. |
-| INV-03 (Storno plus Gutschrift) | BLOCKED | Both reuse the crashing FinalizeCoreAsync. |
-| INV-04 (USt-Kategorien plus Pflichttexte) | PARTIAL | VatCalculationService correct in isolation; never persisted end-to-end. |
-| OPDN-01 (offener Posten pro finalisierter Rechnung) | BLOCKED | Open item creation is inside the same crashing transaction. |
+| DOCS-01 (Belegkette Angebot to AB to Lieferschein to Rechnung) | SATISFIED | Draft-level conversion plus finalize now both work end-to-end. |
+| DOCS-04 (Entwuerfe mutable, finalisierte Belege unveraenderbar via Storno) | SATISFIED | Finalize succeeds; DB immutability triggers are exercised and pass. |
+| INV-01 (Paragraph-14 Pflichtangaben) | SATISFIED | Finalize succeeds; detail DTO now exposes IssuerSnapshot/RecipientSnapshot. |
+| INV-02 (race-sichere Nummernvergabe) | SATISFIED | NumberingService durably commits within the now-succeeding finalize transaction; concurrency suite green. |
+| INV-03 (Storno plus Gutschrift) | SATISFIED | Both reuse the fixed FinalizeCoreAsync; SalesStornoTests green. |
+| INV-04 (USt-Kategorien plus Pflichttexte) | SATISFIED | VatCalculationService output now durably persisted end-to-end, confirmed by rounding and Kleinunternehmer tests. |
+| OPDN-01 (offener Posten pro finalisierter Rechnung) | SATISFIED | Open item creation is inside the now-succeeding finalize transaction; asserted by the finalize test. |
+
+Note: .planning/REQUIREMENTS.md itself still shows these as "Pending" checkboxes - that tracking file is maintained by the roadmap/orchestrator workflow, not by this verifier; the assessment above reflects the actual codebase state.
 
 ### Anti-Patterns Found
 
-| File | Line | Pattern | Severity | Impact |
-|------|------|---------|----------|--------|
-| src/Numera.Api/Endpoints/SalesDocumentEndpoints.cs | 745 | Navigation-collection Add on a tracked existing parent for a client-set-PK child, inconsistent with every other Add site in the same file | Blocker | Crashes finalize, storno and credit-note-finalize at runtime - the phase central "Herz von v1" transaction is completely non-functional. |
-| src/Numera.Api/Contracts/SalesDocumentContracts.cs | 76-99 | Detail DTO omits fields (IssuerSnapshot, RecipientSnapshot) that the frontend already reads | Warning | Paragraph-14 issuer and recipient legally-required data is frozen server-side but never visible to the user. |
-
-Note: both anti-patterns above are honestly self-documented by the implementer in 03-08-SUMMARY.md (Issues Encountered, carried-forward blocker), 03-09-SUMMARY.md (Issues Encountered), and 03-10-SUMMARY.md (carried-forward blocker), and echoed in .planning/STATE.md. This verification independently confirmed both by direct code inspection and, for the finalize crash, by an empirical reproduction against real Postgres using the exact production code path.
+None found in the gap-closure files (SalesDocumentEndpoints.cs, SalesDocumentContracts.cs, SalesTestData.cs, Numera.Api.csproj, Numera.IntegrationTests.csproj) - no TODO/FIXME/XXX/HACK/PLACEHOLDER markers, no empty-implementation stubs, no orphaned dead code from the removed parallel reimplementation (SUMMARY documents the orphaned Json field and BuildOpenItem helper were removed to keep the 0-warning build).
 
 ### Human Verification Required
 
-1. Finalize a real draft end-to-end after the fix - apply the one-line db.Add fix in FinalizeCoreAsync, then finalize a draft Rechnung via the running app or UI and confirm number assignment, breakdown persistence, and open-item creation. Why human: needs the live API and UI stack, not just the isolated EF Core repro used here.
-2. Visually confirm the Paragraph-14 cards render real data - after adding IssuerSnapshot and RecipientSnapshot to the detail DTO, open a finalized invoice detail page and confirm the issuer and recipient cards show frozen legal data. Why human: visual and browser confirmation.
+1. Finalize a real draft end-to-end through the running app (POST /api/documents/{id}/finalize or the UI Finalize button). Expected: success response with an RE-YYYY-##### number, persisted BG-23 breakdown, and an open item in the OP-Uebersicht; invoice becomes read-only; Storno and Gutschrift then work from the detail page action bar. Why human: needs the live API/UI stack (auth, session, real HTTP round-trip), not just the integration-test invocation of the internal core used here.
+2. Visually confirm the Paragraph-14 cards render real data - open a finalized invoice detail page and confirm the issuer and recipient cards show the frozen legal name/address/VAT-ID or tax-number instead of the empty-state hint. Why human: visual/browser confirmation of card rendering and snapshot parsing.
+
+These two items were already flagged as non-blocking in the initial 03-VERIFICATION.md and remain non-blocking here: all automated evidence (build, 59/59 integration tests against real Postgres exercising the real production FinalizeCoreAsync, direct code inspection of all three gap fixes) confirms the underlying functionality is now correct; only the live-UI/browser rendering confirmation requires a human and the running stack.
 
 ### Gaps Summary
 
-Phase 3 isolated building blocks are largely well-built and match the plan: the DB-level GoBD immutability triggers are correct, the numbering service is genuinely race-safe (atomic ON CONFLICT RETURNING), the VAT calculation engine correctly implements all required EN-16931 categories with mandatory Pflichttexte, and the frontend (list, edit, detail, OP-Uebersicht, settings pages) is well-built and largely forward-compatible.
+All three gaps from the initial verification (score 1/5) are closed, independently confirmed against the actual codebase:
 
-However, all of this is gated behind a single shared function, FinalizeCoreAsync, which throws DbUpdateConcurrencyException the instant it tries to persist the BG-23 VAT breakdown, because a new child entity with a client-set (Guid.CreateVersion7) store-generated PK is added via collection-navigation fixup on an already-tracked parent instead of via explicit db.Add. This was empirically reproduced against a real Postgres instance using the exact production load and add pattern. Since finalize, storno, and a Gutschrift own later finalize call all share this one function, no document can ever actually be finalized, numbered, receive an open item, or become immutable through the running application - the phase stated centerpiece (das Herz von v1, die zweite jetzt-oder-nie-Naht) is completely non-functional in its current state, despite all of its individual pieces being independently correct.
+1. GAP 1 (finalize crash) - FinalizeCoreAsync (SalesDocumentEndpoints.cs line 746) now persists the BG-23 breakdown via explicit db.Add(new SalesDocumentTaxBreakdown{ DocumentId = doc.Id, ... }) instead of the navigation-collection doc.TaxBreakdown.Add(...) that previously caused DbUpdateConcurrencyException on every finalize/Storno/Gutschrift attempt. Confirmed absent anywhere in the codebase via grep.
 
-A second, independent and less severe gap: the read-side detail DTO (SalesDocumentDetail and ToDetail) never returns the frozen IssuerSnapshot and RecipientSnapshot jsonb, so even once finalize is fixed, the Paragraph-14 issuer and recipient data will not be visible on the frontend until this DTO gap is also closed. The frontend was deliberately built forward-compatible for this.
+2. GAP 2 (missing Paragraph-14 snapshot DTO fields) - SalesDocumentDetail (SalesDocumentContracts.cs lines 98-99) now carries IssuerSnapshot/RecipientSnapshot; ToDetail (SalesDocumentEndpoints.cs line 657) projects them in the correct positional slot. Frontend requires zero changes (already built defensively).
 
-Both gaps are self-documented by the implementer as known, deliberately-deferred src-only follow-ups (03-08-SUMMARY.md, 03-09-SUMMARY.md, .planning/STATE.md), described as required before finalize ships end-to-end. This verification confirms both are still unresolved in the current codebase and that their impact is total, not cosmetic, for the finalize gap.
+3. GAP 3 (tests guarded a parallel reimplementation, not production code) - SalesTestData.ApplyFinalizeAsync (lines 332-343) now delegates directly to the real, internal, production SalesDocumentEndpoints.FinalizeCoreAsync via InternalsVisibleTo + a Numera.Api ProjectReference. The old parallel reimplementation and its misleading "faithful mirror ... not referenced by this test project" docstring are gone.
 
-Both fixes are small and well-scoped (one line for the finalize crash; a two-field DTO extension for the snapshot gap), and the correct patterns are already proven and ready to copy: tests/Numera.IntegrationTests/SalesTestData.cs line 352 (the db.Add pattern for the breakdown row) and the frontend parseSnapshot and readSnapshot machinery (already built and waiting for the two additional DTO fields).
+Independent confirmation performed by this verifier beyond reading the SUMMARY: dotnet build (0 warnings, .NET 10.0.301 SDK) and dotnet test tests/Numera.IntegrationTests/Numera.IntegrationTests.csproj re-run from scratch against a freshly spun-up real Postgres 18 Testcontainer (Docker Desktop confirmed running) - 59/59 tests passed, including the specific assertions for breakdown persistence, number assignment, open-item creation, DB-enforced immutability (both a rejected business-column UPDATE and a rejected DELETE), and the Kleinunternehmer Paragraph-19 Pflichttext. The regression-guard revert/restore cycle itself (reverting to the navigation-add pattern to observe 6/8 failures, then restoring) was not independently re-executed by this verifier - it would require a temporary source mutation - but is accepted based on (a) the delegation to the real core being directly visible in the current source, (b) the fresh 59/59 green run independently reproduced against that exact delegating code, and (c) the documented failure signature matching the original, separately and empirically reproduced GAP-1 defect from 03-08-SUMMARY.md.
+
+The phase goal - "Nutzer kann rechtskonforme, unveraenderbare Rechnungen mit korrekter USt-Behandlung erzeugen" - is now achieved and regression-guarded by tests that exercise the real shipped code path. The two remaining human-verification items (live-UI finalize, visual Paragraph-14 card rendering) are cosmetic/confirmatory, not functional blockers.
 
 ---
 
-Verified: 2026-07-13T07:54:27Z
+Verified: 2026-07-13T12:19:45Z
 Verifier: Claude (gsd-verifier)

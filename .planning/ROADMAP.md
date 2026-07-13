@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Plattform-Kern** - Multi-Tenant-Fundament: Auth, RLS-Isolation, Geldtyp, Audit-Log, Tarif-Gates, i18n, PWA-Shell ✓ 2026-07-10
 - [x] **Phase 2: Stammdaten** - Kunden/Lieferanten (Stammdaten, Historie, Notizen) und Produktkatalog ✓ 2026-07-12
-- [ ] **Phase 3: Belegkette & Rechnungskern** - Angebot→Rechnung-Kette, Unveränderbarkeit, Nummernvergabe, USt-Kategorien, offene Posten
+- [x] **Phase 3: Belegkette & Rechnungskern** - Angebot→Rechnung-Kette, Unveränderbarkeit, Nummernvergabe, USt-Kategorien, offene Posten ✓ 2026-07-13
 - [ ] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand
 - [ ] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen
 - [ ] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen
@@ -77,19 +77,20 @@ Plans:
   3. Rechnungen enthalten alle Pflichtangaben nach §14 UStG; Rechnungsnummern werden bei Finalisierung race-sicher, eindeutig und im konfigurierten Format vergeben
   4. USt wird als EN-16931-Kategorie modelliert und deckt 19/7/0 %, Kleinunternehmer §19, Reverse-Charge §13b und innergemeinschaftliche Lieferung mit korrekten Pflichttexten ab
   5. Nutzer kann finalisierte Rechnungen stornieren und Gutschriften erstellen; jede finalisierte Rechnung erzeugt einen offenen Posten mit Fälligkeit in der OP-Übersicht
-**Plans**: 10 plans
+**Plans**: 11 plans (10 planned + 1 gap closure)
 
 Plans:
-- [ ] 03-01-PLAN.md — Sales module + company_profile table + migration#1 + RLS + GET/PUT company-profile API
-- [ ] 03-02-PLAN.md — sales_documents schema (6 tables) + migration#2 + immutability triggers + RLS test
-- [ ] 03-03-PLAN.md — VatCalculationService (TDD, EN-16931 BG-23 + Pflichttexte)
-- [ ] 03-04-PLAN.md — sales-document HTTP surface: draft CRUD + convert + list/detail + OP list endpoint
-- [ ] 03-05-PLAN.md — finalize transaction (numbering + snapshots + breakdown + open item + audit + event)
-- [ ] 03-06-PLAN.md — Storno (384) + Gutschrift (381) correction documents
-- [ ] 03-07-PLAN.md — document frontend: list + RHF/zod draft editor with catalog-picker line array
-- [ ] 03-08-PLAN.md — integration tests: finalize side-effects, concurrent numbering, immutability, Storno
-- [ ] 03-09-PLAN.md — document detail page + finalize/storno/gutschrift/convert action bar (frontend)
-- [ ] 03-10-PLAN.md — OP-Übersicht page + company-profile settings form (frontend)
+- [x] 03-01-PLAN.md — Sales module + company_profile table + migration#1 + RLS + GET/PUT company-profile API
+- [x] 03-02-PLAN.md — sales_documents schema (6 tables) + migration#2 + immutability triggers + RLS test
+- [x] 03-03-PLAN.md — VatCalculationService (TDD, EN-16931 BG-23 + Pflichttexte)
+- [x] 03-04-PLAN.md — sales-document HTTP surface: draft CRUD + convert + list/detail + OP list endpoint
+- [x] 03-05-PLAN.md — finalize transaction (numbering + snapshots + breakdown + open item + audit + event)
+- [x] 03-06-PLAN.md — Storno (384) + Gutschrift (381) correction documents
+- [x] 03-07-PLAN.md — document frontend: list + RHF/zod draft editor with catalog-picker line array
+- [x] 03-08-PLAN.md — integration tests: finalize side-effects, concurrent numbering, immutability, Storno
+- [x] 03-09-PLAN.md — document detail page + finalize/storno/gutschrift/convert action bar (frontend)
+- [x] 03-10-PLAN.md — OP-Übersicht page + company-profile settings form (frontend)
+- [x] 03-11-PLAN.md — gap closure: finalize db.Add fix + §14 detail-DTO snapshots + tests drive REAL FinalizeCoreAsync
 
 ### Phase 4: PDF & Versand
 **Goal**: Nutzer kann Belege als professionelle PDFs im eigenen Layout erzeugen und direkt versenden — Rendering läuft asynchron, damit die Finalisierung schnell bleibt.
@@ -182,8 +183,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Plattform-Kern | 8/8 | ✓ Complete | 2026-07-10 |
 | 2. Stammdaten | 7/7 | ✓ Complete | 2026-07-12 |
-| 3. Belegkette & Rechnungskern | 0/TBD | Next | - |
-| 4. PDF & Versand | 0/TBD | Not started | - |
+| 3. Belegkette & Rechnungskern | 11/11 | ✓ Complete | 2026-07-13 |
+| 4. PDF & Versand | 0/TBD | Next | - |
 | 5. E-Rechnung-Engine | 0/TBD | Not started | - |
 | 6. Offene Posten & Mahnwesen | 0/TBD | Not started | - |
 | 7. Erweiterte Rechnungstypen | 0/TBD | Not started | - |
