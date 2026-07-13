@@ -1,0 +1,34 @@
+{
+  "nav": "Open Items",
+  "title": "Open Items",
+  "loadError": "Could not load open items.",
+  "table": {
+    "loading": "Loading …",
+    "empty": "No open items found.",
+    "total": "{{count}} items",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "columns": {
+    "documentNumber": "Document no.",
+    "partner": "Customer",
+    "originalAmount": "Original amount",
+    "openAmount": "Open amount",
+    "issuedOn": "Issued on",
+    "dueDate": "Due date",
+    "status": "Status"
+  },
+  "status": {
+    "Open": "Open",
+    "PartiallyPaid": "Partially paid",
+    "Paid": "Paid",
+    "Cancelled": "Cancelled"
+  },
+  "overdue": "overdue",
+  "filters": {
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "overdueOnly": "Overdue only"
+  }
+}
