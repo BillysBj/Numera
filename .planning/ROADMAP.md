@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Plattform-Kern** - Multi-Tenant-Fundament: Auth, RLS-Isolation, Geldtyp, Audit-Log, Tarif-Gates, i18n, PWA-Shell ✓ 2026-07-10
 - [x] **Phase 2: Stammdaten** - Kunden/Lieferanten (Stammdaten, Historie, Notizen) und Produktkatalog ✓ 2026-07-12
 - [x] **Phase 3: Belegkette & Rechnungskern** - Angebot→Rechnung-Kette, Unveränderbarkeit, Nummernvergabe, USt-Kategorien, offene Posten ✓ 2026-07-13
-- [ ] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand
+- [x] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand ✓ 2026-07-14
 - [ ] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen
 - [ ] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen
 - [ ] **Phase 7: Erweiterte Rechnungstypen** - Fremdwährung, Serienrechnungen, Abschlags-/Schlussrechnungen
@@ -103,11 +103,11 @@ Plans:
 **Plans**: 5 plans in 4 waves
 
 Plans:
-- [ ] 04-01-PLAN.md — Delivery persistence schema + RLS (document_render, document_email, logo columns) [wave 1]
-- [ ] 04-02-PLAN.md — QuestPDF §14 invoice layout (DE/EN) from the frozen snapshot [wave 1]
-- [ ] 04-03-PLAN.md — Async render job + enqueue-on-finalize + GET /pdf + logo endpoint [wave 2]
-- [ ] 04-04-PLAN.md — Email dispatch: Mailpit + MailKit + send job + POST /send + SentAt [wave 3]
-- [ ] 04-05-PLAN.md — Frontend: PDF download + send + status + logo upload UI [wave 4]
+- [x] 04-01-PLAN.md — Delivery persistence schema + RLS (document_render, document_email, logo columns) [wave 1]
+- [x] 04-02-PLAN.md — QuestPDF §14 invoice layout (DE/EN) from the frozen snapshot [wave 1]
+- [x] 04-03-PLAN.md — Async render job + enqueue-on-finalize + GET /pdf + logo endpoint [wave 2]
+- [x] 04-04-PLAN.md — Email dispatch: Mailpit + MailKit + send job + POST /send + SentAt [wave 3]
+- [x] 04-05-PLAN.md — Frontend: PDF download + send + status + logo upload UI [wave 4]
 
 ### Phase 5: E-Rechnung-Engine
 **Goal**: Nutzer kann gesetzlich verpflichtende E-Rechnungen EN-16931-konform erzeugen, validieren und empfangen — der strategische Compliance-Kern von Numera.
@@ -188,8 +188,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. Plattform-Kern | 8/8 | ✓ Complete | 2026-07-10 |
 | 2. Stammdaten | 7/7 | ✓ Complete | 2026-07-12 |
 | 3. Belegkette & Rechnungskern | 11/11 | ✓ Complete | 2026-07-13 |
-| 4. PDF & Versand | 0/TBD | Next | - |
-| 5. E-Rechnung-Engine | 0/TBD | Not started | - |
+| 4. PDF & Versand | 5/5 | ✓ Complete | 2026-07-14 |
+| 5. E-Rechnung-Engine | 0/TBD | Next | - |
 | 6. Offene Posten & Mahnwesen | 0/TBD | Not started | - |
 | 7. Erweiterte Rechnungstypen | 0/TBD | Not started | - |
 | 8. CRM-Ausbau & Steuerberater-Zugang | 0/TBD | Not started | - |
