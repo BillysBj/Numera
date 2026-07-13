@@ -719,7 +719,7 @@ public static class SalesDocumentEndpoints
     // written while status is still Draft (first SaveChanges) so the child immutability trigger
     // permits the child INSERTs; the status flip is a SECOND SaveChanges (OLD.status = 0 passes
     // the parent trigger). Audit is recorded before the final SaveChanges (atomic).
-    private static async Task FinalizeCoreAsync(
+    internal static async Task FinalizeCoreAsync(
         SalesDocument doc,
         CompanyProfile profile,
         BusinessPartner? partner,

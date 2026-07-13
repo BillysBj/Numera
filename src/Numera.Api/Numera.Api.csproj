@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Grant the integration-test assembly access to the internal FinalizeCoreAsync so
+         the finalize/Storno/concurrency suites drive the REAL production finalize core
+         (not a parallel reimplementation) — regression-guards the GAP-1 db.Add fix. -->
+    <InternalsVisibleTo Include="Numera.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Required by the EF Core tools (dotnet ef) when Api is the startup project. -->
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.*">

@@ -65,6 +65,13 @@
       per-table RLS isolation on real Postgres.
     -->
     <ProjectReference Include="..\..\src\modules\Numera.Modules.Sales\Numera.Modules.Sales.csproj" />
+    <!--
+      Numera.Api is referenced so the finalize/Storno/concurrency suites bind to the REAL
+      production finalize core: SalesDocumentEndpoints.FinalizeCoreAsync is internal +
+      [InternalsVisibleTo("Numera.IntegrationTests")], so these tests drive the actual
+      shipped code path (GAP-3 regression guard) instead of a parallel reimplementation.
+    -->
+    <ProjectReference Include="..\..\src\Numera.Api\Numera.Api.csproj" />
   </ItemGroup>
 
 </Project>

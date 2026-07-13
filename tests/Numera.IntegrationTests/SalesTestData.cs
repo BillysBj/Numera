@@ -1,11 +1,10 @@
-using System.Text.Json;
-
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Numbering;
 using Numera.Modules.Sales.Vat;
+using Numera.Platform.Audit;
 using Numera.Platform.Db;
 using Numera.Platform.Money;
 
@@ -16,26 +15,29 @@ namespace Numera.IntegrationTests;
 
 /// <summary>
 /// Shared seed + finalize harness for the FINALIZE-driven Sales integration suites
-/// (plans 03-05/03-06 behaviours, proven by 03-08). It seeds a §14-complete issuer
-/// (<see cref="CompanyProfile"/>), a recipient (<see cref="BusinessPartner"/>) and a
-/// finalizable draft, and runs a finalize that is a faithful mirror of the production
-/// <c>SalesDocumentEndpoints.FinalizeCoreAsync</c> — it routes through the REAL
-/// <see cref="NumberingService"/> (the atomic ON CONFLICT counter) and
-/// <see cref="VatCalculationService"/> (the BG-23 authority), writes the breakdown +
-/// frozen columns while the parent is still Draft, then flips status LAST so the DB
-/// immutability triggers, the partial unique number index and RLS are the controls
-/// actually under test.
+/// (plans 03-05/03-06 behaviours, proven by 03-08, gap-closed by 03-11). It seeds a
+/// §14-complete issuer (<see cref="CompanyProfile"/>), a recipient
+/// (<see cref="BusinessPartner"/>) and a finalizable draft, then delegates the actual
+/// finalize to the REAL production core
+/// <c>Numera.Api.Endpoints.SalesDocumentEndpoints.FinalizeCoreAsync</c> (made
+/// <c>internal</c> + exposed via <c>[InternalsVisibleTo("Numera.IntegrationTests")]</c>,
+/// with a <c>ProjectReference</c> to Numera.Api). The production core routes through the
+/// real <see cref="NumberingService"/> (the atomic ON CONFLICT counter) and
+/// <see cref="VatCalculationService"/> (the BG-23 authority), persists the breakdown via
+/// <c>db.Add</c> while the parent is still Draft, then flips status LAST.
 /// </summary>
 /// <remarks>
-/// The finalize core lives as a private method inside the Api host (not referenced by
-/// this test project), so it is reconstructed here over the same public building blocks.
-/// Every DB-enforced invariant (immutability, uniqueness, open-item close) is exercised
-/// against real Postgres as <c>numera_app</c> regardless of who orchestrates the writes.
+/// Because these suites now drive the SHIPPED finalize/Storno/Gutschrift code path (not a
+/// parallel reimplementation), a regression to the navigation-collection
+/// <c>doc.TaxBreakdown.Add</c> pattern makes the breakdown persist emit a 0-row UPDATE and
+/// throws <c>DbUpdateConcurrencyException</c> — failing these suites (GAP-3 regression
+/// guard). Every DB-enforced invariant (immutability, uniqueness, open-item close) is
+/// exercised against real Postgres as <c>numera_app</c>. Only the §14 completeness gate
+/// (<see cref="CheckGate"/>) remains a harness helper, mirroring the Api-internal
+/// FinalizeValidation, which is not where GAP 1 lives.
 /// </remarks>
 internal static class SalesTestData
 {
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-
     /// <summary>A minimal line specification the harness snapshots onto a draft line.</summary>
     internal readonly record struct LineSpec(
         string Name,
@@ -321,7 +323,11 @@ internal static class SalesTestData
     /// The finalize body WITHOUT transaction management — the caller owns
     /// BeginTransaction/Commit (mirrors how production Storno reuses the finalize core inside
     /// its own transaction so the original mutation + open-item close are one atomic unit).
-    /// The real <see cref="NumberingService"/> enlists the caller's ambient transaction.
+    /// Delegates to the REAL production
+    /// <c>Numera.Api.Endpoints.SalesDocumentEndpoints.FinalizeCoreAsync</c> — the shipped
+    /// finalize/Storno/Gutschrift code path — so the breakdown persist, numbering, open-item
+    /// creation and status flip (the GAP-1 locus) are genuinely under test. The real
+    /// <see cref="NumberingService"/> enlists the caller's ambient transaction.
     /// </summary>
     public static async Task ApplyFinalizeAsync(
         NumeraDbContext db,
@@ -331,90 +337,9 @@ internal static class SalesTestData
         CancellationToken ct = default)
     {
         var numbering = new NumberingService(db);
-
-        // Freeze issuer + recipient onto the document as jsonb (GoBD).
-        doc.IssuerSnapshot = JsonSerializer.Serialize(
-            new { profile.LegalName, profile.VatId, profile.TaxNumber, profile.IsKleinunternehmer }, Json);
-        doc.RecipientSnapshot = partner is null
-            ? null
-            : JsonSerializer.Serialize(new { partner.Name, partner.VatId, partner.TaxNumber }, Json);
-        doc.IsKleinunternehmer = profile.IsKleinunternehmer;
-
-        // VAT: bucket the lines into the BG-23 breakdown (negative lines → a negated breakdown).
-        var rows = VatCalculationService.Calculate(
-            doc.Lines.Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount)),
-            profile.IsKleinunternehmer);
-        foreach (var row in rows)
-        {
-            // Added via db.Add (not the tracked parent's navigation): a breakdown carries a
-            // client-set UUIDv7 PK, so a navigation-fixup would let EF treat it as an existing
-            // (Modified) row and emit a 0-row UPDATE; an explicit Add forces the INSERT.
-            db.Add(new SalesDocumentTaxBreakdown
-            {
-                TenantId = doc.TenantId,
-                DocumentId = doc.Id,
-                TaxCategory = row.Category,
-                VatRatePercent = row.RatePercent,
-                TaxableBase = row.TaxableBase,
-                TaxAmount = row.TaxAmount,
-                ExemptionReasonCode = row.ExemptionCode,
-                ExemptionReasonText = row.ExemptionText,
-            });
-        }
-
-        doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
-        doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
-        doc.TotalGross = doc.TotalNet + doc.TotalTax;
-        doc.AmountDue = doc.TotalGross;
-        doc.ReverseCharge = doc.Lines.Any(l => l.TaxCategory == TaxCategory.AE);
-
-        // Number: atomic upsert-returning counter from the type's own series (Pattern 3).
-        doc.DocumentNumber = await numbering.AssignAsync(doc.DocumentType, doc.DocumentDate.Year, ct);
-
-        var netDays = partner?.PaymentTermsNetDays ?? profile.DefaultPaymentTermsNetDays ?? 14;
-        doc.DueDate = doc.DocumentDate.AddDays(netDays);
-
-        // Open item (OPDN-01) for a Rechnung ONLY.
-        if (doc.DocumentType == DocumentType.Rechnung)
-        {
-            db.Add(BuildOpenItem(doc, partner));
-        }
-
-        // Write breakdown + frozen columns while status is still Draft (child trigger permits).
-        await db.SaveChangesAsync(ct);
-
-        // Flip status LAST — the parent trigger allows this UPDATE because OLD.status = 0.
-        doc.Status = DocumentStatus.Finalized;
-        doc.FinalizedAt = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(ct);
-    }
-
-    private static OpenItem BuildOpenItem(SalesDocument doc, BusinessPartner? partner)
-    {
-        var skontoDueDate = partner?.SkontoDays is int days
-            ? doc.DocumentDate.AddDays(days)
-            : (DateOnly?)null;
-        var skontoAmount = partner?.SkontoPercent is decimal percent
-            ? Math.Round(doc.TotalGross * percent / 100m, 2, MidpointRounding.AwayFromZero)
-            : (decimal?)null;
-
-        return new OpenItem
-        {
-            TenantId = doc.TenantId,
-            DocumentId = doc.Id,
-            PartnerId = doc.PartnerId,
-            DocumentNumber = doc.DocumentNumber!,
-            Currency = doc.Currency,
-            OriginalAmount = doc.TotalGross,
-            OpenAmount = doc.TotalGross,
-            Status = OpenItemStatus.Open,
-            IssuedOn = doc.DocumentDate,
-            DueDate = doc.DueDate!.Value,
-            SkontoPercent = partner?.SkontoPercent,
-            SkontoDays = partner?.SkontoDays,
-            SkontoDueDate = skontoDueDate,
-            SkontoAmount = skontoAmount,
-        };
+        var audit = new NoOpAuditWriter();
+        await Numera.Api.Endpoints.SalesDocumentEndpoints.FinalizeCoreAsync(
+            doc, profile, partner, db, numbering, audit, doc.TenantId, "FinalizeTest", ct);
     }
 
     /// <summary>Extracts the trailing sequence integer from a rendered number (e.g. RE-2026-00007 → 7).</summary>
@@ -432,4 +357,16 @@ internal sealed class FinalizeGateException(IReadOnlyDictionary<string, string[]
 {
     /// <summary>The gate failures keyed by field group (Issuer / Lines / Recipient).</summary>
     public IReadOnlyDictionary<string, string[]> Errors { get; } = errors;
+}
+
+/// <summary>
+/// No-op <see cref="IAuditWriter"/> for the finalize suites: the production
+/// <c>FinalizeCoreAsync</c> records an audit event, but these tests assert on the
+/// breakdown/numbering/open-item/immutability behaviour, not on audit rows, and the real
+/// AuditWriter needs ICurrentTenant/ICurrentUser seams. This keeps the GAP-1 locus fully
+/// exercised without wiring those seams.
+/// </summary>
+internal sealed class NoOpAuditWriter : IAuditWriter
+{
+    public Task RecordAsync(IAuditEvent evt, CancellationToken ct) => Task.CompletedTask;
 }
