@@ -10,6 +10,7 @@ import CatalogListPage from './features/catalog/CatalogListPage'
 import CatalogFormPage from './features/catalog/CatalogFormPage'
 import DocumentListPage from './features/documents/DocumentListPage'
 import DocumentFormPage from './features/documents/DocumentFormPage'
+import DocumentDetailPage from './features/documents/DocumentDetailPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
 // reachable from Login, Dashboard and the partner pages.
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/documents" element={<DocumentListPage />} />
         <Route path="/documents/new" element={<DocumentFormPage />} />
         <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
+        <Route path="/documents/:id" element={<DocumentDetailPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
