@@ -1,0 +1,61 @@
+{
+  "nav": "Settings",
+  "title": "Company profile",
+  "frozenNote": "These details are frozen when an invoice is finalized (§14 UStG). A compliant invoice cannot be finalized without a complete profile.",
+  "loading": "Loading …",
+  "loadError": "Could not load the company profile.",
+  "saving": "Saving …",
+  "save": "Save",
+  "saved": "Company profile saved.",
+  "sections": {
+    "master": "Master data",
+    "tax": "Tax",
+    "payment": "Payment",
+    "bank": "Bank & registry"
+  },
+  "fields": {
+    "legalName": "Legal name",
+    "street": "Street & number",
+    "line2": "Address line 2",
+    "postalCode": "Postal code",
+    "city": "City",
+    "countryCode": "Country (ISO)",
+    "poBox": "PO box",
+    "vatId": "VAT ID (USt-IdNr.)",
+    "taxNumber": "Tax number",
+    "kleinunternehmer": "Small business (§19 UStG)",
+    "defaultPaymentTermsNetDays": "Payment terms (net days)",
+    "defaultTaxCategory": "Default tax category",
+    "iban": "IBAN",
+    "bic": "BIC",
+    "bankName": "Bank",
+    "registerCourt": "Register court",
+    "registerNumber": "Register number",
+    "managingDirector": "Managing director",
+    "contactEmail": "Email",
+    "contactPhone": "Phone"
+  },
+  "hints": {
+    "kleinunternehmer": "With §19 enabled, no VAT is shown on any invoice."
+  },
+  "taxCategory": {
+    "S": "Standard rate (S)",
+    "AE": "Reverse charge (AE)",
+    "K": "Intra-community supply (K)",
+    "E": "Exempt (E)",
+    "Z": "Zero rate (Z)",
+    "G": "Export (G)",
+    "O": "Not taxable (O)"
+  },
+  "errors": {
+    "legalNameRequired": "A legal name is required.",
+    "legalNameMax": "At most 200 characters.",
+    "streetRequired": "A street is required.",
+    "postalCodeRequired": "A postal code is required.",
+    "cityRequired": "A city is required.",
+    "countryCode": "2-letter ISO 3166-1 alpha-2 code.",
+    "paymentTermsRange": "Payment terms must be between 0 and 365 days.",
+    "exactlyOneTaxId": "Provide exactly one: VAT ID or tax number.",
+    "server": "Save failed."
+  }
+}

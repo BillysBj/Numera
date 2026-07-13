@@ -1,0 +1,61 @@
+{
+  "nav": "Einstellungen",
+  "title": "Firmenprofil",
+  "frozenNote": "Diese Angaben werden bei der Rechnungs-Finalisierung eingefroren (§14 UStG). Ohne vollständiges Profil kann keine rechtskonforme Rechnung finalisiert werden.",
+  "loading": "Wird geladen …",
+  "loadError": "Das Firmenprofil konnte nicht geladen werden.",
+  "saving": "Wird gespeichert …",
+  "save": "Speichern",
+  "saved": "Firmenprofil gespeichert.",
+  "sections": {
+    "master": "Stammdaten",
+    "tax": "Steuer",
+    "payment": "Zahlung",
+    "bank": "Bank & Register"
+  },
+  "fields": {
+    "legalName": "Firmenname",
+    "street": "Straße & Hausnummer",
+    "line2": "Adresszusatz",
+    "postalCode": "PLZ",
+    "city": "Ort",
+    "countryCode": "Land (ISO)",
+    "poBox": "Postfach",
+    "vatId": "USt-IdNr.",
+    "taxNumber": "Steuernummer",
+    "kleinunternehmer": "Kleinunternehmer (§19 UStG)",
+    "defaultPaymentTermsNetDays": "Zahlungsziel (Tage netto)",
+    "defaultTaxCategory": "Standard-Steuerkategorie",
+    "iban": "IBAN",
+    "bic": "BIC",
+    "bankName": "Bank",
+    "registerCourt": "Registergericht",
+    "registerNumber": "Registernummer",
+    "managingDirector": "Geschäftsführer",
+    "contactEmail": "E-Mail",
+    "contactPhone": "Telefon"
+  },
+  "hints": {
+    "kleinunternehmer": "Bei aktivem §19 wird auf allen Rechnungen keine Umsatzsteuer ausgewiesen."
+  },
+  "taxCategory": {
+    "S": "Regelsteuersatz (S)",
+    "AE": "Reverse-Charge (AE)",
+    "K": "Innergemeinschaftliche Lieferung (K)",
+    "E": "Steuerbefreit (E)",
+    "Z": "Nullsatz (Z)",
+    "G": "Ausfuhrlieferung (G)",
+    "O": "Nicht steuerbar (O)"
+  },
+  "errors": {
+    "legalNameRequired": "Ein Firmenname ist erforderlich.",
+    "legalNameMax": "Höchstens 200 Zeichen.",
+    "streetRequired": "Eine Straße ist erforderlich.",
+    "postalCodeRequired": "Eine PLZ ist erforderlich.",
+    "cityRequired": "Ein Ort ist erforderlich.",
+    "countryCode": "2-stelliger ISO-3166-1-alpha-2-Code.",
+    "paymentTermsRange": "Zahlungsziel zwischen 0 und 365 Tagen.",
+    "exactlyOneTaxId": "Genau eine Angabe: USt-IdNr. oder Steuernummer.",
+    "server": "Speichern fehlgeschlagen."
+  }
+}
