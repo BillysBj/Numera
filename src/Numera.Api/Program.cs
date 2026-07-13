@@ -17,6 +17,11 @@ using Numera.Platform.Db;
 using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
 
+// QuestPDF requires a license type to be acknowledged before the first render or it
+// throws (RESEARCH.md Pitfall 1). Numera qualifies for the free Community license
+// (gross revenue < $1M). Set once at startup for the whole host.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -49,6 +54,10 @@ builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 // no-op seam until a handler is registered). VatCalculationService is static.
 builder.Services.AddScoped<NumberingService>();
 builder.Services.AddScoped<IDomainEventPublisher, InProcessDomainEventPublisher>();
+// Shared render entrypoint: loads the finalized doc under RLS, renders the §14 PDF from the
+// frozen snapshot (+ live logo), and stores it idempotently in document_render. Used by the
+// on-demand GET /{id}/pdf download and (04-03 Task 2) the Hangfire render job.
+builder.Services.AddScoped<DocumentPdfService>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them

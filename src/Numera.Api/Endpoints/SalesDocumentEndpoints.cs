@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 using Numera.Api.Contracts;
+using Numera.Api.Services;
 using Numera.Api.Validators;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
@@ -101,6 +102,29 @@ public static class SalesDocumentEndpoints
                 .ConfigureAwait(false);
 
             return d is null ? Results.NotFound() : Results.Ok(ToDetail(d));
+        });
+
+        // GET /api/documents/{id}/pdf — download the finalized document's §14 PDF (DOCS-02).
+        // Returns the stored render if present, else renders-on-demand from the frozen snapshot
+        // (the idempotent recovery path for documents whose async render has not landed yet, or
+        // pre-existing ones). Optional ?lang=de|en selects the label set (default de). 404 when
+        // the document is not found under RLS; 409 when it is still a Draft (no frozen snapshot).
+        g.MapGet("/{id:guid}/pdf", async (
+            Guid id,
+            DocumentPdfService pdf,
+            CancellationToken ct,
+            string? lang = null) =>
+        {
+            var result = await pdf.GetOrRender(id, lang ?? "de", ct).ConfigureAwait(false);
+            return result.Result switch
+            {
+                DocumentPdfService.Outcome.NotFound => Results.NotFound(),
+                DocumentPdfService.Outcome.NotFinalized => Results.Problem(
+                    title: "Document is not finalized",
+                    detail: "Only a finalized document has a PDF; this document is still a Draft.",
+                    statusCode: StatusCodes.Status409Conflict),
+                _ => Results.File(result.PdfBytes!, "application/pdf", $"{result.DocumentNumber}.pdf"),
+            };
         });
 
         // POST /api/documents — create a Draft.
