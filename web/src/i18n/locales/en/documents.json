@@ -13,7 +13,18 @@
     "addFromCatalog": "Add from catalog",
     "removeLine": "Remove",
     "convert": "Convert",
-    "view": "View"
+    "convertTo": "Convert to …",
+    "view": "View",
+    "backToList": "Back to list",
+    "editDraft": "Edit draft",
+    "finalize": "Finalize",
+    "finalizing": "Finalizing …",
+    "confirmFinalize": "Finalize this document now? A final document number will be assigned — this cannot be undone.",
+    "storno": "Cancel (Storno)",
+    "confirmStorno": "Cancel this invoice? A cancellation document will be created and the invoice marked as cancelled.",
+    "creditNote": "Credit note",
+    "confirmCreditNote": "Create a credit note for this invoice? A credit-note draft will be created.",
+    "working": "Working …"
   },
   "table": {
     "loading": "Loading …",
@@ -111,5 +122,72 @@
       "conflict": "This document is no longer a draft and cannot be changed.",
       "server": "Saving failed."
     }
+  },
+  "detail": {
+    "draftTitle": "Draft",
+    "sections": {
+      "issuer": "Issuer (§14)",
+      "recipient": "Recipient (§14)",
+      "lines": "Line items",
+      "vatBreakdown": "VAT breakdown",
+      "chain": "Document chain",
+      "meta": "Document details"
+    },
+    "fields": {
+      "number": "Document number",
+      "date": "Document date",
+      "serviceDate": "Service date",
+      "servicePeriodEnd": "Service period end",
+      "dueDate": "Due date",
+      "net": "Net total",
+      "tax": "VAT",
+      "gross": "Gross total",
+      "amountDue": "Amount due",
+      "buyerReference": "Buyer reference / Leitweg-ID",
+      "notes": "Notes",
+      "finalizedAt": "Finalized at",
+      "currency": "Currency"
+    },
+    "snapshot": {
+      "legalName": "Name",
+      "address": "Address",
+      "vatId": "VAT ID",
+      "taxNumber": "Tax number",
+      "email": "Email",
+      "pending": "Frozen when the document is finalized."
+    },
+    "lines": {
+      "lineNumber": "No.",
+      "name": "Name",
+      "quantity": "Qty",
+      "unit": "Unit",
+      "netUnitPrice": "Unit price (net)",
+      "taxCategory": "Tax cat.",
+      "vatRatePercent": "VAT rate",
+      "lineNetAmount": "Net amount",
+      "empty": "No line items."
+    },
+    "breakdown": {
+      "category": "Category",
+      "rate": "Rate",
+      "base": "Taxable base",
+      "tax": "Tax amount",
+      "exemptionText": "Mandatory note",
+      "empty": "No VAT breakdown (computed on finalize)."
+    },
+    "chain": {
+      "convertedFrom": "Converted from",
+      "corrects": "Corrects",
+      "cancelledBy": "Cancelled by",
+      "none": "No linked documents.",
+      "open": "Open document"
+    },
+    "notes": {
+      "kleinunternehmer": "No VAT is charged under §19 UStG (small-business scheme).",
+      "reverseCharge": "Reverse charge — the recipient owes the VAT (§13b UStG).",
+      "cancelled": "This document has been cancelled."
+    },
+    "finalized": "Document number {{number}} assigned.",
+    "loading": "Loading …"
   }
 }

@@ -13,7 +13,18 @@
     "addFromCatalog": "Aus Artikelstamm",
     "removeLine": "Entfernen",
     "convert": "Umwandeln",
-    "view": "Anzeigen"
+    "convertTo": "Umwandeln in …",
+    "view": "Anzeigen",
+    "backToList": "Zurück zur Übersicht",
+    "editDraft": "Entwurf bearbeiten",
+    "finalize": "Finalisieren",
+    "finalizing": "Wird finalisiert …",
+    "confirmFinalize": "Beleg jetzt finalisieren? Dabei wird eine endgültige Belegnummer vergeben – dieser Schritt kann nicht rückgängig gemacht werden.",
+    "storno": "Stornieren",
+    "confirmStorno": "Diese Rechnung stornieren? Es wird ein Storno-Beleg erstellt und die Rechnung als storniert markiert.",
+    "creditNote": "Gutschrift",
+    "confirmCreditNote": "Gutschrift zu dieser Rechnung erstellen? Es wird ein Gutschrift-Entwurf angelegt.",
+    "working": "Wird verarbeitet …"
   },
   "table": {
     "loading": "Wird geladen …",
@@ -111,5 +122,72 @@
       "conflict": "Dieser Beleg ist kein Entwurf mehr und kann nicht geändert werden.",
       "server": "Speichern fehlgeschlagen."
     }
+  },
+  "detail": {
+    "draftTitle": "Entwurf",
+    "sections": {
+      "issuer": "Rechnungssteller (§14)",
+      "recipient": "Rechnungsempfänger (§14)",
+      "lines": "Positionen",
+      "vatBreakdown": "Umsatzsteuer-Aufschlüsselung",
+      "chain": "Belegkette",
+      "meta": "Belegdaten"
+    },
+    "fields": {
+      "number": "Belegnummer",
+      "date": "Belegdatum",
+      "serviceDate": "Leistungsdatum",
+      "servicePeriodEnd": "Leistungszeitraum bis",
+      "dueDate": "Fällig am",
+      "net": "Nettosumme",
+      "tax": "USt.",
+      "gross": "Bruttosumme",
+      "amountDue": "Offener Betrag",
+      "buyerReference": "Leitweg-ID / Referenz",
+      "notes": "Anmerkungen",
+      "finalizedAt": "Finalisiert am",
+      "currency": "Währung"
+    },
+    "snapshot": {
+      "legalName": "Name",
+      "address": "Anschrift",
+      "vatId": "USt-IdNr.",
+      "taxNumber": "Steuernummer",
+      "email": "E-Mail",
+      "pending": "Wird bei der Finalisierung eingefroren."
+    },
+    "lines": {
+      "lineNumber": "Pos.",
+      "name": "Bezeichnung",
+      "quantity": "Menge",
+      "unit": "Einheit",
+      "netUnitPrice": "Einzelpreis (netto)",
+      "taxCategory": "Steuerkat.",
+      "vatRatePercent": "USt-Satz",
+      "lineNetAmount": "Nettobetrag",
+      "empty": "Keine Positionen."
+    },
+    "breakdown": {
+      "category": "Kategorie",
+      "rate": "Satz",
+      "base": "Bemessungsgrundlage",
+      "tax": "Steuerbetrag",
+      "exemptionText": "Pflichthinweis",
+      "empty": "Keine USt-Aufschlüsselung (erst nach Finalisierung)."
+    },
+    "chain": {
+      "convertedFrom": "Umgewandelt aus",
+      "corrects": "Korrigiert",
+      "cancelledBy": "Storniert durch",
+      "none": "Keine verknüpften Belege.",
+      "open": "Beleg öffnen"
+    },
+    "notes": {
+      "kleinunternehmer": "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet (Kleinunternehmer).",
+      "reverseCharge": "Steuerschuldnerschaft des Leistungsempfängers (Reverse-Charge, § 13b UStG).",
+      "cancelled": "Dieser Beleg wurde storniert."
+    },
+    "finalized": "Belegnummer {{number}} vergeben.",
+    "loading": "Wird geladen …"
   }
 }
