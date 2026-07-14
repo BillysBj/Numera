@@ -119,10 +119,14 @@ Plans:
   3. Jede ausgehende E-Rechnung wird vor Finalisierung gegen den KoSIT-Validator geprüft; Fehler blockieren den Versand und werden verständlich erklärt
   4. Nutzer kann empfangene E-Rechnungen (XRechnung/ZUGFeRD) hochladen, validieren und menschenlesbar anzeigen
   5. Empfangene E-Rechnungen werden als Eingangsbelege dem Lieferanten zugeordnet und abgelegt
-**Plans**: TBD
+**Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 05-01: TBD (verfeinert in plan-phase)
+- [ ] 05-01-PLAN.md — E-invoice mapper + XRechnung UBL/CII generator (single source of truth) + golden tests [wave 1]
+- [ ] 05-02-PLAN.md — KoSIT validator sidecar + IEInvoiceValidator client + DE/EN report findings [wave 1]
+- [ ] 05-03-PLAN.md — Outbound XRechnung: document_einvoice table + generate/validate pipeline + two-stage KoSIT gate + download [wave 2]
+- [ ] 05-04-PLAN.md — ZUGFeRD PDF/A-3 (PdfA + embedded CII from the same descriptor) + value-identity check [wave 3]
+- [ ] 05-05-PLAN.md — Inbound: inbound_document table + upload/parse/validate/supplier-match + human-readable frontend [wave 3]
 
 ### Phase 6: Offene Posten & Mahnwesen
 **Goal**: Nutzer kann den Geld-Kreislauf schließen — von der offenen Forderung über die erfasste Zahlung bis zur mehrstufigen Mahnung.
