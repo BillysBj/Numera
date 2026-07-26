@@ -4,6 +4,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
 
 using Numera.Api.Auth;
@@ -71,6 +72,19 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueuePdfOnFi
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 builder.Services.AddTransient<SendDocumentEmailJob>();
+// --- E-invoice validation (plan 05-02, EINV-03) ----------------------------
+// The IEInvoiceValidator seam over the KoSIT validator sidecar. A typed HttpClient POSTs the
+// e-invoice XML to the daemon and parses the report into a structured Accepted/Rejected/Unavailable
+// result with DE/EN-explained findings; an outage surfaces as Unavailable (never a false Rejected).
+// 05-03 wires this into the two-stage send gate.
+builder.Services.Configure<EInvoiceValidationOptions>(
+    builder.Configuration.GetSection(EInvoiceValidationOptions.SectionName));
+builder.Services.AddHttpClient<IEInvoiceValidator, KoSitValidatorClient>((sp, http) =>
+{
+    var options = sp.GetRequiredService<IOptions<EInvoiceValidationOptions>>().Value;
+    http.BaseAddress = new Uri(options.BaseUrl);
+    http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+});
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them
