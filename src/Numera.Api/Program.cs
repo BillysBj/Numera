@@ -142,6 +142,7 @@ app.MapPartnerEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapSalesDocumentEndpoints();
+app.MapEInvoiceEndpoints();
 app.MapOpenItemEndpoints();
 
 app.Run();

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Services;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.Email;
 using Numera.Platform.Tenancy;
 
@@ -39,15 +40,26 @@ public sealed class SendDocumentEmailJob
     }
 
     /// <summary>
-    /// Re-establishes tenant context for <paramref name="tenantId"/>, renders-if-absent the PDF for
-    /// the document referenced by <paramref name="documentEmailId"/> in <paramref name="language"/>,
-    /// sends it as an attachment, and advances the <see cref="DocumentEmail"/> row (+ flips
+    /// Re-establishes tenant context for <paramref name="tenantId"/>, resolves the attachment for
+    /// the document referenced by <paramref name="documentEmailId"/> in <paramref name="language"/>
+    /// (the rendered PDF, or — when <paramref name="asEInvoice"/> is set — the stored/generated
+    /// XRechnung XML), sends it, and advances the <see cref="DocumentEmail"/> row (+ flips
     /// <c>SalesDocument.SentAt</c> on first success) — all under RLS.
     /// </summary>
+    /// <param name="tenantId">The tenant whose context is re-established so RLS applies inside the job.</param>
+    /// <param name="documentEmailId">The Queued <see cref="DocumentEmail"/> row to send + advance.</param>
+    /// <param name="language">The covering-e-mail language ("de"/"en").</param>
+    /// <param name="asEInvoice">
+    /// When true, the attachment is the KoSIT-validated XRechnung (UBL) XML from
+    /// <c>document_einvoice</c> instead of the §14 PDF — the e-invoice Versand (EINV-03). The
+    /// endpoint's stage-2 gate has already confirmed the stored verdict is Accepted before enqueue.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task RunAsync(
         Guid tenantId,
         Guid documentEmailId,
         string language,
+        bool asEInvoice,
         CancellationToken cancellationToken = default)
     {
         using var scope = _scopeFactory.CreateScope();
@@ -75,16 +87,38 @@ public sealed class SendDocumentEmailJob
 
         try
         {
-            // Render-if-absent: NEVER send without an attachment (Pitfall 5).
-            var render = await pdf.GetOrRender(email.DocumentId, language, cancellationToken)
-                .ConfigureAwait(false);
-            if (render.Result != DocumentPdfService.Outcome.Ok)
+            // Resolve the attachment (generate/render-if-absent): NEVER send without one (Pitfall 5).
+            string documentNumber;
+            EmailAttachment attachment;
+            if (asEInvoice)
             {
-                throw new InvalidOperationException(
-                    $"Cannot send document {email.DocumentId}: render outcome was {render.Result}.");
+                var einvoice = services.GetRequiredService<EInvoiceService>();
+                var xml = await einvoice.GetOrGenerate(email.DocumentId, EInvoiceFormat.XRechnungUbl, cancellationToken)
+                    .ConfigureAwait(false);
+                if (xml.Result != EInvoiceService.Outcome.Ok)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot send e-invoice for document {email.DocumentId}: generate outcome was {xml.Result}.");
+                }
+
+                documentNumber = await ResolveDocumentNumberAsync(db, email.DocumentId, cancellationToken)
+                    .ConfigureAwait(false);
+                attachment = new EmailAttachment(xml.FileName!, xml.Xml!, "application/xml");
+            }
+            else
+            {
+                var render = await pdf.GetOrRender(email.DocumentId, language, cancellationToken)
+                    .ConfigureAwait(false);
+                if (render.Result != DocumentPdfService.Outcome.Ok)
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot send document {email.DocumentId}: render outcome was {render.Result}.");
+                }
+
+                documentNumber = render.DocumentNumber!;
+                attachment = new EmailAttachment($"{documentNumber}.pdf", render.PdfBytes!, "application/pdf");
             }
 
-            var documentNumber = render.DocumentNumber!;
             var content = DocumentEmailTemplates.Build(language, documentNumber);
 
             await sender.SendAsync(
@@ -94,8 +128,7 @@ public sealed class SendDocumentEmailJob
                     Subject = email.Subject ?? content.Subject,
                     HtmlBody = content.HtmlBody,
                     TextBody = content.TextBody,
-                    Attachment = new EmailAttachment(
-                        $"{documentNumber}.pdf", render.PdfBytes!, "application/pdf"),
+                    Attachment = attachment,
                 },
                 cancellationToken).ConfigureAwait(false);
 
@@ -135,5 +168,21 @@ public sealed class SendDocumentEmailJob
                 email.DocumentId, tenantId, email.AttemptCount);
             throw;
         }
+    }
+
+    // Reads the finalized document's legal number (RLS-scoped) for the covering e-mail's subject/body.
+    private static async Task<string> ResolveDocumentNumberAsync(
+        Numera.Platform.Db.NumeraDbContext db,
+        Guid documentId,
+        CancellationToken ct)
+    {
+        var number = await db.Set<SalesDocument>()
+            .AsNoTracking()
+            .Where(d => d.Id == documentId)
+            .Select(d => d.DocumentNumber)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+
+        return number ?? documentId.ToString();
     }
 }

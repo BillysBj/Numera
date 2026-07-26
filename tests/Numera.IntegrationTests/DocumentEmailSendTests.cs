@@ -169,7 +169,7 @@ public sealed class DocumentEmailSendTests
             provider.GetRequiredService<IServiceScopeFactory>(),
             NullLogger<SendDocumentEmailJob>.Instance);
 
-        await job.RunAsync(tenant, emailId, "de", CancellationToken.None);
+        await job.RunAsync(tenant, emailId, "de", false, CancellationToken.None);
     }
 
     // Polls Mailpit's HTTP API until exactly one message is present (SMTP delivery completes when

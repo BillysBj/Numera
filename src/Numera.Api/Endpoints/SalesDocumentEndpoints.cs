@@ -14,6 +14,7 @@ using Numera.Api.Services;
 using Numera.Api.Validators;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.Email;
 using Numera.Modules.Sales.Events;
 using Numera.Modules.Sales.Numbering;
@@ -205,7 +206,7 @@ public static class SalesDocumentEndpoints
             // Enqueue AFTER the row commits (enqueue-after-commit) so the job never races an
             // uncommitted document_email. The job runs on the Api default queue (Pitfall 2, LOCKED).
             jobs.Enqueue<SendDocumentEmailJob>(
-                j => j.RunAsync(tenantId, email.Id, language, CancellationToken.None));
+                j => j.RunAsync(tenantId, email.Id, language, false, CancellationToken.None));
 
             return Results.Accepted(
                 $"/api/documents/{doc.Id}/send", new { id = email.Id, status = email.Status });
@@ -429,6 +430,8 @@ public static class SalesDocumentEndpoints
             IDomainEventPublisher publisher,
             IAuditWriter audit,
             ICurrentTenant tenant,
+            EInvoiceService einvoice,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             // 1. Load the draft TRACKED with its lines; reject a non-draft before any DB work.
@@ -467,6 +470,31 @@ public static class SalesDocumentEndpoints
 
             // The gate guarantees a non-null issuer profile beyond this point.
             var tenantId = tenant.TenantId!.Value;
+
+            // STAGE 1 (pre-finalize dry-run, EINV-03, RESEARCH Pitfall 1): for a Rechnung, validate a
+            // PROVISIONAL XRechnung against KoSIT BEFORE any gapless number is burned. A hard rejection
+            // blocks finalize (422) so NO number is stranded (the transaction is not even started). A
+            // validator OUTAGE does NOT block (infra must not strand the user — RESEARCH Pitfall 6);
+            // the post-finalize job + the send gate still protect the actual Versand. Note the criterion
+            // blocks on validation ERRORS, never on a down sidecar.
+            if (doc.DocumentType == DocumentType.Rechnung)
+            {
+                var dryRun = await einvoice.DryRunAsync(doc, profile!, partner, ct).ConfigureAwait(false);
+                if (dryRun.Status == EInvoiceValidationStatus.Rejected)
+                {
+                    return Results.ValidationProblem(
+                        EInvoiceGate.ToProblemDictionary(dryRun.Findings),
+                        statusCode: StatusCodes.Status422UnprocessableEntity,
+                        title: "E-Rechnung ist nicht konform");
+                }
+
+                if (dryRun.Status == EInvoiceValidationStatus.Unavailable)
+                {
+                    loggerFactory.CreateLogger("EInvoiceGate").LogWarning(
+                        "Pre-finalize KoSIT dry-run unavailable for document {DocumentId}; finalizing anyway "
+                        + "(a validator outage does not block finalize).", doc.Id);
+                }
+            }
 
             // 3-7. Everything below runs inside ONE transaction via the shared finalize core
             //      (extracted so Storno can reuse it, plan 03-06): freeze snapshots, persist the
