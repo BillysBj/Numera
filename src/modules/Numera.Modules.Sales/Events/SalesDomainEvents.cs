@@ -13,6 +13,11 @@ namespace Numera.Modules.Sales.Events;
 /// <param name="TotalTax">Sum of the BG-23 breakdown tax (BT-110).</param>
 /// <param name="TotalGross">Grand total (BT-112).</param>
 /// <param name="DocumentDate">Issue date (BT-2).</param>
+/// <param name="DocumentType">
+/// The finalized document's kind (BT-3 seam). A downstream handler uses it to act only on the
+/// types it applies to — e.g. e-invoice generation is Rechnung-only in v1, while PDF rendering
+/// applies to every finalized type.
+/// </param>
 public sealed record InvoiceFinalized(
     Guid TenantId,
     Guid DocumentId,
@@ -20,7 +25,8 @@ public sealed record InvoiceFinalized(
     decimal TotalNet,
     decimal TotalTax,
     decimal TotalGross,
-    DateOnly DocumentDate);
+    DateOnly DocumentDate,
+    DocumentType DocumentType);
 
 /// <summary>
 /// Raised after an invoice is cancelled by a Storno (INV-03, built in plan 03-06). The

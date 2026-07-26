@@ -85,6 +85,15 @@ builder.Services.AddHttpClient<IEInvoiceValidator, KoSitValidatorClient>((sp, ht
     http.BaseAddress = new Uri(options.BaseUrl);
     http.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 });
+// --- E-invoice generation + two-stage gate (plan 05-03, EINV-01/EINV-03) ----
+// EInvoiceService generates UBL+CII from the frozen snapshot, validates via IEInvoiceValidator
+// and stores the bytes + status in document_einvoice (idempotent). The finalize → e-invoice hook
+// (fired after the finalize commit) resolves EnqueueEInvoiceOnFinalize from scope and ENQUEUES
+// GenerateEInvoiceJob on the Api default queue (never inline, only for a Rechnung) — coexisting
+// with EnqueuePdfOnFinalize. The job re-establishes tenant context before any RLS-scoped work.
+builder.Services.AddScoped<EInvoiceService>();
+builder.Services.AddTransient<GenerateEInvoiceJob>();
+builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueueEInvoiceOnFinalize>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them

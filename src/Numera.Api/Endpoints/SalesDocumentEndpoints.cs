@@ -494,7 +494,7 @@ public static class SalesDocumentEndpoints
             await publisher.PublishAsync(
                 new InvoiceFinalized(
                     tenantId, doc.Id, doc.DocumentNumber!,
-                    doc.TotalNet, doc.TotalTax, doc.TotalGross, doc.DocumentDate),
+                    doc.TotalNet, doc.TotalTax, doc.TotalGross, doc.DocumentDate, doc.DocumentType),
                 ct).ConfigureAwait(false);
 
             return Results.Ok(ToDetail(doc));

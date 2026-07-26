@@ -139,7 +139,7 @@ public sealed class DocumentRenderJobTests
         var handler = new EnqueuePdfOnFinalize(client);
 
         await handler.HandleAsync(
-            new InvoiceFinalized(tenant, docId, "RE-2026-00042", 100m, 19m, 119m, new DateOnly(2026, 6, 1)),
+            new InvoiceFinalized(tenant, docId, "RE-2026-00042", 100m, 19m, 119m, new DateOnly(2026, 6, 1), DocumentType.Rechnung),
             CancellationToken.None);
 
         // Enqueue-not-inline: exactly one job enqueued, and it is the render job.
