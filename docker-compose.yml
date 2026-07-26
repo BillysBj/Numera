@@ -53,20 +53,28 @@ services:
     # the send. Mirrors how Mailpit was added in Phase 4: a local sidecar, no auth, answering
     # over HTTP so both dev and Testcontainers integration tests can validate deterministically.
     #
-    # PINNED (RESEARCH Pitfall 4 — config drift silently changes verdicts): validator JAR
-    # 1.6.0 + validator-configuration-xrechnung release 2026-01-31 → XRechnung 3.0.2, which is
-    # the CURRENT PRODUCTION TARGET as of 2026-07. NOT the older 2025-03-21 config and NOT the
-    # XRechnung 4.0 pre-release (mid-2026 early-visibility only, non-production; the 4.0 move is
-    # a future pinned-config swap seam, not v1). The apps4everything/kosit-docker image bundles
-    # both for dev speed; it is pinned to an EXPLICIT tag (NEVER :latest — a rebuilt :latest
-    # would change verdicts with no code change). PRODUCTION should build our OWN image from the
-    # pinned official JAR 1.6.0 + config 2026-01-31 for full reproducibility + update control
-    # (RESEARCH Alternatives: SaaS/:latest rejected for the compliance core).
+    # PINNED (RESEARCH Pitfall 4 — config drift silently changes verdicts): this dev image
+    # bundles the official KoSIT validator JAR 1.5.0 + validator-configuration-xrechnung for
+    # XRechnung 3.0.2 (schematron 2.4.0, config release 2025-07-09) — XRechnung 3.0.2 is the
+    # CURRENT PRODUCTION TARGET as of 2026-07 (NOT the XRechnung 4.0 pre-release, which is
+    # mid-2026 early-visibility only, non-production; the 4.0 move is a future pinned-config
+    # swap seam, not v1). Pinned to an EXPLICIT tag (NEVER :latest — a rebuilt :latest would
+    # change verdicts with no code change).
     #
-    # Daemon HTTP: the image serves the KoSIT daemon on container port 8080; POST the invoice
-    # XML (application/xml) to the root path "/" and it returns the KoSIT XML report. Exposed on
-    # host :8081 (the app's EInvoiceValidation:BaseUrl).
-    image: apps4everything/kosit-docker:1.6.0
+    # NOTE — the community image the research named (apps4everything/kosit-docker:1.6.0, JAR
+    # 1.6.0 + config 2026-01-31) does NOT exist on Docker Hub; easybill/…_3.0.2:v0.2.7 is the
+    # real, pullable, explicitly-tagged XRechnung-3.0.2 daemon image (JAR 1.5.0, config release
+    # 2025-07-09 — same 3.0.2 ruleset, an earlier point release). For PRODUCTION build our OWN
+    # image from the pinned official JAR + the intended validator-configuration-xrechnung release
+    # for full reproducibility + update control (RESEARCH Alternatives: SaaS/:latest rejected for
+    # the compliance core; the config version is a pinned build arg + the single change-locus for
+    # the eventual XRechnung 4.0 swap).
+    #
+    # Daemon HTTP: the entrypoint runs the validator with -D (daemon) -H 0.0.0.0 --disable-gui,
+    # serving on container port 8080. POST the invoice XML to the root path "/" (multipart or raw)
+    # and it returns the KoSIT XML report. Exposed on host :8081 (the app's EInvoiceValidation
+    # BaseUrl).
+    image: easybill/kosit-validator-xrechnung_3.0.2:v0.2.7
     container_name: numera-kosit-validator
     ports:
       - "8081:8080" # KoSIT daemon HTTP (host 8081 → container 8080)

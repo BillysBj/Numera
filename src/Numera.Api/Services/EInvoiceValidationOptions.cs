@@ -35,5 +35,5 @@ public sealed class EInvoiceValidationOptions
     /// diagnostics/health so a config-version drift (RESEARCH Pitfall 4) is visible.
     /// </summary>
     public string ConfiguredProfileVersion { get; set; } =
-        "XRechnung 3.0.2 / validator-configuration-xrechnung 2026-01-31 / validator JAR 1.6.0";
+        "XRechnung 3.0.2 / validator-configuration-xrechnung 2025-07-09 (schematron 2.4.0) / validator JAR 1.5.0";
 }
