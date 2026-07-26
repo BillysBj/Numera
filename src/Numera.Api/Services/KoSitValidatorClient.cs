@@ -13,12 +13,23 @@ namespace Numera.Api.Services;
 /// and hands the returned XML report to <see cref="KoSitReport.Parse"/> for a structured verdict.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The critical safety property (RESEARCH Pitfall 6): a sidecar OUTAGE — connection refused, a
-/// timeout, a non-success HTTP status — is mapped to <see cref="EInvoiceValidationStatus.Unavailable"/>
-/// with a clear message and logged, and is NEVER mapped to <see cref="EInvoiceValidationStatus.Rejected"/>.
-/// An invoice is only "rejected" when the validator actually ran and said so. The client is
-/// registered via <c>AddHttpClient&lt;IEInvoiceValidator, KoSitValidatorClient&gt;</c> bound to the
+/// timeout, or an error body that is not a KoSIT report — is mapped to
+/// <see cref="EInvoiceValidationStatus.Unavailable"/> with a clear message and logged, and is NEVER
+/// mapped to <see cref="EInvoiceValidationStatus.Rejected"/>. An invoice is only "rejected" when the
+/// validator actually ran and said so.
+/// </para>
+/// <para>
+/// IMPORTANT — the KoSIT daemon signals the verdict through the HTTP STATUS, not only the body:
+/// an ACCEPTED document returns <c>200 OK</c> and a REJECTED document returns <c>406 Not
+/// Acceptable</c>, and BOTH carry a full VARL <c>&lt;rep:report&gt;</c> body. So the client must NOT
+/// treat a non-2xx status as an outage — it decides on the BODY: any response whose body is a KoSIT
+/// report is parsed (accept or reject); only a missing/non-report body (connection failure, timeout,
+/// a 5xx error page) is an outage. The client is registered via
+/// <c>AddHttpClient&lt;IEInvoiceValidator, KoSitValidatorClient&gt;</c> bound to the
 /// <see cref="EInvoiceValidationOptions"/> BaseUrl + Timeout.
+/// </para>
 /// </remarks>
 public sealed class KoSitValidatorClient : IEInvoiceValidator
 {
@@ -53,20 +64,21 @@ public sealed class KoSitValidatorClient : IEInvoiceValidator
             using var response = await _http.PostAsync(_options.ValidationPath, content, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (!response.IsSuccessStatusCode)
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            // The verdict rides on the BODY, not the status: 200 (accept) and 406 (reject) both carry
+            // a VARL report. Only a missing/non-report body is an outage — never a false rejection.
+            if (KoSitReport.IsReport(body))
             {
-                // The daemon answered but not with a report (e.g. 5xx): treat as an outage, not a
-                // rejection — we have no authoritative verdict.
-                _logger.LogWarning(
-                    "KoSIT validator returned non-success status {StatusCode}; treating as Unavailable.",
-                    (int)response.StatusCode);
-                return Unavailable(
-                    $"Der Validierungsdienst antwortete mit Status {(int)response.StatusCode}.",
-                    $"The validation service responded with status {(int)response.StatusCode}.");
+                return KoSitReport.Parse(body);
             }
 
-            var report = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            return KoSitReport.Parse(report);
+            _logger.LogWarning(
+                "KoSIT validator returned status {StatusCode} with a non-report body ({Length} bytes); treating as Unavailable.",
+                (int)response.StatusCode, body.Length);
+            return Unavailable(
+                $"Der Validierungsdienst antwortete unerwartet (Status {(int)response.StatusCode}, kein Prüfbericht).",
+                $"The validation service responded unexpectedly (status {(int)response.StatusCode}, no report).");
         }
         catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {

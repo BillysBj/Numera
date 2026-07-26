@@ -20,6 +20,35 @@ namespace Numera.Api.Services;
 /// </remarks>
 public static class KoSitReport
 {
+    /// <summary>The XML namespace of the KoSIT VARL report (its root element's namespace).</summary>
+    private const string VarlNamespace = "http://www.xoev.de/de/validator/varl/1";
+
+    /// <summary>
+    /// Cheap gate the client uses to tell a genuine KoSIT report (which may arrive with a non-2xx
+    /// status — a rejection is HTTP 406) from an error/non-report body (an outage). Returns true
+    /// only when <paramref name="body"/> parses as XML whose root is the VARL <c>report</c> element.
+    /// This is what stops a stray 200 with unrelated XML from being trusted as an "Accepted" verdict.
+    /// </summary>
+    public static bool IsReport(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return false;
+        }
+
+        try
+        {
+            var root = XDocument.Parse(body).Root;
+            return root is not null
+                && string.Equals(root.Name.LocalName, "report", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(root.Name.NamespaceName, VarlNamespace, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (System.Xml.XmlException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Parses a KoSIT XML report string into a structured verdict + findings.
     /// </summary>
