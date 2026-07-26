@@ -29,6 +29,11 @@
     <!-- Sales module (CompanyProfile) referenced so its DLL is deployed next to the
          test assembly for NumeraDbContext entity discovery, matching the Api host. -->
     <ProjectReference Include="..\..\src\modules\Numera.Modules.Sales\Numera.Modules.Sales.csproj" />
+    <!-- Numera.Api referenced so the PURE KoSitReport parser + its public result records
+         (EInvoiceFinding/EInvoiceValidationResult) are unit-tested here (KoSitReportTests) with
+         no sidecar/Docker — the parser lives in the Api Services alongside the HttpClient it
+         feeds (05-02). Mirrors how Numera.IntegrationTests references Numera.Api (03-11). -->
+    <ProjectReference Include="..\..\src\Numera.Api\Numera.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
