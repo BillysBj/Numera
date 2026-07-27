@@ -78,6 +78,7 @@ public static class EInvoiceMapper
 
         MapSeller(desc, model.Issuer);
         MapBuyer(desc, model.Recipient);
+        MapDelivery(desc, model);
         MapDates(desc, model);
         MapLines(desc, model.Lines);
         MapVatBreakdown(desc, model.BreakdownRows);
@@ -108,6 +109,12 @@ public static class EInvoiceMapper
             city: issuer.Address.City ?? string.Empty,
             street: issuer.Address.Street ?? string.Empty,
             country: ParseCountry(issuer.Address.CountryCode));
+
+        // BT-27 Seller name (BR-06): the UBL writer only emits cac:PartyLegalEntity/RegistrationName
+        // when a legal organization is present — without it BR-06 rejects. The CII SellerTradeParty
+        // already carries ram:Name, so this closes the UBL-side gap from the SAME frozen legal name.
+        desc.Seller.SpecifiedLegalOrganization =
+            new LegalOrganization { TradingBusinessName = issuer.LegalName ?? string.Empty };
 
         // Tax identity: USt-IdNr (BT-31, scheme VA) and/or Steuernummer (BT-32, scheme FC).
         if (!string.IsNullOrWhiteSpace(issuer.VatId))
@@ -159,6 +166,11 @@ public static class EInvoiceMapper
             street: recipient.BillingAddress.Street ?? string.Empty,
             country: ParseCountry(recipient.BillingAddress.CountryCode));
 
+        // BT-44 Buyer name (BR-07): same UBL-writer requirement as the seller — set the buyer's
+        // legal organization so cac:PartyLegalEntity/RegistrationName is emitted from the frozen name.
+        desc.Buyer.SpecifiedLegalOrganization =
+            new LegalOrganization { TradingBusinessName = recipient.Name ?? string.Empty };
+
         // Buyer VAT id BT-48 when present.
         if (!string.IsNullOrWhiteSpace(recipient.VatId))
         {
@@ -174,12 +186,42 @@ public static class EInvoiceMapper
         }
     }
 
+    private static void MapDelivery(InvoiceDescriptor desc, InvoicePdfModel model)
+    {
+        // BG-13 Deliver-to. For an intra-community supply (category K) EN 16931 BR-IC-12 requires
+        // the Deliver-to country code (BT-80) to be present. The goods are delivered to the buyer,
+        // so we default the ship-to to the frozen buyer address (its country carries BT-80). Only
+        // emitted when a K breakdown row exists — other categories do not need BG-13.
+        var isIntraCommunity = model.BreakdownRows.Any(r => r.TaxCategory == TaxCategory.K)
+            || model.Lines.Any(l => l.TaxCategory == TaxCategory.K);
+
+        if (!isIntraCommunity)
+        {
+            return;
+        }
+
+        var buyer = model.Recipient;
+        desc.ShipTo = new Party
+        {
+            Name = buyer.Name ?? string.Empty,
+            Street = buyer.BillingAddress.Street ?? string.Empty,
+            Postcode = buyer.BillingAddress.PostalCode ?? string.Empty,
+            City = buyer.BillingAddress.City ?? string.Empty,
+            Country = ParseCountry(buyer.BillingAddress.CountryCode),
+        };
+    }
+
     private static void MapDates(InvoiceDescriptor desc, InvoicePdfModel model)
     {
-        // Due date BT-9 — as a payment term due date.
+        // Due date BT-9 — as a payment term due date. A description (BT-20) MUST be supplied:
+        // a null/blank description makes the ZUGFeRD-csharp CII writer emit an empty
+        // <ram:Description> element, which KoSIT rejects (PEPPOL-EN16931-R008 "no empty elements").
+        // The text is derived from the frozen due date, so nothing is invented beyond the template.
         if (model.DueDate is { } due)
         {
-            desc.AddTradePaymentTerms(null, due.ToDateTime(TimeOnly.MinValue));
+            desc.AddTradePaymentTerms(
+                $"Zahlbar ohne Abzug bis {due:dd.MM.yyyy}.",
+                due.ToDateTime(TimeOnly.MinValue));
         }
 
         // Service date BT-72 / service period BG-14.
