@@ -24,9 +24,12 @@ namespace Numera.Modules.Sales.EInvoice.Inbound;
 /// </summary>
 public static class InboundParser
 {
-    // The three canonical embedded-XML file names a ZUGFeRD / Factur-X / XRechnung PDF/A-3 uses.
-    private static readonly string[] EInvoiceAttachmentNames =
-        ["factur-x.xml", "zugferd-invoice.xml", "xrechnung.xml"];
+    // The canonical embedded-XML name stems a ZUGFeRD / Factur-X / XRechnung PDF/A-3 uses. Matched
+    // as a case-insensitive substring because the /EmbeddedFiles name-tree KEY varies by producer:
+    // some tools use the full "factur-x.xml", others just the stem "factur-x" (e.g. QuestPDF), so a
+    // stem match plus a content sniff (see TryExtractEmbeddedXml) covers both.
+    private static readonly string[] EInvoiceAttachmentStems =
+        ["factur-x", "zugferd-invoice", "xrechnung", "cii", "order-x"];
 
     /// <summary>
     /// Detects the format, extracts the embedded XML (for a PDF), and parses the e-invoice into a
@@ -112,13 +115,15 @@ public static class InboundParser
                 return null;
             }
 
-            var preferred = files.FirstOrDefault(f =>
-                EInvoiceAttachmentNames.Any(n => string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase)));
+            // 1. Prefer an attachment whose name matches a canonical e-invoice stem or the .xml
+            //    extension (producer-independent — see EInvoiceAttachmentStems).
+            var preferred = files.FirstOrDefault(f => f.Name is { } name
+                && (name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                    || EInvoiceAttachmentStems.Any(s => name.Contains(s, StringComparison.OrdinalIgnoreCase))));
 
-            var chosen = preferred
-                ?? files.FirstOrDefault(f => f.Name is not null
-                    && f.Name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase));
-
+            // 2. Fall back to the first embedded file whose CONTENT sniffs as XML (robust to an
+            //    arbitrary attachment name from a foreign sender).
+            var chosen = preferred ?? files.FirstOrDefault(f => SniffsAsXml(f.Bytes));
             if (chosen is null)
             {
                 return null;
@@ -132,6 +137,31 @@ public static class InboundParser
             // A corrupt / unreadable PDF is treated as "no embedded e-invoice" (endpoint 422s cleanly).
             return null;
         }
+    }
+
+    // Sniffs whether bytes look like an XML document: the first non-whitespace byte (past an
+    // optional UTF-8 BOM) is '<'. Cheap, encoding-tolerant, and enough to pick the XML attachment
+    // out of a PDF whose embedded-file name does not follow the ZUGFeRD convention.
+    private static bool SniffsAsXml(ReadOnlySpan<byte> bytes)
+    {
+        var i = 0;
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        {
+            i = 3; // skip UTF-8 BOM
+        }
+
+        for (; i < bytes.Length; i++)
+        {
+            var b = bytes[i];
+            if (b is (byte)' ' or (byte)'\t' or (byte)'\r' or (byte)'\n')
+            {
+                continue;
+            }
+
+            return b == (byte)'<';
+        }
+
+        return false;
     }
 
     // Distinguishes raw XRechnung UBL from CII by the root element. A CII document is a
