@@ -1,0 +1,88 @@
+{
+  "nav": "Inbound invoices",
+  "title": "Inbound invoices",
+  "subtitle": "Received e-invoices (XRechnung / ZUGFeRD)",
+  "loadError": "Could not load inbound invoices.",
+  "table": {
+    "loading": "Loading …",
+    "empty": "No inbound invoices yet.",
+    "total": "{{count}} documents",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "columns": {
+    "seller": "Supplier",
+    "invoiceNumber": "Invoice no.",
+    "invoiceDate": "Date",
+    "totalGross": "Gross amount",
+    "status": "Validation",
+    "supplier": "Matched",
+    "format": "Format",
+    "uploadedAt": "Uploaded on"
+  },
+  "status": {
+    "Accepted": "Conformant",
+    "Rejected": "Rejected",
+    "Unavailable": "Not validated"
+  },
+  "format": {
+    "XmlUbl": "XRechnung (UBL)",
+    "XmlCii": "XRechnung (CII)",
+    "ZugferdPdf": "ZUGFeRD (PDF)"
+  },
+  "unmatched": "not matched",
+  "upload": {
+    "label": "Upload e-invoice",
+    "button": "Upload",
+    "hint": "XRechnung XML or ZUGFeRD PDF",
+    "uploading": "Uploading …",
+    "success": "Inbound invoice processed.",
+    "notEInvoice": "The file is not an e-invoice.",
+    "error": "The upload failed."
+  },
+  "detail": {
+    "loading": "Loading …",
+    "title": "Inbound invoice",
+    "back": "Back to list",
+    "seller": "Supplier",
+    "buyer": "Recipient",
+    "invoiceNumber": "Invoice number",
+    "invoiceDate": "Invoice date",
+    "currency": "Currency",
+    "vatId": "VAT ID",
+    "taxNumber": "Tax number",
+    "address": "Address",
+    "totals": "Amounts",
+    "totalNet": "Net",
+    "totalTax": "VAT",
+    "totalGross": "Gross",
+    "amountDue": "Amount due",
+    "lines": "Line items",
+    "breakdown": "VAT breakdown",
+    "validation": "KoSIT validation",
+    "supplier": "Matched supplier",
+    "supplierLink": "View supplier",
+    "download": "Download original",
+    "downloadError": "Could not download the original.",
+    "noFindings": "No findings.",
+    "format": "Format",
+    "uploadedAt": "Uploaded on"
+  },
+  "lineColumns": {
+    "name": "Description",
+    "quantity": "Qty",
+    "unit": "Unit",
+    "unitPrice": "Unit price",
+    "net": "Net",
+    "category": "Cat.",
+    "rate": "Rate"
+  },
+  "breakdownColumns": {
+    "category": "Category",
+    "rate": "Rate",
+    "base": "Base",
+    "tax": "Tax",
+    "reason": "Note"
+  }
+}

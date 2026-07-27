@@ -12,6 +12,8 @@ import DocumentListPage from './features/documents/DocumentListPage'
 import DocumentFormPage from './features/documents/DocumentFormPage'
 import DocumentDetailPage from './features/documents/DocumentDetailPage'
 import OpenItemsListPage from './features/openItems/OpenItemsListPage'
+import InboundListPage from './features/inbound/InboundListPage'
+import InboundDetailPage from './features/inbound/InboundDetailPage'
 import CompanyProfileSettingsPage from './features/settings/CompanyProfileSettingsPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
@@ -22,6 +24,7 @@ function AppHeader() {
   const { t: tc } = useTranslation('catalog')
   const { t: td } = useTranslation('documents')
   const { t: to } = useTranslation('openItems')
+  const { t: ti } = useTranslation('inbound')
   const { t: ts } = useTranslation('settings')
   return (
     <header className="app-header">
@@ -32,6 +35,7 @@ function AppHeader() {
         <Link to="/catalog">{tc('nav')}</Link>
         <Link to="/documents">{td('nav')}</Link>
         <Link to="/open-items">{to('nav')}</Link>
+        <Link to="/inbound">{ti('nav')}</Link>
         <Link to="/settings">{ts('nav')}</Link>
       </nav>
       <LanguageSwitcher />
@@ -58,6 +62,8 @@ export default function App() {
         <Route path="/documents/:id/edit" element={<DocumentFormPage />} />
         <Route path="/documents/:id" element={<DocumentDetailPage />} />
         <Route path="/open-items" element={<OpenItemsListPage />} />
+        <Route path="/inbound" element={<InboundListPage />} />
+        <Route path="/inbound/:id" element={<InboundDetailPage />} />
         <Route path="/settings" element={<CompanyProfileSettingsPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

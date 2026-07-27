@@ -1,0 +1,88 @@
+{
+  "nav": "Eingangsbelege",
+  "title": "Eingangsbelege",
+  "subtitle": "Empfangene E-Rechnungen (XRechnung / ZUGFeRD)",
+  "loadError": "Eingangsbelege konnten nicht geladen werden.",
+  "table": {
+    "loading": "Wird geladen …",
+    "empty": "Keine Eingangsbelege vorhanden.",
+    "total": "{{count}} Belege",
+    "page": "Seite {{page}} von {{pages}}",
+    "prev": "Zurück",
+    "next": "Weiter"
+  },
+  "columns": {
+    "seller": "Lieferant",
+    "invoiceNumber": "Rechnungsnr.",
+    "invoiceDate": "Datum",
+    "totalGross": "Bruttobetrag",
+    "status": "Prüfung",
+    "supplier": "Zugeordnet",
+    "format": "Format",
+    "uploadedAt": "Hochgeladen am"
+  },
+  "status": {
+    "Accepted": "Konform",
+    "Rejected": "Abgelehnt",
+    "Unavailable": "Nicht geprüft"
+  },
+  "format": {
+    "XmlUbl": "XRechnung (UBL)",
+    "XmlCii": "XRechnung (CII)",
+    "ZugferdPdf": "ZUGFeRD (PDF)"
+  },
+  "unmatched": "nicht zugeordnet",
+  "upload": {
+    "label": "E-Rechnung hochladen",
+    "button": "Hochladen",
+    "hint": "XRechnung-XML oder ZUGFeRD-PDF",
+    "uploading": "Wird hochgeladen …",
+    "success": "Eingangsbeleg wurde verarbeitet.",
+    "notEInvoice": "Die Datei ist keine E-Rechnung.",
+    "error": "Der Upload ist fehlgeschlagen."
+  },
+  "detail": {
+    "loading": "Wird geladen …",
+    "title": "Eingangsbeleg",
+    "back": "Zurück zur Übersicht",
+    "seller": "Lieferant",
+    "buyer": "Empfänger",
+    "invoiceNumber": "Rechnungsnummer",
+    "invoiceDate": "Rechnungsdatum",
+    "currency": "Währung",
+    "vatId": "USt-IdNr.",
+    "taxNumber": "Steuernummer",
+    "address": "Anschrift",
+    "totals": "Beträge",
+    "totalNet": "Netto",
+    "totalTax": "USt.",
+    "totalGross": "Brutto",
+    "amountDue": "Zahlbetrag",
+    "lines": "Positionen",
+    "breakdown": "USt.-Aufschlüsselung",
+    "validation": "KoSIT-Prüfung",
+    "supplier": "Zugeordneter Lieferant",
+    "supplierLink": "Lieferant anzeigen",
+    "download": "Original herunterladen",
+    "downloadError": "Das Original konnte nicht heruntergeladen werden.",
+    "noFindings": "Keine Beanstandungen.",
+    "format": "Format",
+    "uploadedAt": "Hochgeladen am"
+  },
+  "lineColumns": {
+    "name": "Bezeichnung",
+    "quantity": "Menge",
+    "unit": "Einheit",
+    "unitPrice": "Einzelpreis",
+    "net": "Netto",
+    "category": "Kat.",
+    "rate": "Satz"
+  },
+  "breakdownColumns": {
+    "category": "Kategorie",
+    "rate": "Satz",
+    "base": "Bemessung",
+    "tax": "Steuer",
+    "reason": "Hinweis"
+  }
+}
