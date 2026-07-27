@@ -24,9 +24,13 @@ namespace Numera.Modules.Sales.Pdf;
 /// stay German even under the English labels (LOCKED).
 /// </para>
 /// <para>
-/// Phase-5-ready seam: this is a single <c>Document.Create</c> that the ZUGFeRD path can
-/// later wrap with <c>WithSettings(new DocumentSettings{ PdfA = true })</c>. PDF/A and the
-/// ZUGFeRD package are deliberately NOT added here (LOCKED: Phase-5 seam only).
+/// Phase-5 ZUGFeRD seam (05-04): the SAME §14 layout renders as PDF/A-3b via
+/// <see cref="RenderPdfA"/> — the ONLY difference is <see cref="GetSettings"/> returns
+/// <see cref="PDFA_Conformance.PDFA_3B"/> (the level ZUGFeRD/Factur-X requires to embed the
+/// CII). PDF/A-3b is produced by CORE QuestPDF 2026.7.1 (no extra package, no iText/AGPL);
+/// <c>ZugferdGenerator</c> then attaches the <c>factur-x.xml</c> CII via
+/// <c>DocumentOperation</c>. The non-PDF/A <see cref="Render"/> path (Phase-4 §14 PDF) is
+/// byte-layout unchanged — it returns <see cref="DocumentSettings.Default"/> exactly as before.
 /// </para>
 /// </remarks>
 public sealed class InvoiceDocument : IDocument
@@ -34,17 +38,29 @@ public sealed class InvoiceDocument : IDocument
     private readonly InvoicePdfModel _model;
     private readonly PdfLabels _labels;
     private readonly CultureInfo _culture;
+    private readonly bool _pdfA;
 
     /// <summary>Creates the document for a render model.</summary>
-    public InvoiceDocument(InvoicePdfModel model)
+    /// <param name="model">The render model built from the frozen snapshot.</param>
+    /// <param name="pdfA">When true, <see cref="GetSettings"/> targets PDF/A-3b (the ZUGFeRD base).</param>
+    public InvoiceDocument(InvoicePdfModel model, bool pdfA = false)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         _labels = PdfLabels.For(model.Language);
         _culture = _labels.Culture;
+        _pdfA = pdfA;
     }
 
     /// <summary>Renders <paramref name="model"/> to a PDF <c>byte[]</c> (the storable artifact).</summary>
     public static byte[] Render(InvoicePdfModel model) => new InvoiceDocument(model).GeneratePdf();
+
+    /// <summary>
+    /// Renders <paramref name="model"/> to a <b>PDF/A-3b</b> <c>byte[]</c> — the byte-identical §14
+    /// layout, only tagged PDF/A-3b (the conformance level ZUGFeRD/Factur-X requires so the CII can
+    /// be embedded). Fonts are embedded by QuestPDF automatically (RESEARCH Pitfall 5). This is the
+    /// base <c>ZugferdGenerator</c> wraps with the <c>factur-x.xml</c> attachment + ZUGFeRD XMP.
+    /// </summary>
+    public static byte[] RenderPdfA(InvoicePdfModel model) => new InvoiceDocument(model, pdfA: true).GeneratePdf();
 
     /// <inheritdoc />
     public DocumentMetadata GetMetadata() => new()
@@ -52,6 +68,25 @@ public sealed class InvoiceDocument : IDocument
         Title = $"{_labels.Invoice} {_model.DocumentNumber}".Trim(),
         Author = _model.Issuer.LegalName ?? string.Empty,
     };
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The §14 path returns <see cref="DocumentSettings.Default"/> (identical to the implicit
+    /// default the Phase-4 render used). The ZUGFeRD path adds ONLY
+    /// <see cref="PDFA_Conformance.PDFA_3B"/> on top of those defaults — same compression, DPI and
+    /// image quality — so the printed page is unchanged, just PDF/A-3b-tagged. (The legacy
+    /// <c>DocumentSettings.PdfA</c> boolean is deprecated; the conformance enum is the current API.)
+    /// </remarks>
+    public DocumentSettings GetSettings()
+    {
+        var settings = DocumentSettings.Default;
+        if (_pdfA)
+        {
+            settings.PDFA_Conformance = PDFA_Conformance.PDFA_3B;
+        }
+
+        return settings;
+    }
 
     /// <summary>Formats a decimal as a plain grouped number ("1.234,56" in de-DE). Exposed for tests (Pitfall 4).</summary>
     public static string FormatNumber(decimal value, CultureInfo culture) =>
