@@ -12,6 +12,7 @@ using Numera.Api.Endpoints;
 using Numera.Api.Events;
 using Numera.Api.Jobs;
 using Numera.Api.Services;
+using Numera.Modules.Sales.EInvoice.Inbound;
 using Numera.Modules.Sales.Events;
 using Numera.Modules.Sales.Numbering;
 using Numera.Platform.Audit;
@@ -94,6 +95,13 @@ builder.Services.AddHttpClient<IEInvoiceValidator, KoSitValidatorClient>((sp, ht
 builder.Services.AddScoped<EInvoiceService>();
 builder.Services.AddTransient<GenerateEInvoiceJob>();
 builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueueEInvoiceOnFinalize>();
+// --- Inbound e-invoicing (plan 05-05, EINV-04/EINV-05) ----------------------
+// InboundEInvoiceService ingests a received XRechnung/ZUGFeRD: parse (detect → PdfPig extract →
+// InvoiceDescriptor.Load) → validate via IEInvoiceValidator (reused 05-02 seam) → match the
+// supplier by VAT id (SupplierMatcher) → store the immutable original + read-model + verdict in
+// inbound_document (RLS). POST /api/inbound-documents uploads; GET list/detail/original read.
+builder.Services.AddScoped<SupplierMatcher>();
+builder.Services.AddScoped<InboundEInvoiceService>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them
@@ -143,6 +151,7 @@ app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
+app.MapInboundDocumentEndpoints();
 app.MapOpenItemEndpoints();
 
 app.Run();
