@@ -9,9 +9,13 @@
     <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
     <!-- TaxCategory (EN 16931 BT-151 seam) used as the issuer's optional default. -->
     <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
+    <!-- Inbound e-invoicing (05-05) matches a received invoice's seller to a BusinessPartner
+         (supplier, BT-31/BT-48). Crm has no Sales dependency, so this reference is cycle-free. -->
+    <ProjectReference Include="..\Numera.Modules.Crm\Numera.Modules.Crm.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.15" />
     <PackageReference Include="QuestPDF" Version="2026.7.1" />
     <PackageReference Include="ZUGFeRD-csharp" Version="18.0.0" />
   </ItemGroup>
