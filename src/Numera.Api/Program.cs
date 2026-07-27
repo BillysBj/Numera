@@ -103,6 +103,7 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueueEInvoic
 builder.Services.AddScoped<SupplierMatcher>();
 builder.Services.AddScoped<InboundEInvoiceService>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<DunningConfigService>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them
@@ -155,5 +156,6 @@ app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
+app.MapDunningEndpoints();
 
 app.Run();
