@@ -1,0 +1,31 @@
+{
+  "title": "Record payment",
+  "description": "Record a payment for {{documentNumber}} (outstanding: {{openAmount}})",
+  "fields": {
+    "amount": "Amount",
+    "valueDate": "Value date",
+    "method": "Payment method",
+    "reference": "Reference"
+  },
+  "methods": {
+    "BankTransfer": "Bank transfer",
+    "Cash": "Cash",
+    "Card": "Card",
+    "Sepa": "SEPA",
+    "Other": "Other"
+  },
+  "actions": {
+    "record": "Record payment",
+    "cancel": "Cancel",
+    "saving": "Saving …"
+  },
+  "validation": {
+    "amountPositive": "The amount must be greater than 0.",
+    "amountMax": "The amount must not exceed the outstanding amount.",
+    "valueDateRequired": "Please enter a value date.",
+    "methodInvalid": "Please select a valid payment method."
+  },
+  "success": "The payment was recorded successfully.",
+  "error": "The payment could not be recorded.",
+  "serverValidationError": "Please check the payment details."
+}

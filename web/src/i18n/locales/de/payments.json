@@ -1,0 +1,31 @@
+{
+  "title": "Zahlung erfassen",
+  "description": "Zahlung für {{documentNumber}} erfassen (offen: {{openAmount}})",
+  "fields": {
+    "amount": "Betrag",
+    "valueDate": "Wertstellungsdatum",
+    "method": "Zahlungsart",
+    "reference": "Referenz"
+  },
+  "methods": {
+    "BankTransfer": "Überweisung",
+    "Cash": "Barzahlung",
+    "Card": "Kartenzahlung",
+    "Sepa": "SEPA",
+    "Other": "Sonstige"
+  },
+  "actions": {
+    "record": "Zahlung erfassen",
+    "cancel": "Abbrechen",
+    "saving": "Wird gespeichert …"
+  },
+  "validation": {
+    "amountPositive": "Der Betrag muss größer als 0 sein.",
+    "amountMax": "Der Betrag darf den offenen Betrag nicht überschreiten.",
+    "valueDateRequired": "Bitte geben Sie ein Wertstellungsdatum an.",
+    "methodInvalid": "Bitte wählen Sie eine gültige Zahlungsart."
+  },
+  "success": "Die Zahlung wurde erfolgreich erfasst.",
+  "error": "Die Zahlung konnte nicht erfasst werden.",
+  "serverValidationError": "Bitte prüfen Sie die Zahlungsangaben."
+}

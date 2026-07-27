@@ -11,6 +11,8 @@ import {
 import { DataTable } from '@/components/DataTable'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import RecordPaymentDialog from '@/features/payments/RecordPaymentDialog'
 
 // Amount display formatter — EUR, exactly 2 fraction digits. The wire value is a decimal
 // serialized as a JSON number; formatted for PRESENTATION only (no arithmetic) so there
@@ -47,6 +49,7 @@ export default function OpenItemsListPage() {
   })
   const [status, setStatus] = useState<OpenItemStatus | null>(null)
   const [overdueOnly, setOverdueOnly] = useState(false)
+  const [paymentItem, setPaymentItem] = useState<OpenItemListItem | null>(null)
 
   const query = useQuery({
     queryKey: [
@@ -129,6 +132,25 @@ export default function OpenItemsListPage() {
           </div>
         ),
       },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => {
+          const canRecord =
+            row.original.status === OpenItemStatus.Open ||
+            row.original.status === OpenItemStatus.PartiallyPaid
+          return (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!canRecord}
+              onClick={() => setPaymentItem(row.original)}
+            >
+              {t('payments:actions.record')}
+            </Button>
+          )
+        },
+      },
     ],
     [t],
   )
@@ -188,6 +210,13 @@ export default function OpenItemsListPage() {
         onPaginationChange={setPagination}
         isLoading={query.isLoading}
         translationNs="openItems"
+      />
+      <RecordPaymentDialog
+        open={paymentItem !== null}
+        onOpenChange={(open) => {
+          if (!open) setPaymentItem(null)
+        }}
+        openItem={paymentItem}
       />
     </main>
   )
