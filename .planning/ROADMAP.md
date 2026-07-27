@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Stammdaten** - Kunden/Lieferanten (Stammdaten, Historie, Notizen) und Produktkatalog ✓ 2026-07-12
 - [x] **Phase 3: Belegkette & Rechnungskern** - Angebot→Rechnung-Kette, Unveränderbarkeit, Nummernvergabe, USt-Kategorien, offene Posten ✓ 2026-07-13
 - [x] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand ✓ 2026-07-14
-- [ ] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen
+- [x] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen ✓ 2026-07-14
 - [ ] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen
 - [ ] **Phase 7: Erweiterte Rechnungstypen** - Fremdwährung, Serienrechnungen, Abschlags-/Schlussrechnungen
 - [ ] **Phase 8: CRM-Ausbau & Steuerberater-Zugang** - Aufgaben/Erinnerungen, Kundenakte, Steuerberater-Rolle (lesend)
@@ -122,11 +122,11 @@ Plans:
 **Plans**: 5 plans in 3 waves
 
 Plans:
-- [ ] 05-01-PLAN.md — E-invoice mapper + XRechnung UBL/CII generator (single source of truth) + golden tests [wave 1]
-- [ ] 05-02-PLAN.md — KoSIT validator sidecar + IEInvoiceValidator client + DE/EN report findings [wave 1]
-- [ ] 05-03-PLAN.md — Outbound XRechnung: document_einvoice table + generate/validate pipeline + two-stage KoSIT gate + download [wave 2]
-- [ ] 05-04-PLAN.md — ZUGFeRD PDF/A-3 (PdfA + embedded CII from the same descriptor) + value-identity check [wave 3]
-- [ ] 05-05-PLAN.md — Inbound: inbound_document table + upload/parse/validate/supplier-match + human-readable frontend [wave 3]
+- [x] 05-01-PLAN.md — E-invoice mapper + XRechnung UBL/CII generator (single source of truth) + golden tests [wave 1]
+- [x] 05-02-PLAN.md — KoSIT validator sidecar + IEInvoiceValidator client + DE/EN report findings [wave 1]
+- [x] 05-03-PLAN.md — Outbound XRechnung: document_einvoice table + generate/validate pipeline + two-stage KoSIT gate + download [wave 2]
+- [x] 05-04-PLAN.md — ZUGFeRD PDF/A-3 (PdfA + embedded CII from the same descriptor) + value-identity check [wave 3]
+- [x] 05-05-PLAN.md — Inbound: inbound_document table + upload/parse/validate/supplier-match + human-readable frontend [wave 3]
 
 ### Phase 6: Offene Posten & Mahnwesen
 **Goal**: Nutzer kann den Geld-Kreislauf schließen — von der offenen Forderung über die erfasste Zahlung bis zur mehrstufigen Mahnung.
@@ -193,8 +193,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. Stammdaten | 7/7 | ✓ Complete | 2026-07-12 |
 | 3. Belegkette & Rechnungskern | 11/11 | ✓ Complete | 2026-07-13 |
 | 4. PDF & Versand | 5/5 | ✓ Complete | 2026-07-14 |
-| 5. E-Rechnung-Engine | 0/TBD | Next | - |
-| 6. Offene Posten & Mahnwesen | 0/TBD | Not started | - |
+| 5. E-Rechnung-Engine | 5/5 | ✓ Complete | 2026-07-14 |
+| 6. Offene Posten & Mahnwesen | 0/TBD | Next | - |
 | 7. Erweiterte Rechnungstypen | 0/TBD | Not started | - |
 | 8. CRM-Ausbau & Steuerberater-Zugang | 0/TBD | Not started | - |
 | 9. v1-Feinschliff & Compliance | 0/TBD | Not started | - |
