@@ -102,6 +102,7 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueueEInvoic
 // inbound_document (RLS). POST /api/inbound-documents uploads; GET list/detail/original read.
 builder.Services.AddScoped<SupplierMatcher>();
 builder.Services.AddScoped<InboundEInvoiceService>();
+builder.Services.AddScoped<PaymentService>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
 // (which reads the per-request tenant + DbContext), so the feature manager and its
 // filters must live in the request scope — AddFeatureManagement() would register them
@@ -153,5 +154,6 @@ app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
 app.MapOpenItemEndpoints();
+app.MapPaymentEndpoints();
 
 app.Run();
