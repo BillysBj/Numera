@@ -58,6 +58,26 @@ public static class EInvoiceEndpoints
             };
         });
 
+        // GET /api/documents/{id}/zugferd — download the finalized invoice's ZUGFeRD PDF/A-3
+        // (render-if-absent from the frozen snapshot + live logo). The hybrid is a valid e-invoice
+        // AND a human-readable PDF, so one download serves both. 404 unknown; 409 Draft.
+        g.MapGet("/{id:guid}/zugferd", async (
+            Guid id,
+            EInvoiceService einvoice,
+            CancellationToken ct) =>
+        {
+            var result = await einvoice.GetOrGenerate(id, EInvoiceFormat.ZugferdPdfA3, ct).ConfigureAwait(false);
+            return result.Result switch
+            {
+                EInvoiceService.Outcome.NotFound => Results.NotFound(),
+                EInvoiceService.Outcome.NotFinalized => Results.Problem(
+                    title: "Document is not finalized",
+                    detail: "Only a finalized invoice has a ZUGFeRD PDF; this document is still a Draft.",
+                    statusCode: StatusCodes.Status409Conflict),
+                _ => Results.File(result.Xml!, "application/pdf", result.FileName),
+            };
+        });
+
         // POST /api/documents/{id}/send-einvoice — the AUTHORITATIVE stage-2 send gate. Refuses to
         // dispatch unless the stored XRechnung (UBL) was Accepted by KoSIT (errors block the
         // Versand, explained). On Accepted: records a Queued document_email + enqueues the send job

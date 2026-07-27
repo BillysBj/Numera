@@ -51,12 +51,16 @@ public sealed class EInvoiceService
     private static readonly JsonSerializerOptions ReportJson = new(JsonSerializerDefaults.Web);
 
     /// <summary>
-    /// The e-invoice syntaxes eagerly generated + validated at finalize, so a later download of
-    /// any is instant. THE extension point: 05-04 appends <see cref="EInvoiceFormat.ZugferdPdfA3"/>
-    /// here and the finalize job serves it with no job-file edit.
+    /// The e-invoice formats eagerly generated + validated at finalize, so a later download of any
+    /// is instant. THE extension point: because <c>GenerateEInvoiceJob</c> iterates this list, adding
+    /// <see cref="EInvoiceFormat.ZugferdPdfA3"/> (05-04) makes the finalize job eagerly produce all
+    /// three formats with NO job-file edit. ORDER MATTERS: <see cref="EInvoiceFormat.XRechnungCii"/>
+    /// precedes <see cref="EInvoiceFormat.ZugferdPdfA3"/> so the ZUGFeRD step can reuse the CII's
+    /// already-stored KoSIT verdict (the embedded CII is byte-identical — EINV-02) instead of
+    /// re-validating identical bytes.
     /// </summary>
     public static readonly IReadOnlyList<EInvoiceFormat> FinalizeFormats =
-        [EInvoiceFormat.XRechnungUbl, EInvoiceFormat.XRechnungCii];
+        [EInvoiceFormat.XRechnungUbl, EInvoiceFormat.XRechnungCii, EInvoiceFormat.ZugferdPdfA3];
 
     private readonly NumeraDbContext _db;
     private readonly ICurrentTenant _tenant;
@@ -111,10 +115,22 @@ public sealed class EInvoiceService
                 $"Cannot generate an e-invoice for document {documentId}: it is still a Draft (no frozen snapshot).");
         }
 
-        var model = SnapshotReader.FromDocument(doc);
-        var xml = Serialize(model, format);
+        byte[] bytes;
+        EInvoiceValidationStatus status;
+        string? reportJson;
 
-        var result = await _validator.ValidateAsync(xml, ct).ConfigureAwait(false);
+        if (format == EInvoiceFormat.ZugferdPdfA3)
+        {
+            (bytes, status, reportJson) = await GenerateZugferdAsync(doc, documentId, ct).ConfigureAwait(false);
+        }
+        else
+        {
+            var model = SnapshotReader.FromDocument(doc);
+            bytes = Serialize(model, format);
+            var result = await _validator.ValidateAsync(bytes, ct).ConfigureAwait(false);
+            status = result.Status;
+            reportJson = SerializeReport(result);
+        }
 
         // Idempotent replace: drop any prior artifact for this (document, format), insert the fresh one.
         var stale = await _db.Set<EInvoiceArtifact>()
@@ -132,11 +148,11 @@ public sealed class EInvoiceService
             TenantId = _tenant.TenantId!.Value,
             DocumentId = doc.Id,
             Format = format,
-            Xml = xml,
+            Xml = bytes,
             DocumentNumber = doc.DocumentNumber ?? doc.Id.ToString(),
-            ValidationStatus = result.Status,
-            ValidationReport = SerializeReport(result),
-            ByteSize = xml.LongLength,
+            ValidationStatus = status,
+            ValidationReport = reportJson,
+            ByteSize = bytes.LongLength,
             GeneratedAt = now,
             ValidatedAt = now,
         };
@@ -144,6 +160,47 @@ public sealed class EInvoiceService
 
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
         return artifact;
+    }
+
+    /// <summary>
+    /// Generates the ZUGFeRD PDF/A-3b carrier for a finalized <paramref name="doc"/> and resolves its
+    /// validation verdict. The tenant logo is read LIVE (presentation only, exactly as
+    /// <see cref="DocumentPdfService"/> does — a logo is not part of the §14 legal snapshot); the
+    /// stored artifact bytes are the PDF, not XML.
+    /// </summary>
+    /// <remarks>
+    /// EINV-02 lets us skip a redundant KoSIT call: the embedded <c>factur-x.xml</c> is
+    /// <see cref="XRechnungGenerator.GenerateCiiForZugferd"/> over the SAME frozen model, i.e.
+    /// byte-identical to the standalone <see cref="EInvoiceFormat.XRechnungCii"/> that the finalize
+    /// job already generated + validated (CII precedes ZUGFeRD in <see cref="FinalizeFormats"/>). We
+    /// therefore reuse the CII's stored verdict. Only when no CII artifact exists yet (e.g. a
+    /// standalone ZUGFeRD download before the job ran) do we validate the embedded CII bytes directly.
+    /// </remarks>
+    private async Task<(byte[] Bytes, EInvoiceValidationStatus Status, string? Report)> GenerateZugferdAsync(
+        SalesDocument doc,
+        Guid documentId,
+        CancellationToken ct)
+    {
+        // Sole permitted live read: the tenant logo (presentation, not the frozen legal snapshot).
+        var logo = await _db.Set<CompanyProfile>()
+            .AsNoTracking()
+            .Select(p => new { p.LogoBytes, p.LogoContentType })
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+
+        var model = SnapshotReader.FromDocument(doc, logo?.LogoBytes, logo?.LogoContentType);
+        var pdf = ZugferdGenerator.Generate(model);
+
+        // Reuse the byte-identical CII's verdict (EINV-02) rather than re-validate identical bytes.
+        var cii = await GetArtifactAsync(documentId, EInvoiceFormat.XRechnungCii, ct).ConfigureAwait(false);
+        if (cii is not null)
+        {
+            return (pdf, cii.ValidationStatus, cii.ValidationReport);
+        }
+
+        var embeddedCii = XRechnungGenerator.GenerateCiiForZugferd(model);
+        var result = await _validator.ValidateAsync(embeddedCii, ct).ConfigureAwait(false);
+        return (pdf, result.Status, SerializeReport(result));
     }
 
     /// <summary>
@@ -224,29 +281,26 @@ public sealed class EInvoiceService
             .Include(x => x.TaxBreakdown)
             .FirstOrDefaultAsync(x => x.Id == documentId, ct);
 
-    // Serializes ONE mapped descriptor to the requested XRechnung syntax. ZUGFeRD PDF/A-3 (05-04)
-    // is not produced here; the finalize list only contains UBL + CII in this plan.
+    // Serializes ONE mapped descriptor to the requested XRechnung XML syntax. ZUGFeRD PDF/A-3 is NOT
+    // an XML syntax — it is produced by GenerateZugferdAsync (PDF/A base + embedded CII), never here.
     private static byte[] Serialize(InvoicePdfModel model, EInvoiceFormat format) => format switch
     {
         EInvoiceFormat.XRechnungUbl => XRechnungGenerator.GenerateUbl(model),
         EInvoiceFormat.XRechnungCii => XRechnungGenerator.GenerateCii(model),
         EInvoiceFormat.ZugferdPdfA3 => throw new NotSupportedException(
-            "ZUGFeRD PDF/A-3 generation lands in plan 05-04; EInvoiceService.FinalizeFormats does not yet include it."),
+            "ZUGFeRD PDF/A-3 is a PDF carrier, generated by GenerateZugferdAsync, not the XML Serialize path."),
         _ => throw new ArgumentOutOfRangeException(nameof(format), format, "Unknown e-invoice format."),
     };
 
-    private static string FileName(string number, EInvoiceFormat format)
+    // The download file name: the two XRechnung syntaxes are .xml; the ZUGFeRD carrier is a .pdf
+    // (a valid e-invoice AND a human-readable PDF — one file serves both).
+    private static string FileName(string number, EInvoiceFormat format) => format switch
     {
-        var suffix = format switch
-        {
-            EInvoiceFormat.XRechnungUbl => "ubl",
-            EInvoiceFormat.XRechnungCii => "cii",
-            EInvoiceFormat.ZugferdPdfA3 => "zugferd",
-            _ => "xml",
-        };
-
-        return $"{number}-{suffix}.xml";
-    }
+        EInvoiceFormat.XRechnungUbl => $"{number}-ubl.xml",
+        EInvoiceFormat.XRechnungCii => $"{number}-cii.xml",
+        EInvoiceFormat.ZugferdPdfA3 => $"{number}-zugferd.pdf",
+        _ => $"{number}.xml",
+    };
 
     // Persists the structured findings + verdict as jsonb (the raw KoSIT XML is not jsonb, so the
     // structured findings are serialized; an outage yields a null report).
