@@ -1,3 +1,5 @@
+using System.Data;
+
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Contracts;
@@ -52,21 +54,78 @@ public static class OpenItemEndpoints
 
             var total = await query.CountAsync(ct).ConfigureAwait(false);
 
-            var items = await query
+            var pageItems = await query
                 .OrderBy(o => o.DueDate).ThenBy(o => o.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(o => new OpenItemListItem(
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            var dunningStates = await ReadDunningStatesAsync(
+                db, pageItems.Select(o => o.Id), ct).ConfigureAwait(false);
+            var items = pageItems.Select(o =>
+            {
+                dunningStates.TryGetValue(o.Id, out var state);
+                return new OpenItemListItem(
                     o.Id, o.DocumentId, o.DocumentNumber, o.PartnerId, o.Currency,
                     o.OriginalAmount, o.OpenAmount, o.Status, o.IssuedOn, o.DueDate,
                     o.DueDate < today &&
-                        (o.Status == OpenItemStatus.Open || o.Status == OpenItemStatus.PartiallyPaid)))
-                .ToListAsync(ct)
-                .ConfigureAwait(false);
+                        (o.Status == OpenItemStatus.Open || o.Status == OpenItemStatus.PartiallyPaid),
+                    state.Level,
+                    state.LastDunnedOn);
+            }).ToList();
 
             return Results.Ok(new { items, page, pageSize, total });
         });
 
         return app;
+    }
+
+    private static async Task<Dictionary<Guid, (int Level, DateOnly? LastDunnedOn)>>
+        ReadDunningStatesAsync(
+            NumeraDbContext db,
+            IEnumerable<Guid> ids,
+            CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, (int, DateOnly?)>();
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+        {
+            return result;
+        }
+
+        var connection = db.Database.GetDbConnection();
+        var closeConnection = connection.State != ConnectionState.Open;
+        if (closeConnection)
+        {
+            await db.Database.OpenConnectionAsync(ct).ConfigureAwait(false);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT id, current_dunning_level, last_dunned_on FROM open_items WHERE id = ANY(@ids)";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "ids";
+            parameter.Value = idList.ToArray();
+            command.Parameters.Add(parameter);
+            await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+            while (await reader.ReadAsync(ct).ConfigureAwait(false))
+            {
+                result[reader.GetGuid(0)] = (
+                    reader.GetInt32(1),
+                    reader.IsDBNull(2) ? null : reader.GetFieldValue<DateOnly>(2));
+            }
+        }
+        finally
+        {
+            if (closeConnection)
+            {
+                await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
+        }
+
+        return result;
     }
 }

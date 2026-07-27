@@ -24,4 +24,6 @@ public sealed record OpenItemListItem(
     OpenItemStatus Status,
     DateOnly IssuedOn,
     DateOnly DueDate,
-    bool Overdue);
+    bool Overdue,
+    int CurrentDunningLevel,
+    DateOnly? LastDunnedOn);

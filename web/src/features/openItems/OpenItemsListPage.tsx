@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import type { ColumnDef, PaginationState } from '@tanstack/react-table'
 import {
   listOpenItems,
@@ -13,6 +18,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import RecordPaymentDialog from '@/features/payments/RecordPaymentDialog'
+import { runDunning } from '@/lib/api/dunning'
 
 // Amount display formatter — EUR, exactly 2 fraction digits. The wire value is a decimal
 // serialized as a JSON number; formatted for PRESENTATION only (no arithmetic) so there
@@ -29,6 +35,13 @@ function formatDate(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : dateFmt.format(d)
 }
 
+function daysOverdue(dueDate: string): number {
+  const due = new Date(`${dueDate}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.floor((today.getTime() - due.getTime()) / 86_400_000))
+}
+
 // The four selectable statuses, mapped to their i18n keys. Mirrors OpenItemStatus.
 const STATUS_KEYS: Record<OpenItemStatus, string> = {
   [OpenItemStatus.Open]: 'Open',
@@ -42,6 +55,8 @@ const STATUS_KEYS: Record<OpenItemStatus, string> = {
 // Read-only — there is no create/edit here (payments are Phase 6).
 export default function OpenItemsListPage() {
   const { t } = useTranslation('openItems')
+  const { t: td } = useTranslation('dunning')
+  const queryClient = useQueryClient()
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -50,6 +65,8 @@ export default function OpenItemsListPage() {
   const [status, setStatus] = useState<OpenItemStatus | null>(null)
   const [overdueOnly, setOverdueOnly] = useState(false)
   const [paymentItem, setPaymentItem] = useState<OpenItemListItem | null>(null)
+  const [runResult, setRunResult] = useState<string | null>(null)
+  const [runError, setRunError] = useState(false)
 
   const query = useQuery({
     queryKey: [
@@ -69,6 +86,19 @@ export default function OpenItemsListPage() {
         overdueOnly,
       }),
     placeholderData: keepPreviousData,
+  })
+
+  const dunningRun = useMutation({
+    mutationFn: runDunning,
+    onSuccess: async ({ issued, skipped }) => {
+      setRunError(false)
+      setRunResult(td('run.result', { issued, skipped }))
+      await queryClient.invalidateQueries({ queryKey: ['open-items'] })
+    },
+    onError: () => {
+      setRunResult(null)
+      setRunError(true)
+    },
   })
 
   const columns = useMemo<ColumnDef<OpenItemListItem>[]>(
@@ -119,6 +149,27 @@ export default function OpenItemsListPage() {
         cell: ({ row }) => formatDate(row.original.dueDate),
       },
       {
+        id: 'dunningLevel',
+        header: td('columns.dunningLevel'),
+        cell: ({ row }) => (
+          <Badge variant={row.original.currentDunningLevel > 1 ? 'destructive' : 'secondary'}>
+            {td(`levelNames.${row.original.currentDunningLevel}`, {
+              defaultValue: String(row.original.currentDunningLevel),
+            })}
+          </Badge>
+        ),
+      },
+      {
+        id: 'daysOverdue',
+        header: td('columns.daysOverdue'),
+        cell: ({ row }) =>
+          row.original.overdue ? (
+            <Badge variant="destructive">{daysOverdue(row.original.dueDate)}</Badge>
+          ) : (
+            '—'
+          ),
+      },
+      {
         id: 'status',
         header: t('columns.status'),
         cell: ({ row }) => (
@@ -152,14 +203,23 @@ export default function OpenItemsListPage() {
         },
       },
     ],
-    [t],
+    [t, td],
   )
 
   return (
     <main className="app-main" style={{ maxWidth: '1024px' }}>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
+        <Button
+          onClick={() => dunningRun.mutate()}
+          disabled={dunningRun.isPending}
+        >
+          {dunningRun.isPending ? td('run.running') : td('run.button')}
+        </Button>
       </div>
+
+      {runResult && <p role="status" className="mb-3 text-sm text-emerald-600">{runResult}</p>}
+      {runError && <p role="alert" className="mb-3 text-sm text-destructive">{td('run.error')}</p>}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex flex-col gap-1">

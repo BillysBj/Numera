@@ -1,0 +1,45 @@
+{
+  "nav": "Dunning",
+  "settings": {
+    "title": "Configure dunning",
+    "description": "Edit deadlines, fees, interest, and template text for each dunning level.",
+    "level": "Level",
+    "name": "Name",
+    "daysAfterDue": "Days after due date",
+    "fee": "Fee",
+    "chargeInterest": "Charge interest",
+    "interestRatePercent": "Interest rate (%)",
+    "templateTextDe": "German template text",
+    "templateTextEn": "English template text",
+    "save": "Save",
+    "saving": "Saving …",
+    "saved": "Dunning levels saved.",
+    "loading": "Loading dunning levels …",
+    "loadError": "Could not load dunning levels.",
+    "serverError": "Could not save dunning levels."
+  },
+  "columns": {
+    "dunningLevel": "Dunning level",
+    "daysOverdue": "Days overdue"
+  },
+  "levelNames": {
+    "0": "No reminder",
+    "1": "Payment reminder",
+    "2": "First reminder",
+    "3": "Second reminder",
+    "4": "Third reminder"
+  },
+  "run": {
+    "button": "Start dunning run",
+    "running": "Dunning run in progress …",
+    "result": "{{issued}} issued, {{skipped}} skipped",
+    "error": "Could not start the dunning run."
+  },
+  "errors": {
+    "ladder": "Dunning levels must be contiguous and start at 0.",
+    "days": "Deadlines must be non-negative and non-decreasing by level.",
+    "fee": "Fees must not be negative.",
+    "rate": "Interest rates must not be negative.",
+    "required": "Name and both German and English template text are required."
+  }
+}

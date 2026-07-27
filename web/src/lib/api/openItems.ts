@@ -44,6 +44,8 @@ export interface OpenItemListItem {
   dueDate: string
   /** Server-computed: the due date has passed and the item is still (partially) open. */
   overdue: boolean
+  currentDunningLevel: number
+  lastDunnedOn?: string | null
 }
 
 export interface OpenItemListResponse {

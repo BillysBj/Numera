@@ -15,6 +15,7 @@ import OpenItemsListPage from './features/openItems/OpenItemsListPage'
 import InboundListPage from './features/inbound/InboundListPage'
 import InboundDetailPage from './features/inbound/InboundDetailPage'
 import CompanyProfileSettingsPage from './features/settings/CompanyProfileSettingsPage'
+import DunningConfigSettingsPage from './features/dunning/DunningConfigSettingsPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
 // reachable from Login, Dashboard and the partner pages.
@@ -26,6 +27,7 @@ function AppHeader() {
   const { t: to } = useTranslation('openItems')
   const { t: ti } = useTranslation('inbound')
   const { t: ts } = useTranslation('settings')
+  const { t: tdu } = useTranslation('dunning')
   return (
     <header className="app-header">
       <span className="brand">{t('app.name')}</span>
@@ -37,6 +39,7 @@ function AppHeader() {
         <Link to="/open-items">{to('nav')}</Link>
         <Link to="/inbound">{ti('nav')}</Link>
         <Link to="/settings">{ts('nav')}</Link>
+        <Link to="/settings/dunning">{tdu('nav')}</Link>
       </nav>
       <LanguageSwitcher />
     </header>
@@ -65,6 +68,7 @@ export default function App() {
         <Route path="/inbound" element={<InboundListPage />} />
         <Route path="/inbound/:id" element={<InboundDetailPage />} />
         <Route path="/settings" element={<CompanyProfileSettingsPage />} />
+        <Route path="/settings/dunning" element={<DunningConfigSettingsPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

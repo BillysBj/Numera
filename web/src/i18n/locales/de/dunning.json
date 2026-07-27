@@ -1,0 +1,45 @@
+{
+  "nav": "Mahnwesen",
+  "settings": {
+    "title": "Mahnwesen konfigurieren",
+    "description": "Bearbeiten Sie Fristen, Gebühren, Zinsen und Vorlagentexte je Mahnstufe.",
+    "level": "Stufe",
+    "name": "Name",
+    "daysAfterDue": "Tage nach Fälligkeit",
+    "fee": "Gebühr",
+    "chargeInterest": "Zinsen berechnen",
+    "interestRatePercent": "Zinssatz (%)",
+    "templateTextDe": "Vorlagentext Deutsch",
+    "templateTextEn": "Vorlagentext Englisch",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "saved": "Mahnstufen wurden gespeichert.",
+    "loading": "Mahnstufen werden geladen …",
+    "loadError": "Mahnstufen konnten nicht geladen werden.",
+    "serverError": "Mahnstufen konnten nicht gespeichert werden."
+  },
+  "columns": {
+    "dunningLevel": "Mahnstufe",
+    "daysOverdue": "Tage überfällig"
+  },
+  "levelNames": {
+    "0": "Keine Mahnung",
+    "1": "Zahlungserinnerung",
+    "2": "1. Mahnung",
+    "3": "2. Mahnung",
+    "4": "3. Mahnung"
+  },
+  "run": {
+    "button": "Mahnlauf starten",
+    "running": "Mahnlauf läuft …",
+    "result": "{{issued}} erzeugt, {{skipped}} übersprungen",
+    "error": "Mahnlauf konnte nicht gestartet werden."
+  },
+  "errors": {
+    "ladder": "Die Mahnstufen müssen lückenlos bei 0 beginnen.",
+    "days": "Fristen müssen nichtnegativ und nach Stufe nicht fallend sein.",
+    "fee": "Gebühren dürfen nicht negativ sein.",
+    "rate": "Zinssätze dürfen nicht negativ sein.",
+    "required": "Name sowie deutsche und englische Vorlagentexte sind erforderlich."
+  }
+}
