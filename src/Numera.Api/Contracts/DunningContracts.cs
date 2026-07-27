@@ -16,3 +16,6 @@ public sealed record DunningConfigResponse(IReadOnlyList<DunningLevelConfigDto> 
 
 /// <summary>Replaces the tenant's complete dunning ladder.</summary>
 public sealed record UpdateDunningConfigRequest(IReadOnlyList<DunningLevelConfigDto> Levels);
+
+/// <summary>Summary of a manually initiated tenant dunning run.</summary>
+public sealed record DunningRunResponse(int Issued, int Skipped);

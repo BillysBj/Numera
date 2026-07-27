@@ -1,5 +1,19 @@
+using System.Data;
+using System.Text.Json;
+
+using Hangfire;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+
 using Numera.Api.Contracts;
+using Numera.Api.Jobs;
 using Numera.Api.Services;
+using Numera.Modules.Sales;
+using Numera.Modules.Sales.Dunning;
+using Numera.Platform.Audit;
+using Numera.Platform.Db;
+using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Endpoints;
 
@@ -28,7 +42,167 @@ public static class DunningEndpoints
                 : Results.ValidationProblem(result.Errors);
         });
 
-        // Extension seam: the dunning-run endpoint and send workflow are implemented in plan 06-04.
+        group.MapPost("/run", RunAsync);
         return app;
     }
+
+    internal static async Task<IResult> RunAsync(
+        NumeraDbContext db,
+        ICurrentTenant currentTenant,
+        IAuditWriter audit,
+        IBackgroundJobClient jobs,
+        CancellationToken ct)
+    {
+        var tenantId = currentTenant.TenantId
+            ?? throw new InvalidOperationException("A tenant is required to run dunning.");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var openItems = await db.Set<OpenItem>()
+            .Where(x => x.DueDate < today &&
+                        (x.Status == OpenItemStatus.Open || x.Status == OpenItemStatus.PartiallyPaid))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        var configs = await db.Set<DunningLevelConfig>()
+            .AsNoTracking()
+            .OrderBy(x => x.Level)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        var states = await ReadStatesAsync(db, openItems.Select(x => x.Id), ct).ConfigureAwait(false);
+        var candidates = DunningService.SelectCandidates(openItems, configs, states, today);
+        var notices = new List<DunningNotice>(candidates.Count);
+
+        foreach (var candidate in candidates)
+        {
+            var amounts = DunningService.CalculateAmounts(
+                candidate.OpenItem.OpenAmount,
+                candidate.NextLevel,
+                candidate.DaysOverdue);
+            var notice = new DunningNotice
+            {
+                TenantId = tenantId,
+                OpenItemId = candidate.OpenItem.Id,
+                DocumentId = candidate.OpenItem.DocumentId,
+                Level = candidate.NextLevel.Level,
+                IssuedOn = today,
+                NewDueDate = DunningService.CalculateNewDueDate(today),
+                OverdueAmount = candidate.OpenItem.OpenAmount,
+                Fee = amounts.Fee,
+                Interest = amounts.Interest,
+                InterestRatePercent = candidate.NextLevel.InterestRatePercent,
+                TotalToPay = amounts.TotalToPay,
+                Status = 0,
+                CreatedAt = DateTimeOffset.UtcNow,
+            };
+            db.Add(notice);
+            notices.Add(notice);
+
+            await audit.RecordAsync(
+                new DunningNoticeAuditEvent(
+                    "dunning.notice.created",
+                    notice.Id,
+                    null,
+                    JsonSerializer.Serialize(new
+                    {
+                        notice.OpenItemId,
+                        notice.Level,
+                        notice.OverdueAmount,
+                        notice.Fee,
+                        notice.Interest,
+                        notice.TotalToPay,
+                    })),
+                ct).ConfigureAwait(false);
+        }
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        foreach (var candidate in candidates)
+        {
+            await AdvanceStateAsync(
+                db,
+                candidate.OpenItem.Id,
+                candidate.NextLevel.Level,
+                today,
+                ct).ConfigureAwait(false);
+        }
+
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+
+        foreach (var notice in notices)
+        {
+            jobs.Enqueue<SendDunningNoticeJob>(
+                job => job.RunAsync(tenantId, notice.Id, "de", CancellationToken.None));
+        }
+
+        return Results.Ok(new DunningRunResponse(notices.Count, openItems.Count - notices.Count));
+    }
+
+    private static async Task<Dictionary<Guid, DunningService.OpenItemDunningState>> ReadStatesAsync(
+        NumeraDbContext db,
+        IEnumerable<Guid> ids,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, DunningService.OpenItemDunningState>();
+        var idList = ids.ToList();
+        if (idList.Count == 0)
+        {
+            return result;
+        }
+
+        var connection = db.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.Transaction = db.Database.CurrentTransaction!.GetDbTransaction();
+        command.CommandText =
+            "SELECT id, current_dunning_level, last_dunned_on FROM open_items WHERE id = ANY(@ids)";
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "ids";
+        parameter.Value = idList.ToArray();
+        command.Parameters.Add(parameter);
+        await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            result[reader.GetGuid(0)] = new DunningService.OpenItemDunningState(
+                reader.GetInt32(1),
+                reader.IsDBNull(2) ? null : reader.GetFieldValue<DateOnly>(2));
+        }
+
+        return result;
+    }
+
+    private static async Task AdvanceStateAsync(
+        NumeraDbContext db,
+        Guid openItemId,
+        int level,
+        DateOnly today,
+        CancellationToken ct)
+    {
+        var connection = db.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.Transaction = db.Database.CurrentTransaction!.GetDbTransaction();
+        command.CommandText =
+            "UPDATE open_items SET current_dunning_level = @level, last_dunned_on = @today WHERE id = @id";
+        AddParameter(command, "level", level);
+        AddParameter(command, "today", today);
+        AddParameter(command, "id", openItemId);
+        await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+    }
+
+    private static void AddParameter(
+        System.Data.Common.DbCommand command,
+        string name,
+        object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+}
+
+internal sealed record DunningNoticeAuditEvent(
+    string Action,
+    Guid? EntityId,
+    string? Before,
+    string? After) : IAuditEvent
+{
+    public string EntityType => nameof(DunningNotice);
 }
