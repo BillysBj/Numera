@@ -45,6 +45,12 @@ public sealed class EInvoiceOutboundTests
 {
     private readonly PostgresFixture _fixture;
 
+    // The finalize job now eagerly renders the ZUGFeRD PDF/A-3 (FinalizeFormats includes
+    // ZugferdPdfA3 since 05-04), so QuestPDF needs its Community license set — exactly as the
+    // real Api host does at startup, mirrored here like the other PDF-rendering integration tests.
+    static EInvoiceOutboundTests() =>
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
     public EInvoiceOutboundTests(PostgresFixture fixture) => _fixture = fixture;
 
     // ---------------------------------------------------------- (1) generate + persist + idempotency + RLS
@@ -66,11 +72,14 @@ public sealed class EInvoiceOutboundTests
             var artifacts = await read.Set<EInvoiceArtifact>().AsNoTracking()
                 .Where(a => a.DocumentId == docId).OrderBy(a => a.Format).ToListAsync();
 
-            // Exactly one artifact per FinalizeFormats entry (UBL + CII), each a real XRechnung.
-            Assert.Equal(2, artifacts.Count);
+            // One artifact per FinalizeFormats entry: UBL + CII (XRechnung XML) + ZUGFeRD PDF/A-3.
+            Assert.Equal(3, artifacts.Count);
             Assert.Equal(EInvoiceFormat.XRechnungUbl, artifacts[0].Format);
             Assert.Equal(EInvoiceFormat.XRechnungCii, artifacts[1].Format);
-            foreach (var a in artifacts)
+            Assert.Equal(EInvoiceFormat.ZugferdPdfA3, artifacts[2].Format);
+
+            // The two XRechnung syntaxes are real, KoSIT-accepted XML invoices.
+            foreach (var a in artifacts.Where(a => a.Format is EInvoiceFormat.XRechnungUbl or EInvoiceFormat.XRechnungCii))
             {
                 Assert.Equal(tenant, a.TenantId);
                 Assert.Equal("RE-2026-00001", a.DocumentNumber);
@@ -81,13 +90,21 @@ public sealed class EInvoiceOutboundTests
                 Assert.Contains("Invoice", text, StringComparison.Ordinal);
                 Assert.NotNull(a.ValidatedAt);
             }
+
+            // The ZUGFeRD artifact carries the PDF/A-3 bytes (not XML) and reuses the CII's verdict.
+            var zugferd = artifacts[2];
+            Assert.Equal(tenant, zugferd.TenantId);
+            Assert.Equal("RE-2026-00001", zugferd.DocumentNumber);
+            Assert.Equal(EInvoiceValidationStatus.Accepted, zugferd.ValidationStatus);
+            Assert.True(zugferd.ByteSize > 0, $"ByteSize was {zugferd.ByteSize}");
+            Assert.StartsWith("%PDF", Encoding.UTF8.GetString(zugferd.Xml, 0, Math.Min(8, zugferd.Xml.Length)), StringComparison.Ordinal);
         }
 
         // (idempotency) Re-running REPLACES, never duplicates — still exactly one per format.
         await RunGenerateJobAsync(tenant, docId, validator);
         await using (var read = _fixture.CreateAppContext(tenant))
         {
-            Assert.Equal(2, await read.Set<EInvoiceArtifact>().AsNoTracking()
+            Assert.Equal(3, await read.Set<EInvoiceArtifact>().AsNoTracking()
                 .CountAsync(a => a.DocumentId == docId));
         }
 
