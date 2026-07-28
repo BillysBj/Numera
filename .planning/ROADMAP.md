@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand ✓ 2026-07-14
 - [x] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen ✓ 2026-07-14
 - [x] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen ✓ 2026-07-28
-- [ ] **Phase 7: Erweiterte Rechnungstypen** - Fremdwährung, Serienrechnungen, Abschlags-/Schlussrechnungen
+- [x] **Phase 7: Erweiterte Rechnungstypen** - Fremdwährung, Serienrechnungen, Abschlags-/Schlussrechnungen ✓ 2026-07-28
 - [ ] **Phase 8: CRM-Ausbau & Steuerberater-Zugang** - Aufgaben/Erinnerungen, Kundenakte, Steuerberater-Rolle (lesend)
 - [ ] **Phase 9: v1-Feinschliff & Compliance** - PWA-Installation/Offline, DSGVO-Export, GoBD-Konformitätspass, Tarif-Gate-UX
 
@@ -156,15 +156,15 @@ Plans:
 **Plans**: 9 plans in 4 waves
 
 Plans:
-- [ ] 07-01-PLAN.md — Entitlement foundation: 3 new L+ capabilities in PlanCapabilityMap + web entitlements helper/UpgradeHint [wave 1]
-- [ ] 07-02-PLAN.md — INV-07 core: Abschlags-/Schlussrechnung DocumentTypes + numbering + frozen prepayment table (RLS) + FinalizeCoreAsync residual AmountDue (BT-113) [wave 1]
-- [ ] 07-03-PLAN.md — INV-07 e-invoice/PDF: BT-113 prepaid in mapper + prepayment PDF block + live-KoSIT prepayment golden [wave 2]
-- [ ] 07-04-PLAN.md — INV-05 core: foreign-currency columns + 2-minor-unit guard + rate freeze + EUR VAT (BT-111) in finalize + gate [wave 2]
-- [ ] 07-05-PLAN.md — INV-05 e-invoice/PDF: BT-6/BT-111 in mapper + USt-in-EUR PDF line + live-KoSIT currency golden [wave 3]
-- [ ] 07-06-PLAN.md — INV-06 infra: recurring template tables (RLS) + unique period index + CRUD/activate/pause endpoints (per-template Hangfire job, tenantId in args) [wave 3]
-- [ ] 07-07-PLAN.md — INV-06 generation: tenant-safe, idempotent, catch-up GenerateRecurringInvoiceJob reusing FinalizeCoreAsync (auto-finalize + Draft opt-out) [wave 4]
-- [ ] 07-08-PLAN.md — Documents frontend + down-payment creation endpoints: currency/rate form + Abschlag/Schluss UI + deduction display (+ human-verify) [wave 4]
-- [ ] 07-09-PLAN.md — Recurring frontend: template list/editor + pause/resume + route/nav + entitlement hints (+ human-verify) [wave 4]
+- [x] 07-01-PLAN.md — Entitlement foundation: 3 new L+ capabilities in PlanCapabilityMap + web entitlements helper/UpgradeHint [wave 1]
+- [x] 07-02-PLAN.md — INV-07 core: Abschlags-/Schlussrechnung DocumentTypes + numbering + frozen prepayment table (RLS) + FinalizeCoreAsync residual AmountDue (BT-113) [wave 1]
+- [x] 07-03-PLAN.md — INV-07 e-invoice/PDF: BT-113 prepaid in mapper + prepayment PDF block + live-KoSIT prepayment golden [wave 2]
+- [x] 07-04-PLAN.md — INV-05 core: foreign-currency columns + 2-minor-unit guard + rate freeze + EUR VAT (BT-111) in finalize + gate [wave 2]
+- [x] 07-05-PLAN.md — INV-05 e-invoice/PDF: BT-6/BT-111 in mapper + USt-in-EUR PDF line + live-KoSIT currency golden [wave 3]
+- [x] 07-06-PLAN.md — INV-06 infra: recurring template tables (RLS) + unique period index + CRUD/activate/pause endpoints (per-template Hangfire job, tenantId in args) [wave 3]
+- [x] 07-07-PLAN.md — INV-06 generation: tenant-safe, idempotent, catch-up GenerateRecurringInvoiceJob reusing FinalizeCoreAsync (auto-finalize + Draft opt-out) [wave 4]
+- [x] 07-08-PLAN.md — Documents frontend + down-payment creation endpoints: currency/rate form + Abschlag/Schluss UI + deduction display (+ human-verify) [wave 4]
+- [x] 07-09-PLAN.md — Recurring frontend: template list/editor + pause/resume + route/nav + entitlement hints (+ human-verify) [wave 4]
 
 ### Phase 8: CRM-Ausbau & Steuerberater-Zugang
 **Goal**: Nutzer kann Kundenbeziehungen aktiv managen und seinen Steuerberater kontrolliert einbinden — die letzten funktionalen v1-Bausteine der Lexware-Feature-Matrix.
@@ -207,6 +207,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 4. PDF & Versand | 5/5 | ✓ Complete | 2026-07-14 |
 | 5. E-Rechnung-Engine | 5/5 | ✓ Complete | 2026-07-14 |
 | 6. Offene Posten & Mahnwesen | 5/5 | ✓ Complete | 2026-07-28 |
-| 7. Erweiterte Rechnungstypen | 0/TBD | Next | - |
-| 8. CRM-Ausbau & Steuerberater-Zugang | 0/TBD | Not started | - |
+| 7. Erweiterte Rechnungstypen | 9/9 | ✓ Complete | 2026-07-28 |
+| 8. CRM-Ausbau & Steuerberater-Zugang | 0/TBD | Next | - |
 | 9. v1-Feinschliff & Compliance | 0/TBD | Not started | - |
