@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Belegkette & Rechnungskern** - Angebot→Rechnung-Kette, Unveränderbarkeit, Nummernvergabe, USt-Kategorien, offene Posten ✓ 2026-07-13
 - [x] **Phase 4: PDF & Versand** - Worker-Tier, PDF-Belege mit eigenem Briefpapier, E-Mail-Versand ✓ 2026-07-14
 - [x] **Phase 5: E-Rechnung-Engine** - XRechnung + ZUGFeRD erzeugen, KoSIT-Validierung, E-Rechnungen empfangen/anzeigen ✓ 2026-07-14
-- [ ] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen
+- [x] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen ✓ 2026-07-28
 - [ ] **Phase 7: Erweiterte Rechnungstypen** - Fremdwährung, Serienrechnungen, Abschlags-/Schlussrechnungen
 - [ ] **Phase 8: CRM-Ausbau & Steuerberater-Zugang** - Aufgaben/Erinnerungen, Kundenakte, Steuerberater-Rolle (lesend)
 - [ ] **Phase 9: v1-Feinschliff & Compliance** - PWA-Installation/Offline, DSGVO-Export, GoBD-Konformitätspass, Tarif-Gate-UX
@@ -139,11 +139,11 @@ Plans:
 **Plans**: 5 plans (4 waves)
 
 Plans:
-- [ ] 06-01-PLAN.md — Payments backend: payment + payment_allocation (RLS + append-only), PaymentService record/reverse, /api/payments [wave 1]
-- [ ] 06-02-PLAN.md — Payments frontend: RecordPaymentDialog + OP-list "Zahlung erfassen" action [wave 2]
-- [ ] 06-03-PLAN.md — Dunning schema+config backend: dunning_level_config + dunning_notice + open_items ALTER (sole wave-2 migration), seeded German ladder, /api/dunning/config [wave 2]
-- [ ] 06-04-PLAN.md — Dunning run backend: DunningService + DunningNoticeDocument + SendDunningNoticeJob + POST /api/dunning/run [wave 3]
-- [ ] 06-05-PLAN.md — Dunning frontend: config settings UI + enriched OP-Übersicht + Mahnlauf action (+ human-verify) [wave 4]
+- [x] 06-01-PLAN.md — Payments backend: payment + payment_allocation (RLS + append-only), PaymentService record/reverse, /api/payments [wave 1]
+- [x] 06-02-PLAN.md — Payments frontend: RecordPaymentDialog + OP-list "Zahlung erfassen" action [wave 2]
+- [x] 06-03-PLAN.md — Dunning schema+config backend: dunning_level_config + dunning_notice + open_items ALTER (sole wave-2 migration), seeded German ladder, /api/dunning/config [wave 2]
+- [x] 06-04-PLAN.md — Dunning run backend: DunningService + DunningNoticeDocument + SendDunningNoticeJob + POST /api/dunning/run [wave 3]
+- [x] 06-05-PLAN.md — Dunning frontend: config settings UI + enriched OP-Übersicht + Mahnlauf action (+ human-verify) [wave 4]
 
 ### Phase 7: Erweiterte Rechnungstypen
 **Goal**: Nutzer kann über die Standardrechnung hinausgehende, praxisrelevante Rechnungstypen erstellen — Fremdwährung, wiederkehrende Rechnungen und Abschlagslogik.
@@ -198,7 +198,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. Belegkette & Rechnungskern | 11/11 | ✓ Complete | 2026-07-13 |
 | 4. PDF & Versand | 5/5 | ✓ Complete | 2026-07-14 |
 | 5. E-Rechnung-Engine | 5/5 | ✓ Complete | 2026-07-14 |
-| 6. Offene Posten & Mahnwesen | 0/5 | Next | - |
-| 7. Erweiterte Rechnungstypen | 0/TBD | Not started | - |
+| 6. Offene Posten & Mahnwesen | 5/5 | ✓ Complete | 2026-07-28 |
+| 7. Erweiterte Rechnungstypen | 0/TBD | Next | - |
 | 8. CRM-Ausbau & Steuerberater-Zugang | 0/TBD | Not started | - |
 | 9. v1-Feinschliff & Compliance | 0/TBD | Not started | - |
