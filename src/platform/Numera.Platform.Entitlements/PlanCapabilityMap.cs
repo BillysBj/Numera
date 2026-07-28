@@ -45,6 +45,9 @@ public static class PlanCapabilityMap
         Capability.MultiUser,
         Capability.Dunning,
         Capability.EInvoicing,
+        Capability.ForeignCurrencyInvoicing,
+        Capability.RecurringInvoices,
+        Capability.DownPaymentInvoices,
     ]);
 
     // XL: full set including programmatic API access.
@@ -55,6 +58,9 @@ public static class PlanCapabilityMap
         Capability.Dunning,
         Capability.EInvoicing,
         Capability.ApiAccess,
+        Capability.ForeignCurrencyInvoicing,
+        Capability.RecurringInvoices,
+        Capability.DownPaymentInvoices,
     ]);
 
     /// <summary>

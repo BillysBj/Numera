@@ -28,4 +28,13 @@ public enum Capability
 
     /// <summary>Programmatic API access (public REST API / tokens).</summary>
     ApiAccess = 5,
+
+    /// <summary>Invoices in supported foreign currencies (Fremdwährungsrechnungen).</summary>
+    ForeignCurrencyInvoicing = 6,
+
+    /// <summary>Recurring invoice templates and generation (Serienrechnungen).</summary>
+    RecurringInvoices = 7,
+
+    /// <summary>Down-payment and final invoices (Abschlags-/Schlussrechnungen).</summary>
+    DownPaymentInvoices = 8,
 }

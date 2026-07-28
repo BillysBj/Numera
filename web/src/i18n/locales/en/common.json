@@ -22,6 +22,9 @@
     "loading": "Loading …",
     "error": "Could not load data."
   },
+  "entitlements": {
+    "upgradeHint": "This feature is available from plan L"
+  },
   "offline": {
     "banner": "Offline – financial data is only available online."
   }

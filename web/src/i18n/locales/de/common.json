@@ -22,6 +22,9 @@
     "loading": "Wird geladen …",
     "error": "Daten konnten nicht geladen werden."
   },
+  "entitlements": {
+    "upgradeHint": "Diese Funktion ist ab Tarif L verfügbar"
+  },
   "offline": {
     "banner": "Offline – Finanzdaten sind nur online verfügbar."
   }
