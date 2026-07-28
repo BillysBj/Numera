@@ -1,0 +1,37 @@
+{
+  "nav": "Team",
+  "title": "Team verwalten",
+  "description": "Mitglieder einladen, Rollen vergeben und Zugänge entfernen.",
+  "loading": "Team wird geladen …",
+  "roles": {
+    "1": "Inhaber",
+    "2": "Mitarbeiter",
+    "3": "Steuerberater"
+  },
+  "invite": {
+    "title": "Mitglied einladen",
+    "email": "E-Mail-Adresse",
+    "role": "Rolle",
+    "submit": "Einladen",
+    "submitting": "Wird eingeladen …",
+    "success": "Das Mitglied wurde hinzugefügt."
+  },
+  "members": {
+    "title": "Mitglieder",
+    "user": "Benutzer-ID",
+    "role": "Rolle",
+    "changeRole": "Rolle ändern",
+    "actions": "Aktionen",
+    "remove": "Entfernen",
+    "roleChanged": "Die Rolle wurde geändert.",
+    "removed": "Das Mitglied wurde entfernt."
+  },
+  "errors": {
+    "invalidEmail": "Bitte eine gültige E-Mail-Adresse eingeben.",
+    "invalidRole": "Bitte eine gültige Rolle auswählen.",
+    "load": "Das Team konnte nicht geladen werden.",
+    "server": "Die Änderung konnte nicht gespeichert werden.",
+    "lastOwner": "Der letzte Inhaber kann nicht herabgestuft oder entfernt werden.",
+    "upgradeRequired": "Die Team-Verwaltung erfordert Tarif M oder höher."
+  }
+}

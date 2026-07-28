@@ -1,0 +1,37 @@
+{
+  "nav": "Team",
+  "title": "Manage team",
+  "description": "Invite members, assign roles, and remove access.",
+  "loading": "Loading team …",
+  "roles": {
+    "1": "Owner",
+    "2": "Employee",
+    "3": "Tax advisor"
+  },
+  "invite": {
+    "title": "Invite member",
+    "email": "Email address",
+    "role": "Role",
+    "submit": "Invite",
+    "submitting": "Inviting …",
+    "success": "The member was added."
+  },
+  "members": {
+    "title": "Members",
+    "user": "User ID",
+    "role": "Role",
+    "changeRole": "Change role",
+    "actions": "Actions",
+    "remove": "Remove",
+    "roleChanged": "The role was changed.",
+    "removed": "The member was removed."
+  },
+  "errors": {
+    "invalidEmail": "Enter a valid email address.",
+    "invalidRole": "Select a valid role.",
+    "load": "The team could not be loaded.",
+    "server": "The change could not be saved.",
+    "lastOwner": "The last owner cannot be demoted or removed.",
+    "upgradeRequired": "Team management requires plan M or higher."
+  }
+}

@@ -121,6 +121,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 // --- Registration (Keycloak Admin API) + background jobs -------------------
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<RegistrationService>();
+builder.Services.AddScoped<InvitationService>();
 builder.Services.AddTransient<WelcomeEmailJob>();
 // Recurring-invoice generation job (07-06 infra; body in 07-07). Registered like every other
 // Hangfire job so the per-template recurring schedule resolves it from DI, not just ActivatorUtilities.
@@ -171,5 +172,6 @@ app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
 app.MapDunningEndpoints();
 app.MapRecurringInvoiceEndpoints();
+app.MapTeamEndpoints();
 
 app.Run();
