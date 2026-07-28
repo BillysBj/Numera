@@ -115,6 +115,8 @@ public sealed class NumberingService
         DocumentType.Angebot => "AN-",
         DocumentType.Auftragsbestaetigung => "AB-",
         DocumentType.Lieferschein => "LS-",
+        DocumentType.Abschlagsrechnung => "AR-",
+        DocumentType.Schlussrechnung => "SR-",
         _ => "DOC-",
     };
 }

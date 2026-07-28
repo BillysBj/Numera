@@ -184,3 +184,10 @@ ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON tenants
     USING (id = current_setting('app.current_tenant')::uuid)
     WITH CHECK (id = current_setting('app.current_tenant')::uuid);
+
+-- sales_document_prepayment (Phase 7, frozen Schlussrechnung BT-113 snapshots)
+ALTER TABLE sales_document_prepayment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_document_prepayment FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON sales_document_prepayment
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);

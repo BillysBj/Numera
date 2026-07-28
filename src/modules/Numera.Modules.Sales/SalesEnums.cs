@@ -30,6 +30,12 @@ public enum DocumentType
 
     /// <summary>Gutschrift — commercial credit note / Rechnungskorrektur (code 381).</summary>
     Gutschrift,
+
+    /// <summary>Abschlagsrechnung — numbered + DB-immutable §14 invoice (EN 16931 BT-3 code 380).</summary>
+    Abschlagsrechnung = 6,
+
+    /// <summary>Schlussrechnung — numbered + DB-immutable §14 invoice (EN 16931 BT-3 code 380).</summary>
+    Schlussrechnung = 7,
 }
 
 /// <summary>

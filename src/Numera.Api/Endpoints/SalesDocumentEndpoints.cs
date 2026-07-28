@@ -471,13 +471,14 @@ public static class SalesDocumentEndpoints
             // The gate guarantees a non-null issuer profile beyond this point.
             var tenantId = tenant.TenantId!.Value;
 
-            // STAGE 1 (pre-finalize dry-run, EINV-03, RESEARCH Pitfall 1): for a Rechnung, validate a
+            // STAGE 1 (pre-finalize dry-run, EINV-03, RESEARCH Pitfall 1): for every receivable
+            // invoice type, validate a
             // PROVISIONAL XRechnung against KoSIT BEFORE any gapless number is burned. A hard rejection
             // blocks finalize (422) so NO number is stranded (the transaction is not even started). A
             // validator OUTAGE does NOT block (infra must not strand the user — RESEARCH Pitfall 6);
             // the post-finalize job + the send gate still protect the actual Versand. Note the criterion
             // blocks on validation ERRORS, never on a down sidecar.
-            if (doc.DocumentType == DocumentType.Rechnung)
+            if (IsReceivableInvoice(doc.DocumentType))
             {
                 var dryRun = await einvoice.DryRunAsync(doc, profile!, partner, ct).ConfigureAwait(false);
                 if (dryRun.Status == EInvoiceValidationStatus.Rejected)
@@ -499,7 +500,7 @@ public static class SalesDocumentEndpoints
             // 3-7. Everything below runs inside ONE transaction via the shared finalize core
             //      (extracted so Storno can reuse it, plan 03-06): freeze snapshots, persist the
             //      BG-23 breakdown + frozen totals, assign the race-safe number, create the open
-            //      item (Rechnung only), then flip status LAST. The caller commits + publishes.
+            //      item (receivable invoice types only), then flip status LAST. The caller commits + publishes.
             await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
             try
             {
@@ -554,12 +555,15 @@ public static class SalesDocumentEndpoints
                 return Results.NotFound();
             }
 
-            if (original.DocumentType != DocumentType.Rechnung
+            // V1 limitation: cancelling an Abschlagsrechnung already deducted by a finalized
+            // Schlussrechnung does not recompute BT-113 or its residual. Users must cancel in
+            // the correct order (Schlussrechnung first); there is no deduction-chain cascade.
+            if (!IsReceivableInvoice(original.DocumentType)
                 || original.Status is not (DocumentStatus.Finalized or DocumentStatus.Sent))
             {
                 return Results.Problem(
                     title: "Document cannot be cancelled",
-                    detail: $"Only a finalized invoice can be cancelled by a Storno; this is a "
+                    detail: $"Only a finalized Rechnung, Abschlagsrechnung, or Schlussrechnung can be cancelled by a Storno; this is a "
                           + $"{original.DocumentType} in status {original.Status}.",
                     statusCode: StatusCodes.Status409Conflict);
             }
@@ -696,11 +700,11 @@ public static class SalesDocumentEndpoints
                 return Results.NotFound();
             }
 
-            if (original.DocumentType != DocumentType.Rechnung || original.Status == DocumentStatus.Draft)
+            if (!IsReceivableInvoice(original.DocumentType) || original.Status == DocumentStatus.Draft)
             {
                 return Results.Problem(
                     title: "Document cannot be credited",
-                    detail: $"A credit note references an issued invoice; this is a "
+                    detail: $"A credit note references an issued Rechnung, Abschlagsrechnung, or Schlussrechnung; this is a "
                           + $"{original.DocumentType} in status {original.Status}.",
                     statusCode: StatusCodes.Status409Conflict);
             }
@@ -895,7 +899,25 @@ public static class SalesDocumentEndpoints
         doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
         doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
         doc.TotalGross = doc.TotalNet + doc.TotalTax;
-        doc.AmountDue = doc.TotalGross;
+        if (doc.DocumentType == DocumentType.Schlussrechnung)
+        {
+            var prepaidGross = await db.Set<SalesDocumentPrepayment>()
+                .Where(p => p.DocumentId == doc.Id)
+                .SumAsync(p => p.GrossAmount, ct)
+                .ConfigureAwait(false);
+            if (prepaidGross < 0m || prepaidGross > doc.TotalGross)
+            {
+                throw new InvalidOperationException(
+                    $"Prepaid gross amount {prepaidGross} must be between zero and document gross {doc.TotalGross}.");
+            }
+
+            // BT-115 = BT-112 - BT-113. VAT totals and breakdown remain the full project values.
+            doc.AmountDue = doc.TotalGross - prepaidGross;
+        }
+        else
+        {
+            doc.AmountDue = doc.TotalGross;
+        }
         doc.ReverseCharge = doc.Lines.Any(l => l.TaxCategory == TaxCategory.AE);
 
         // Number: atomic upsert-returning counter from the type's own series (Pattern 3).
@@ -906,8 +928,8 @@ public static class SalesDocumentEndpoints
         var netDays = partner?.PaymentTermsNetDays ?? profile.DefaultPaymentTermsNetDays ?? 14;
         doc.DueDate = doc.DocumentDate.AddDays(netDays);
 
-        // Open item (OPDN-01) for a Rechnung ONLY.
-        if (doc.DocumentType == DocumentType.Rechnung)
+        // Open item (OPDN-01) for Rechnung, Abschlagsrechnung, and Schlussrechnung.
+        if (IsReceivableInvoice(doc.DocumentType))
         {
             db.Add(BuildOpenItem(doc, partner, tenantId));
         }
@@ -1006,7 +1028,7 @@ public static class SalesDocumentEndpoints
     }
 
     // Builds the open item (OPDN-01, RESEARCH.md Pattern 5): OriginalAmount = OpenAmount =
-    // gross, snapshotting the partner's Skonto terms as the Phase-6 payment seam.
+    // AmountDue, snapshotting the partner's Skonto terms as the Phase-6 payment seam.
     private static OpenItem BuildOpenItem(SalesDocument doc, BusinessPartner? partner, Guid tenantId)
     {
         var skontoDueDate = partner?.SkontoDays is int days
@@ -1014,7 +1036,7 @@ public static class SalesDocumentEndpoints
             : (DateOnly?)null;
 
         var skontoAmount = partner?.SkontoPercent is decimal percent
-            ? Math.Round(doc.TotalGross * percent / 100m, 2, MidpointRounding.AwayFromZero)
+            ? Math.Round(doc.AmountDue * percent / 100m, 2, MidpointRounding.AwayFromZero)
             : (decimal?)null;
 
         return new OpenItem
@@ -1024,8 +1046,8 @@ public static class SalesDocumentEndpoints
             PartnerId = doc.PartnerId,
             DocumentNumber = doc.DocumentNumber!,
             Currency = doc.Currency,
-            OriginalAmount = doc.TotalGross,
-            OpenAmount = doc.TotalGross,
+            OriginalAmount = doc.AmountDue,
+            OpenAmount = doc.AmountDue,
             Status = OpenItemStatus.Open,
             IssuedOn = doc.DocumentDate,
             DueDate = doc.DueDate!.Value,
@@ -1040,6 +1062,11 @@ public static class SalesDocumentEndpoints
     // index → Postgres 23505. Return a clean 409 instead of a 500.
     private static bool IsDuplicateNumber(DbUpdateException ex) =>
         ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
+
+    private static bool IsReceivableInvoice(DocumentType documentType) =>
+        documentType is DocumentType.Rechnung
+            or DocumentType.Abschlagsrechnung
+            or DocumentType.Schlussrechnung;
 }
 
 /// <summary>
