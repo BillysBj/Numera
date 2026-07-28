@@ -98,6 +98,15 @@ public static class EInvoiceMapper
             duePayableAmount: model.AmountDue,
             roundingAmount: null);
 
+        if (!string.Equals(model.Currency, "EUR", StringComparison.OrdinalIgnoreCase)
+            && model.TotalTaxEur is not null)
+        {
+            // BT-6 and BT-111 are a mandatory pair under BR-53. BT-111 is the frozen
+            // accounting-currency VAT amount and is injected after serialization because
+            // ZUGFeRD-csharp 18 has no descriptor property for BT-111.
+            desc.TaxCurrency = CurrencyCodes.EUR;
+        }
+
         if (!string.IsNullOrWhiteSpace(model.Notes))
         {
             desc.AddNote(model.Notes!); // BT-22

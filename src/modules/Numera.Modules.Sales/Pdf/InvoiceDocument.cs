@@ -288,6 +288,31 @@ public sealed class InvoiceDocument : IDocument
                 {
                     TotalLine(col, _labels.PayableBy, Money(_model.AmountDue), bold: true);
                 }
+
+                if (!string.Equals(_model.Currency, "EUR", StringComparison.OrdinalIgnoreCase)
+                    && _model.TotalTaxEur is decimal totalTaxEur)
+                {
+                    TotalLine(
+                        col,
+                        _model.Language == "en" ? "VAT in EUR" : "USt in EUR",
+                        $"{FormatNumber(totalTaxEur, _culture)} EUR",
+                        bold: false);
+
+                    if (_model.ExchangeRate is decimal exchangeRate
+                        && _model.ExchangeRateDate is DateOnly exchangeRateDate)
+                    {
+                        var prefix = _model.Language == "en" ? "Exchange rate" : "Umrechnungskurs";
+                        var dateLabel = _model.Language == "en" ? "as of" : "Stand";
+                        col.Item()
+                            .PaddingTop(2)
+                            .AlignRight()
+                            .Text(
+                                $"{prefix}: 1 EUR = {exchangeRate.ToString("0.######", _culture)} "
+                                + $"{_model.Currency}, {dateLabel} {FormatDate(exchangeRateDate)}")
+                            .FontSize(7)
+                            .FontColor(Colors.Grey.Darken1);
+                    }
+                }
             });
         });
     }

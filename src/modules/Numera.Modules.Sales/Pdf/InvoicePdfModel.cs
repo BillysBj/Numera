@@ -57,6 +57,15 @@ public sealed record InvoicePdfModel
     /// <summary>ISO 4217 currency (BT-5).</summary>
     public string Currency { get; init; } = "EUR";
 
+    /// <summary>Frozen foreign-currency units per EUR used when the document was finalized.</summary>
+    public decimal? ExchangeRate { get; init; }
+
+    /// <summary>Frozen reference date of <see cref="ExchangeRate"/>.</summary>
+    public DateOnly? ExchangeRateDate { get; init; }
+
+    /// <summary>Frozen invoice VAT total in EUR (BT-111).</summary>
+    public decimal? TotalTaxEur { get; init; }
+
     /// <summary>Leitweg-ID / buyer reference (BT-10). Nullable.</summary>
     public string? BuyerReference { get; init; }
 

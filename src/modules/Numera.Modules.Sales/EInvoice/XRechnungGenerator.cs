@@ -2,6 +2,10 @@ using Numera.Modules.Sales.Pdf;
 
 using s2industries.ZUGFeRD;
 
+using System.Globalization;
+using System.Xml;
+using System.Xml.Linq;
+
 namespace Numera.Modules.Sales.EInvoice;
 
 /// <summary>
@@ -77,6 +81,64 @@ public static class XRechnungGenerator
 
         using var stream = new MemoryStream();
         descriptor.Save(stream, Version, XRechnungProfile, format);
-        return stream.ToArray();
+
+        if (string.Equals(model.Currency, "EUR", StringComparison.OrdinalIgnoreCase)
+            || model.TotalTaxEur is not decimal totalTaxEur)
+        {
+            return stream.ToArray();
+        }
+
+        stream.Position = 0;
+        var document = XDocument.Load(stream);
+        InjectAccountingCurrencyTaxTotal(document, format, totalTaxEur);
+
+        using var output = new MemoryStream();
+        using (var writer = XmlWriter.Create(output, new XmlWriterSettings
+        {
+            Encoding = new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            Indent = false,
+        }))
+        {
+            document.Save(writer);
+        }
+
+        return output.ToArray();
+    }
+
+    private static void InjectAccountingCurrencyTaxTotal(
+        XDocument document,
+        ZUGFeRDFormats format,
+        decimal totalTaxEur)
+    {
+        var amount = totalTaxEur.ToString("0.00", CultureInfo.InvariantCulture);
+
+        if (format == ZUGFeRDFormats.UBL)
+        {
+            XNamespace cac = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
+            XNamespace cbc = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
+            var ublTaxTotal = document.Root?.Elements(cac + "TaxTotal").Single();
+
+            ublTaxTotal?.AddAfterSelf(
+                new XElement(
+                    cac + "TaxTotal",
+                    new XElement(
+                        cbc + "TaxAmount",
+                        new XAttribute("currencyID", "EUR"),
+                        amount)));
+            return;
+        }
+
+        var ram = document.Root?.GetNamespaceOfPrefix("ram")
+            ?? throw new InvalidOperationException("Generated CII has no ram namespace.");
+        var settlement = document
+            .Descendants(ram + "ApplicableHeaderTradeSettlement")
+            .Single();
+        var ciiTaxTotal = settlement.Descendants(ram + "TaxTotalAmount").Single();
+
+        ciiTaxTotal.AddAfterSelf(
+            new XElement(
+                ram + "TaxTotalAmount",
+                new XAttribute("currencyID", "EUR"),
+                amount));
     }
 }

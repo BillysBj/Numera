@@ -61,6 +61,9 @@ public static class SnapshotReader
             ServicePeriodEnd = doc.ServicePeriodEnd,
             DueDate = doc.DueDate,
             Currency = doc.Currency,
+            ExchangeRate = doc.ExchangeRate,
+            ExchangeRateDate = doc.ExchangeRateDate,
+            TotalTaxEur = doc.TotalTaxEur,
             BuyerReference = doc.BuyerReference,
             Notes = doc.Notes,
 
