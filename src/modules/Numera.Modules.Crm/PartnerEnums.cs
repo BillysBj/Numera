@@ -35,3 +35,13 @@ public enum PartnerActivityType
     /// <summary>A note was added to the partner.</summary>
     NoteAdded = 5,
 }
+
+/// <summary>Completion state of a partner task.</summary>
+public enum PartnerTaskStatus
+{
+    /// <summary>The task still requires action.</summary>
+    Open = 0,
+
+    /// <summary>The task has been completed.</summary>
+    Done = 1,
+}

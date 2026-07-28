@@ -163,6 +163,7 @@ app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
 app.MapPartnerEndpoints();
+app.MapPartnerTaskEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapSalesDocumentEndpoints();

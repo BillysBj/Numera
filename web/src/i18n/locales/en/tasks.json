@@ -1,0 +1,47 @@
+{
+  "tab": "Tasks",
+  "filters": {
+    "open": "Open only",
+    "overdue": "Overdue only"
+  },
+  "columns": {
+    "done": "Done",
+    "title": "Task",
+    "dueDate": "Due date",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "status": {
+    "open": "Open",
+    "done": "Done"
+  },
+  "overdue": "Overdue",
+  "empty": "No tasks yet.",
+  "loading": "Loading tasks …",
+  "form": {
+    "title": "New task",
+    "taskTitle": "Title",
+    "description": "Description",
+    "dueDate": "Due date",
+    "assignee": "Assigned user ID",
+    "create": "Create task"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "messages": {
+    "created": "Task created.",
+    "updated": "Task updated.",
+    "deleted": "Task deleted."
+  },
+  "errors": {
+    "titleRequired": "A title is required.",
+    "load": "Tasks could not be loaded.",
+    "save": "The task could not be saved.",
+    "delete": "The task could not be deleted."
+  },
+  "confirmDelete": "Delete this task?"
+}

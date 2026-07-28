@@ -204,3 +204,10 @@ ALTER TABLE recurring_invoice_template_lines FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON recurring_invoice_template_lines
     USING (tenant_id = current_setting('app.current_tenant')::uuid)
     WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- partner tasks (Phase 8, editable due-date tracking; no append-only trigger)
+ALTER TABLE partner_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner_tasks FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON partner_tasks
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);

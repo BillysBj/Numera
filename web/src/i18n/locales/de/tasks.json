@@ -1,0 +1,47 @@
+{
+  "tab": "Aufgaben",
+  "filters": {
+    "open": "Nur offene",
+    "overdue": "Nur überfällige"
+  },
+  "columns": {
+    "done": "Erledigt",
+    "title": "Aufgabe",
+    "dueDate": "Fällig am",
+    "status": "Status",
+    "actions": "Aktionen"
+  },
+  "status": {
+    "open": "Offen",
+    "done": "Erledigt"
+  },
+  "overdue": "Überfällig",
+  "empty": "Keine Aufgaben vorhanden.",
+  "loading": "Aufgaben werden geladen …",
+  "form": {
+    "title": "Neue Aufgabe",
+    "taskTitle": "Titel",
+    "description": "Beschreibung",
+    "dueDate": "Fällig am",
+    "assignee": "Zugewiesene Benutzer-ID",
+    "create": "Aufgabe anlegen"
+  },
+  "actions": {
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "save": "Speichern",
+    "cancel": "Abbrechen"
+  },
+  "messages": {
+    "created": "Aufgabe wurde angelegt.",
+    "updated": "Aufgabe wurde aktualisiert.",
+    "deleted": "Aufgabe wurde gelöscht."
+  },
+  "errors": {
+    "titleRequired": "Ein Titel ist erforderlich.",
+    "load": "Aufgaben konnten nicht geladen werden.",
+    "save": "Die Aufgabe konnte nicht gespeichert werden.",
+    "delete": "Die Aufgabe konnte nicht gelöscht werden."
+  },
+  "confirmDelete": "Aufgabe wirklich löschen?"
+}

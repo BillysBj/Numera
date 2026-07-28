@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useForm, type Resolver } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   archivePartner,
@@ -25,8 +28,26 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { Dialog, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import {
+  PartnerTaskStatus,
+  useCreateTask,
+  useDeleteTask,
+  useTasks,
+  useUpdateTask,
+  type PartnerTask,
+  type PartnerTaskWrite,
+} from './tasks'
 
 const ACTIVITY_KEY: Record<number, string> = {
   [PartnerActivityType.PartnerCreated]: 'PartnerCreated',
@@ -404,6 +425,9 @@ export default function PartnerDetailPage() {
           </CardContent>
         </Card>
 
+        {/* Partner tasks (CRM-04) */}
+        <PartnerTasksSection partnerId={id} />
+
         {/* Documents placeholder (Phase 3) */}
         <Card>
           <CardHeader>
@@ -475,6 +499,239 @@ export default function PartnerDetailPage() {
         </DialogFooter>
       </Dialog>
     </main>
+  )
+}
+
+interface TaskFormValues {
+  title: string
+  description: string
+  dueDate: string
+  assignedUserId: string
+}
+
+function PartnerTasksSection({ partnerId }: { partnerId: string }) {
+  const { t } = useTranslation('tasks')
+  const [openOnly, setOpenOnly] = useState(false)
+  const [overdueOnly, setOverdueOnly] = useState(false)
+  const [editing, setEditing] = useState<PartnerTask | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const tasks = useTasks(partnerId, { openOnly, overdueOnly })
+  const createTask = useCreateTask(partnerId)
+  const updateTask = useUpdateTask(partnerId)
+  const deleteTask = useDeleteTask(partnerId)
+
+  const schema = useMemo(() => z.object({
+    title: z.string().trim().min(1, t('errors.titleRequired')).max(200),
+    description: z.string(),
+    dueDate: z.string(),
+    assignedUserId: z.union([z.literal(''), z.uuid()]),
+  }), [t])
+  const form = useForm<TaskFormValues>({
+    resolver: zodResolver(schema) as unknown as Resolver<TaskFormValues>,
+    defaultValues: {
+      title: '',
+      description: '',
+      dueDate: '',
+      assignedUserId: '',
+    },
+  })
+
+  const asWrite = (values: TaskFormValues): PartnerTaskWrite => ({
+    title: values.title.trim(),
+    description: values.description.trim() || null,
+    dueDate: values.dueDate || null,
+    assignedUserId: values.assignedUserId || null,
+  })
+
+  const submit = form.handleSubmit(async (values) => {
+    setError(null)
+    setMessage(null)
+    try {
+      if (editing) {
+        await updateTask.mutateAsync({
+          id: editing.id,
+          ...asWrite(values),
+          status: editing.status,
+        })
+        setMessage(t('messages.updated'))
+        setEditing(null)
+      } else {
+        await createTask.mutateAsync(asWrite(values))
+        setMessage(t('messages.created'))
+      }
+      form.reset()
+    } catch {
+      setError(t('errors.save'))
+    }
+  })
+
+  const startEdit = (task: PartnerTask) => {
+    setEditing(task)
+    form.reset({
+      title: task.title,
+      description: task.description ?? '',
+      dueDate: task.dueDate ?? '',
+      assignedUserId: task.assignedUserId ?? '',
+    })
+  }
+
+  const toggleDone = async (task: PartnerTask, done: boolean) => {
+    setError(null)
+    setMessage(null)
+    try {
+      await updateTask.mutateAsync({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        assignedUserId: task.assignedUserId,
+        status: done ? PartnerTaskStatus.Done : PartnerTaskStatus.Open,
+      })
+      setMessage(t('messages.updated'))
+    } catch {
+      setError(t('errors.save'))
+    }
+  }
+
+  const remove = async (taskId: string) => {
+    if (!window.confirm(t('confirmDelete'))) return
+    setError(null)
+    setMessage(null)
+    try {
+      await deleteTask.mutateAsync(taskId)
+      setMessage(t('messages.deleted'))
+    } catch {
+      setError(t('errors.delete'))
+    }
+  }
+
+  return (
+    <Card className="md:col-span-2">
+      <CardHeader><CardTitle>{t('tab')}</CardTitle></CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
+          <h3 className="font-medium md:col-span-2">{t('form.title')}</h3>
+          <label className="flex flex-col gap-1.5">
+            <Label htmlFor="task-title">{t('form.taskTitle')}</Label>
+            <Input id="task-title" {...form.register('title')} />
+            {form.formState.errors.title && (
+              <span className="text-sm text-destructive">
+                {form.formState.errors.title.message}
+              </span>
+            )}
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <Label htmlFor="task-due-date">{t('form.dueDate')}</Label>
+            <Input id="task-due-date" type="date" {...form.register('dueDate')} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <Label htmlFor="task-description">{t('form.description')}</Label>
+            <Textarea id="task-description" {...form.register('description')} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <Label htmlFor="task-assignee">{t('form.assignee')}</Label>
+            <Input id="task-assignee" {...form.register('assignedUserId')} />
+          </label>
+          <div className="flex gap-2 md:col-span-2">
+            <Button type="submit" disabled={createTask.isPending || updateTask.isPending}>
+              {editing ? t('actions.save') : t('form.create')}
+            </Button>
+            {editing && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setEditing(null)
+                  form.reset()
+                }}
+              >
+                {t('actions.cancel')}
+              </Button>
+            )}
+          </div>
+        </form>
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {message && <p role="status" className="text-sm text-emerald-600">{message}</p>}
+
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={openOnly} onCheckedChange={setOpenOnly} />
+            {t('filters.open')}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={overdueOnly} onCheckedChange={setOverdueOnly} />
+            {t('filters.overdue')}
+          </label>
+        </div>
+
+        {tasks.isLoading && <p className="text-sm text-muted-foreground">{t('loading')}</p>}
+        {tasks.isError && <p role="alert" className="text-sm text-destructive">{t('errors.load')}</p>}
+        {tasks.data && tasks.data.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
+        )}
+        {tasks.data && tasks.data.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('columns.done')}</TableHead>
+                <TableHead>{t('columns.title')}</TableHead>
+                <TableHead>{t('columns.dueDate')}</TableHead>
+                <TableHead>{t('columns.status')}</TableHead>
+                <TableHead className="text-right">{t('columns.actions')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tasks.data.map((task) => (
+                <TableRow key={task.id}>
+                  <TableCell>
+                    <Checkbox
+                      aria-label={t('columns.done')}
+                      checked={task.status === PartnerTaskStatus.Done}
+                      disabled={updateTask.isPending}
+                      onCheckedChange={(checked) => void toggleDone(task, checked)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{task.title}</div>
+                    {task.description && (
+                      <div className="text-xs text-muted-foreground">{task.description}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>{task.dueDate ?? '—'}</TableCell>
+                  <TableCell>
+                    {task.isOverdue ? (
+                      <Badge variant="destructive">{t('overdue')}</Badge>
+                    ) : (
+                      <Badge variant="secondary">
+                        {task.status === PartnerTaskStatus.Done
+                          ? t('status.done')
+                          : t('status.open')}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(task)}>
+                      {t('actions.edit')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={deleteTask.isPending}
+                      onClick={() => void remove(task.id)}
+                    >
+                      {t('actions.delete')}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

@@ -26,6 +26,8 @@ import deRecurring from './locales/de/recurring.json'
 import enRecurring from './locales/en/recurring.json'
 import deTeam from './locales/de/team.json'
 import enTeam from './locales/en/team.json'
+import deTasks from './locales/de/tasks.json'
+import enTasks from './locales/en/tasks.json'
 
 // Supported UI languages. German is the default/fallback (Numera is a German
 // financial product); English is the secondary locale (success criterion 5).
@@ -47,6 +49,7 @@ export const resources = {
     dunning: deDunning,
     recurring: deRecurring,
     team: deTeam,
+    tasks: deTasks,
   },
   en: {
     common: enCommon,
@@ -61,6 +64,7 @@ export const resources = {
     dunning: enDunning,
     recurring: enRecurring,
     team: enTeam,
+    tasks: enTasks,
   },
 } as const
 
@@ -73,7 +77,7 @@ i18n
     fallbackLng: 'de',
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
     nonExplicitSupportedLngs: true, // treat "de-DE" as "de"
-    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'inbound', 'payments', 'settings', 'dunning', 'recurring', 'team'],
+    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'inbound', 'payments', 'settings', 'dunning', 'recurring', 'team', 'tasks'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false, // React already escapes
