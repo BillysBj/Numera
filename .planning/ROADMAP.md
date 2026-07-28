@@ -153,10 +153,18 @@ Plans:
   1. Nutzer kann Rechnungen in Fremdwährung erstellen; der USt-Ausweis erfolgt korrekt in EUR-Umrechnung
   2. Nutzer kann Serienrechnungen anlegen, die automatisch nach Zeitplan erzeugt werden
   3. Nutzer kann Abschlags- und Schlussrechnungen erstellen; geleistete Anzahlungen werden in der Schlussrechnung korrekt verrechnet
-**Plans**: TBD
+**Plans**: 9 plans in 4 waves
 
 Plans:
-- [ ] 07-01: TBD (verfeinert in plan-phase)
+- [ ] 07-01-PLAN.md — Entitlement foundation: 3 new L+ capabilities in PlanCapabilityMap + web entitlements helper/UpgradeHint [wave 1]
+- [ ] 07-02-PLAN.md — INV-07 core: Abschlags-/Schlussrechnung DocumentTypes + numbering + frozen prepayment table (RLS) + FinalizeCoreAsync residual AmountDue (BT-113) [wave 1]
+- [ ] 07-03-PLAN.md — INV-07 e-invoice/PDF: BT-113 prepaid in mapper + prepayment PDF block + live-KoSIT prepayment golden [wave 2]
+- [ ] 07-04-PLAN.md — INV-05 core: foreign-currency columns + 2-minor-unit guard + rate freeze + EUR VAT (BT-111) in finalize + gate [wave 2]
+- [ ] 07-05-PLAN.md — INV-05 e-invoice/PDF: BT-6/BT-111 in mapper + USt-in-EUR PDF line + live-KoSIT currency golden [wave 3]
+- [ ] 07-06-PLAN.md — INV-06 infra: recurring template tables (RLS) + unique period index + CRUD/activate/pause endpoints (per-template Hangfire job, tenantId in args) [wave 3]
+- [ ] 07-07-PLAN.md — INV-06 generation: tenant-safe, idempotent, catch-up GenerateRecurringInvoiceJob reusing FinalizeCoreAsync (auto-finalize + Draft opt-out) [wave 4]
+- [ ] 07-08-PLAN.md — Documents frontend + down-payment creation endpoints: currency/rate form + Abschlag/Schluss UI + deduction display (+ human-verify) [wave 4]
+- [ ] 07-09-PLAN.md — Recurring frontend: template list/editor + pause/resume + route/nav + entitlement hints (+ human-verify) [wave 4]
 
 ### Phase 8: CRM-Ausbau & Steuerberater-Zugang
 **Goal**: Nutzer kann Kundenbeziehungen aktiv managen und seinen Steuerberater kontrolliert einbinden — die letzten funktionalen v1-Bausteine der Lexware-Feature-Matrix.
