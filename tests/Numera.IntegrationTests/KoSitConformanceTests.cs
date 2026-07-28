@@ -46,6 +46,7 @@ public sealed class KoSitConformanceTests
         ["K", "ubl"], ["K", "cii"],
         ["G", "ubl"], ["G", "cii"],
         ["Z", "ubl"], ["Z", "cii"],
+        ["prepay", "ubl"], ["prepay", "cii"],
     ];
 
     [KositTheory]
@@ -126,6 +127,26 @@ public sealed class KoSitConformanceTests
             rows: [Row(TaxCategory.Z, 0m, 250m, 0m)],
             net: 250m, tax: 0m, gross: 250m),
 
+        "prepay" => Model(
+            lines: [Line(1, "Gesamtprojekt", 1m, "C62", 1000m, 1000m, TaxCategory.S, 19m)],
+            rows: [Row(TaxCategory.S, 19m, 1000m, 190m)],
+            net: 1000m,
+            tax: 190m,
+            gross: 1190m,
+            prepayments:
+            [
+                new InvoicePdfModel.PrepaymentRow
+                {
+                    LineNumber = 1,
+                    AbschlagNumber = "AR-2026-00001",
+                    AbschlagDate = new DateOnly(2026, 6, 1),
+                    NetAmount = 300m,
+                    VatAmount = 57m,
+                    GrossAmount = 357m,
+                },
+            ],
+            amountDue: 833m),
+
         _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown VAT scenario."),
     };
 
@@ -161,7 +182,9 @@ public sealed class KoSitConformanceTests
         IReadOnlyList<InvoicePdfModel.LineRow> lines,
         IReadOnlyList<InvoicePdfModel.BreakdownRow> rows,
         decimal net, decimal tax, decimal gross,
-        bool isKleinunternehmer = false) => new()
+        bool isKleinunternehmer = false,
+        IReadOnlyList<InvoicePdfModel.PrepaymentRow>? prepayments = null,
+        decimal? amountDue = null) => new()
         {
             DocumentNumber = "RE-2026-00001",
             DocumentDate = new DateOnly(2026, 7, 13),
@@ -206,10 +229,11 @@ public sealed class KoSitConformanceTests
             },
             Lines = lines,
             BreakdownRows = rows,
+            Prepayments = prepayments ?? [],
             TotalNet = net,
             TotalTax = tax,
             TotalGross = gross,
-            AmountDue = gross,
+            AmountDue = amountDue ?? gross,
         };
 
     private static bool IsError(string severity) =>

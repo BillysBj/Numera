@@ -1,9 +1,15 @@
+using System.Text;
+using System.Xml.Linq;
+
 using Microsoft.EntityFrameworkCore;
 
+using Numera.Api.Services;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.EInvoice;
 using Numera.Platform.Db;
 using Numera.Platform.Money;
+using Numera.Platform.Tenancy;
 
 using Xunit;
 
@@ -72,6 +78,19 @@ public sealed class DownPaymentInvoiceTests
         Assert.NotEqual(schluss.TotalGross, schluss.AmountDue);
         Assert.Equal(schluss.AmountDue, schlussOpen.OriginalAmount);
         Assert.Equal(schluss.AmountDue, schlussOpen.OpenAmount);
+
+        var service = new EInvoiceService(read, TenantOf(tenant), new AcceptingEInvoiceValidator());
+        var artifact = await service.GenerateAndValidate(
+            schlussId,
+            EInvoiceFormat.XRechnungUbl,
+            CancellationToken.None);
+        var xml = XDocument.Parse(Encoding.UTF8.GetString(artifact.Xml));
+        Assert.Equal(
+            "119.00",
+            Assert.Single(xml.Descendants(), x => x.Name.LocalName == "PrepaidAmount").Value);
+        Assert.Equal(
+            "238.00",
+            Assert.Single(xml.Descendants(), x => x.Name.LocalName == "PayableAmount").Value);
     }
 
     [Fact]
@@ -217,5 +236,23 @@ public sealed class DownPaymentInvoiceTests
         await db.SaveChangesAsync();
         await tx.CommitAsync();
         return storno.Id;
+    }
+
+    private static TenantContext TenantOf(Guid tenant)
+    {
+        var context = new TenantContext();
+        context.SetTenant(tenant);
+        return context;
+    }
+
+    private sealed class AcceptingEInvoiceValidator : IEInvoiceValidator
+    {
+        public Task<EInvoiceValidationResult> ValidateAsync(
+            byte[] xml,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new EInvoiceValidationResult(
+                EInvoiceValidationStatus.Accepted,
+                [],
+                "<rep:report/>"));
     }
 }

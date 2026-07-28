@@ -287,6 +287,51 @@ public class EInvoiceMapperTests
         Assert.Contains(EInvoiceMapper.BusinessProcess, ciiText);
     }
 
+    [Fact]
+    public void Schlussrechnung_emits_frozen_BT113_and_residual_BT115_in_both_syntaxes()
+    {
+        var prepayments = new[]
+        {
+            new InvoicePdfModel.PrepaymentRow
+            {
+                LineNumber = 1,
+                AbschlagNumber = "AR-2026-00001",
+                AbschlagDate = new DateOnly(2026, 5, 15),
+                NetAmount = 200m,
+                VatAmount = 38m,
+                GrossAmount = 238m,
+            },
+            new InvoicePdfModel.PrepaymentRow
+            {
+                LineNumber = 2,
+                AbschlagNumber = "AR-2026-00002",
+                AbschlagDate = new DateOnly(2026, 6, 15),
+                NetAmount = 100m,
+                VatAmount = 19m,
+                GrossAmount = 119m,
+            },
+        };
+        var model = Model(
+            lines: [Line(1, "Gesamtprojekt", 1m, "C62", 1000m, 1000m, TaxCategory.S, 19m)],
+            rows: [Row(TaxCategory.S, 19m, 1000m, 190m)],
+            net: 1000m,
+            tax: 190m,
+            gross: 1190m,
+            prepayments: prepayments,
+            amountDue: 833m);
+
+        var ubl = Parse(XRechnungGenerator.GenerateUbl(model));
+        var cii = Parse(XRechnungGenerator.GenerateCii(model));
+
+        Assert.Equal(357m, Dec(MonetaryChild(ubl, "PrepaidAmount")));
+        Assert.Equal(357m, Dec(CiiSummation(cii, "TotalPrepaidAmount")));
+        Assert.Equal(833m, Dec(MonetaryChild(ubl, "PayableAmount")));
+        Assert.Equal(833m, Dec(CiiSummation(cii, "DuePayableAmount")));
+        Assert.Equal(1190m - 357m, Dec(MonetaryChild(ubl, "PayableAmount")));
+        Assert.Equal(UblPerCategoryTax(ubl), CiiPerCategoryTax(cii));
+        Assert.Equal(190m, Dec(UblDocumentTaxAmount(ubl)));
+    }
+
     // ================================================================ Fixture builders
 
     private static InvoicePdfModel.LineRow Line(
@@ -321,7 +366,9 @@ public class EInvoiceMapperTests
         decimal net, decimal tax, decimal gross,
         string? buyerReference = "LW-123",
         bool withIban = true,
-        bool isKleinunternehmer = false) => new()
+        bool isKleinunternehmer = false,
+        IReadOnlyList<InvoicePdfModel.PrepaymentRow>? prepayments = null,
+        decimal? amountDue = null) => new()
         {
             DocumentNumber = "RE-2026-00042",
             DocumentDate = new DateOnly(2026, 7, 13),
@@ -366,10 +413,11 @@ public class EInvoiceMapperTests
             },
             Lines = lines,
             BreakdownRows = rows,
+            Prepayments = prepayments ?? [],
             TotalNet = net,
             TotalTax = tax,
             TotalGross = gross,
-            AmountDue = gross,
+            AmountDue = amountDue ?? gross,
         };
 
     // ================================================================ XML helpers (local-name based)
