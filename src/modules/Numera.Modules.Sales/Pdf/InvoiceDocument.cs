@@ -157,6 +157,7 @@ public sealed class InvoiceDocument : IDocument
             col.Item().Element(ComposeLinesTable);
             col.Item().Element(ComposeTotals);
             col.Item().Element(ComposeBreakdown);
+            col.Item().Element(ComposePrepayments);
             col.Item().Element(ComposePflichttexte);
             col.Item().Element(ComposePaymentBlock);
 
@@ -327,6 +328,65 @@ public sealed class InvoiceDocument : IDocument
                     BodyCell(table).AlignRight().Text(Money(b.TaxableBase));
                     BodyCell(table).AlignRight().Text(Money(b.TaxAmount));
                 }
+            });
+        });
+    }
+
+    private void ComposePrepayments(IContainer container)
+    {
+        if (_model.Prepayments.Count == 0)
+        {
+            container.Text(string.Empty);
+            return;
+        }
+
+        var english = string.Equals(_model.Language, "en", StringComparison.OrdinalIgnoreCase);
+        container.Column(outer =>
+        {
+            outer.Item().Text(english ? "Deduction of advance invoices" : "Abzug geleisteter Abschläge")
+                .FontSize(8).FontColor(Colors.Grey.Darken1);
+            outer.Item().PaddingTop(3).Table(table =>
+            {
+                table.ColumnsDefinition(c =>
+                {
+                    c.ConstantColumn(28);
+                    c.RelativeColumn(2);
+                    c.RelativeColumn(1.5f);
+                    c.RelativeColumn(2);
+                    c.RelativeColumn(2);
+                    c.RelativeColumn(2);
+                });
+
+                table.Header(header =>
+                {
+                    HeaderCell(header, english ? "Item" : "Pos.");
+                    HeaderCell(header, english ? "No." : "Nr.");
+                    HeaderCell(header, english ? "Date" : "Datum");
+                    HeaderCell(header, english ? "Net" : "Netto", right: true);
+                    HeaderCell(header, english ? "VAT" : "USt", right: true);
+                    HeaderCell(header, english ? "Gross" : "Brutto", right: true);
+                });
+
+                foreach (var prepayment in _model.Prepayments)
+                {
+                    BodyCell(table).Text(prepayment.LineNumber.ToString(CultureInfo.InvariantCulture));
+                    BodyCell(table).Text(prepayment.AbschlagNumber);
+                    BodyCell(table).Text(FormatDate(prepayment.AbschlagDate));
+                    BodyCell(table).AlignRight().Text(Money(prepayment.NetAmount));
+                    BodyCell(table).AlignRight().Text(Money(prepayment.VatAmount));
+                    BodyCell(table).AlignRight().Text(Money(prepayment.GrossAmount));
+                }
+            });
+
+            outer.Item().PaddingTop(4).Row(row =>
+            {
+                row.RelativeItem().Text(english ? "Total prepaid" : "Summe Abschläge").SemiBold();
+                row.ConstantItem(110).AlignRight().Text(Money(_model.TotalPrepaid)).Bold();
+            });
+            outer.Item().Row(row =>
+            {
+                row.RelativeItem().Text(english ? "Amount due" : "Noch zu zahlen").SemiBold();
+                row.ConstantItem(110).AlignRight().Text(Money(_model.AmountDue)).Bold();
             });
         });
     }

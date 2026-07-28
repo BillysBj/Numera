@@ -85,12 +85,18 @@ public static class EInvoiceMapper
 
         // Totals — transcribed from the frozen persisted values, NEVER recomputed
         // (RESEARCH Pitfall 3; prevents BR-CO-10/13/15 drift). BT-106/109/112/115.
+        var totalPrepaid = model.TotalPrepaid;
+        desc.TotalPrepaidAmount = totalPrepaid;
         desc.SetTotals(
             lineTotalAmount: model.TotalNet,
+            chargeTotalAmount: null,
+            allowanceTotalAmount: null,
             taxBasisAmount: model.TotalNet,
             taxTotalAmount: model.TotalTax,
             grandTotalAmount: model.TotalGross,
-            duePayableAmount: model.AmountDue);
+            totalPrepaidAmount: totalPrepaid,
+            duePayableAmount: model.AmountDue,
+            roundingAmount: null);
 
         if (!string.IsNullOrWhiteSpace(model.Notes))
         {

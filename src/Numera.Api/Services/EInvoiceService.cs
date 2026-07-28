@@ -125,7 +125,12 @@ public sealed class EInvoiceService
         }
         else
         {
-            var model = SnapshotReader.FromDocument(doc);
+            var prepayments = await _db.Set<SalesDocumentPrepayment>()
+                .AsNoTracking()
+                .Where(p => p.DocumentId == doc.Id)
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+            var model = SnapshotReader.FromDocument(doc, prepayments: prepayments);
             bytes = Serialize(model, format);
             var result = await _validator.ValidateAsync(bytes, ct).ConfigureAwait(false);
             status = result.Status;
@@ -188,7 +193,16 @@ public sealed class EInvoiceService
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
 
-        var model = SnapshotReader.FromDocument(doc, logo?.LogoBytes, logo?.LogoContentType);
+        var prepayments = await _db.Set<SalesDocumentPrepayment>()
+            .AsNoTracking()
+            .Where(p => p.DocumentId == doc.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        var model = SnapshotReader.FromDocument(
+            doc,
+            logo?.LogoBytes,
+            logo?.LogoContentType,
+            prepayments: prepayments);
         var pdf = ZugferdGenerator.Generate(model);
 
         // Reuse the byte-identical CII's verdict (EINV-02) rather than re-validate identical bytes.

@@ -27,6 +27,11 @@ public static class SnapshotReader
     /// Builds a render model from the frozen snapshot of <paramref name="doc"/>.
     /// </summary>
     /// <param name="doc">The finalized document (with <c>Lines</c> and <c>TaxBreakdown</c> loaded).</param>
+    /// <param name="prepayments">
+    /// Frozen <see cref="SalesDocumentPrepayment"/> rows loaded for this document. The aggregate
+    /// currently has no parent collection, so callers must query these rows by
+    /// <see cref="SalesDocumentPrepayment.DocumentId"/> and pass them here.
+    /// </param>
     /// <param name="logoBytes">Optional tenant logo bytes (presentation only).</param>
     /// <param name="logoContentType">Content type of <paramref name="logoBytes"/>.</param>
     /// <param name="language">Render language: "de" (default) or "en".</param>
@@ -34,7 +39,8 @@ public static class SnapshotReader
         SalesDocument doc,
         byte[]? logoBytes = null,
         string? logoContentType = null,
-        string language = "de")
+        string language = "de",
+        IReadOnlyList<SalesDocumentPrepayment>? prepayments = null)
     {
         ArgumentNullException.ThrowIfNull(doc);
 
@@ -84,6 +90,19 @@ public static class SnapshotReader
                     TaxAmount = b.TaxAmount,
                     ExemptionReasonCode = b.ExemptionReasonCode,
                     ExemptionReasonText = b.ExemptionReasonText,
+                })],
+
+            Prepayments = [.. (prepayments ?? [])
+                .OrderBy(p => p.AbschlagDate)
+                .ThenBy(p => p.AbschlagNumber, StringComparer.Ordinal)
+                .Select((p, index) => new InvoicePdfModel.PrepaymentRow
+                {
+                    LineNumber = index + 1,
+                    AbschlagNumber = p.AbschlagNumber,
+                    AbschlagDate = p.AbschlagDate,
+                    NetAmount = p.NetAmount,
+                    VatAmount = p.VatAmount,
+                    GrossAmount = p.GrossAmount,
                 })],
 
             TotalNet = doc.TotalNet,

@@ -73,6 +73,14 @@ public sealed record InvoicePdfModel
     /// <summary>The EN 16931 VAT breakdown rows, one per (category, rate).</summary>
     public IReadOnlyList<BreakdownRow> BreakdownRows { get; init; } = [];
 
+    // --- Frozen down-payment deductions (BT-113 source) ----------------------
+
+    /// <summary>Itemized Abschläge frozen on the Schlussrechnung at finalize.</summary>
+    public IReadOnlyList<PrepaymentRow> Prepayments { get; init; } = [];
+
+    /// <summary>Total frozen gross prepayment deducted as BT-113.</summary>
+    public decimal TotalPrepaid => Prepayments.Sum(p => p.GrossAmount);
+
     // --- Totals (persisted, frozen) ------------------------------------------
 
     /// <summary>Sum of line nets (BT-106/109).</summary>
@@ -233,5 +241,27 @@ public sealed record InvoicePdfModel
 
         /// <summary>Exemption reason text / Pflichttext (BT-120), printed verbatim. Nullable.</summary>
         public string? ExemptionReasonText { get; init; }
+    }
+
+    /// <summary>A frozen Abschlag deduction displayed on the Schlussrechnung.</summary>
+    public sealed record PrepaymentRow
+    {
+        /// <summary>Stable 1-based presentation position.</summary>
+        public int LineNumber { get; init; }
+
+        /// <summary>Frozen legal number of the Abschlagsrechnung.</summary>
+        public string AbschlagNumber { get; init; } = string.Empty;
+
+        /// <summary>Frozen issue date of the Abschlagsrechnung.</summary>
+        public DateOnly AbschlagDate { get; init; }
+
+        /// <summary>Frozen net amount.</summary>
+        public decimal NetAmount { get; init; }
+
+        /// <summary>Frozen VAT amount.</summary>
+        public decimal VatAmount { get; init; }
+
+        /// <summary>Frozen gross amount deducted from BT-115.</summary>
+        public decimal GrossAmount { get; init; }
     }
 }

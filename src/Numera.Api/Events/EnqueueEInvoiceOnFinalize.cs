@@ -42,7 +42,9 @@ public sealed class EnqueueEInvoiceOnFinalize : IDomainEventHandler<InvoiceFinal
         ArgumentNullException.ThrowIfNull(domainEvent);
 
         // v1 scope: only a Rechnung (type 380) is e-invoiced. Storno/Gutschrift are a documented seam.
-        if (domainEvent.DocumentType != DocumentType.Rechnung)
+        if (domainEvent.DocumentType is not (DocumentType.Rechnung
+            or DocumentType.Abschlagsrechnung
+            or DocumentType.Schlussrechnung))
         {
             return Task.CompletedTask;
         }

@@ -138,7 +138,18 @@ public sealed class DocumentPdfService
             .FirstOrDefaultAsync(ct)
             .ConfigureAwait(false);
 
-        var model = SnapshotReader.FromDocument(doc, logo?.LogoBytes, logo?.LogoContentType, lang);
+        var prepayments = await _db.Set<SalesDocumentPrepayment>()
+            .AsNoTracking()
+            .Where(p => p.DocumentId == doc.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var model = SnapshotReader.FromDocument(
+            doc,
+            logo?.LogoBytes,
+            logo?.LogoContentType,
+            lang,
+            prepayments: prepayments);
         var bytes = InvoiceDocument.Render(model);
 
         // Idempotent replace: drop any prior render for this (document, language), insert the fresh one.
