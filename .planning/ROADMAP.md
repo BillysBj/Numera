@@ -175,10 +175,14 @@ Plans:
   2. Nutzer kann Dateien am Kunden ablegen (Kundenakte)
   3. Nutzer kann Teammitglieder einladen und Rollen vergeben (Inhaber, Mitarbeiter, Steuerberater)
   4. Ein Steuerberater-Nutzer hat lesenden Zugriff auf Belege und Auswertungen, kann aber nichts verändern
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 08-01: TBD (verfeinert in plan-phase)
+- [ ] 08-01-PLAN.md — PLAT-03 enforcement foundation (ICurrentUserRole seam, global write-guard + read allow-list middleware, RequireOwner policy, tests)
+- [ ] 08-02-PLAN.md — Team invitations API + UI (Keycloak direct-add, Owner-only + MultiUser-gated /api/team, React team feature)
+- [ ] 08-03-PLAN.md — CRM-04 partner tasks (entity + RLS migration + CRUD/overdue endpoints + Aufgaben tab)
+- [ ] 08-04-PLAN.md — CRM-05 Kundenakte files (append-only bytea entity + RLS/immutability migration + upload/download/list + Dateien tab)
+- [ ] 08-05-PLAN.md — Human-verify checkpoint (end-to-end across all 4 success criteria, incl. read-only Steuerberater)
 
 ### Phase 9: v1-Feinschliff & Compliance
 **Goal**: Numera ist launch-reif — PWA, Tarif-Gates und Compliance-Artefakte sind poliert und nachweislich rechtskonform.
