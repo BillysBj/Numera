@@ -30,6 +30,19 @@ public sealed record CreateSalesDocumentRequest(
     decimal? ExchangeRate = null,
     DateOnly? ExchangeRateDate = null);
 
+/// <summary>Creates a Schlussrechnung draft and freezes the selected finalized Abschlagsrechnungen.</summary>
+public sealed record FinalInvoiceRequest(
+    Guid? PartnerId,
+    DateOnly DocumentDate,
+    DateOnly? ServiceDate,
+    string? Notes,
+    string? BuyerReference,
+    IReadOnlyList<SalesLineRequest> Lines,
+    IReadOnlyList<Guid> AbschlagDocumentIds,
+    string? Currency = null,
+    decimal? ExchangeRate = null,
+    DateOnly? ExchangeRateDate = null);
+
 /// <summary>Payload to update an existing draft. Same shape as create (full replace of header + lines).</summary>
 public sealed record UpdateSalesDocumentRequest(
     DocumentType DocumentType,
@@ -107,7 +120,17 @@ public sealed record SalesDocumentDetail(
     string? IssuerSnapshot,
     string? RecipientSnapshot,
     IReadOnlyList<SalesLineDto> Lines,
-    IReadOnlyList<SalesTaxBreakdownDto> TaxBreakdown);
+    IReadOnlyList<SalesTaxBreakdownDto> TaxBreakdown,
+    IReadOnlyList<SalesDocumentPrepaymentDto> Prepayments);
+
+/// <summary>A frozen Abschlagsrechnung deduction on a Schlussrechnung.</summary>
+public sealed record SalesDocumentPrepaymentDto(
+    Guid AbschlagDocumentId,
+    string AbschlagNumber,
+    DateOnly AbschlagDate,
+    decimal NetAmount,
+    decimal VatAmount,
+    decimal GrossAmount);
 
 /// <summary>A line of a document detail (BG-25).</summary>
 public sealed record SalesLineDto(

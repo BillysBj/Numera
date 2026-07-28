@@ -60,7 +60,8 @@ public static class SalesDocumentEndpoints
             int pageSize = 25,
             string? q = null,
             DocumentType? type = null,
-            DocumentStatus? status = null) =>
+            DocumentStatus? status = null,
+            Guid? partnerId = null) =>
         {
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
@@ -75,6 +76,11 @@ public static class SalesDocumentEndpoints
             if (status is not null)
             {
                 query = query.Where(d => d.Status == status);
+            }
+
+            if (partnerId is not null)
+            {
+                query = query.Where(d => d.PartnerId == partnerId);
             }
 
             if (!string.IsNullOrWhiteSpace(q))
@@ -107,7 +113,23 @@ public static class SalesDocumentEndpoints
                 .FirstOrDefaultAsync(x => x.Id == id, ct)
                 .ConfigureAwait(false);
 
-            return d is null ? Results.NotFound() : Results.Ok(ToDetail(d));
+            if (d is null)
+            {
+                return Results.NotFound();
+            }
+
+            var prepayments = await db.Set<SalesDocumentPrepayment>()
+                .AsNoTracking()
+                .Where(p => p.DocumentId == d.Id)
+                .OrderBy(p => p.AbschlagDate)
+                .ThenBy(p => p.AbschlagNumber)
+                .Select(p => new SalesDocumentPrepaymentDto(
+                    p.AbschlagDocumentId, p.AbschlagNumber, p.AbschlagDate,
+                    p.NetAmount, p.VatAmount, p.GrossAmount))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+
+            return Results.Ok(ToDetail(d, prepayments));
         });
 
         // GET /api/documents/{id}/pdf — download the finalized document's §14 PDF (DOCS-02).
@@ -229,6 +251,17 @@ public static class SalesDocumentEndpoints
                 return Results.ValidationProblem(result.ToDictionary());
             }
 
+            if (IsDownPaymentDocument(req.DocumentType)
+                && !await entitlements.HasCapabilityAsync(Capability.DownPaymentInvoices, ct).ConfigureAwait(false))
+            {
+                return DownPaymentUpgradeRequired();
+            }
+
+            if (req.DocumentType == DocumentType.Schlussrechnung)
+            {
+                return InvalidPrepayments("Use /api/documents/final-invoice to create a Schlussrechnung.");
+            }
+
             var currency = NormalizeCurrency(req.Currency);
             if (IsForeignCurrency(currency)
                 && !await entitlements.HasCapabilityAsync(Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
@@ -268,6 +301,125 @@ public static class SalesDocumentEndpoints
             return Results.Created($"/api/documents/{doc.Id}", new { doc.Id });
         });
 
+        // POST /api/documents/abschlag — create an entitled Abschlagsrechnung Draft.
+        g.MapPost("/abschlag", async (
+            CreateSalesDocumentRequest req,
+            IValidator<CreateSalesDocumentRequest> validator,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            IEntitlementService entitlements,
+            CancellationToken ct) =>
+        {
+            if (!await entitlements.HasCapabilityAsync(Capability.DownPaymentInvoices, ct).ConfigureAwait(false))
+            {
+                return DownPaymentUpgradeRequired();
+            }
+
+            var forced = req with { DocumentType = DocumentType.Abschlagsrechnung };
+            var result = await validator.ValidateAsync(forced, ct).ConfigureAwait(false);
+            if (!result.IsValid)
+            {
+                return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            var currency = NormalizeCurrency(forced.Currency);
+            if (IsForeignCurrency(currency)
+                && !await entitlements.HasCapabilityAsync(Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
+            {
+                return ForeignCurrencyUpgradeRequired();
+            }
+
+            var tenantId = tenant.TenantId!.Value;
+            var doc = BuildDraft(forced, DocumentType.Abschlagsrechnung, tenantId, currency);
+            db.Add(doc);
+            await audit.RecordAsync(
+                new SalesDocumentAuditEvent("sales_document.created", doc.Id, Before: null, After: Snapshot(doc)), ct)
+                .ConfigureAwait(false);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/documents/{doc.Id}", new { doc.Id });
+        });
+
+        // POST /api/documents/final-invoice — create a Schlussrechnung Draft with frozen deductions.
+        g.MapPost("/final-invoice", async (
+            FinalInvoiceRequest req,
+            IValidator<CreateSalesDocumentRequest> validator,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            IEntitlementService entitlements,
+            CancellationToken ct) =>
+        {
+            if (!await entitlements.HasCapabilityAsync(Capability.DownPaymentInvoices, ct).ConfigureAwait(false))
+            {
+                return DownPaymentUpgradeRequired();
+            }
+
+            var create = new CreateSalesDocumentRequest(
+                DocumentType.Schlussrechnung, req.PartnerId, req.DocumentDate, req.ServiceDate,
+                req.Notes, req.BuyerReference, req.Lines, req.Currency,
+                req.ExchangeRate, req.ExchangeRateDate);
+            var result = await validator.ValidateAsync(create, ct).ConfigureAwait(false);
+            if (!result.IsValid)
+            {
+                return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            var ids = req.AbschlagDocumentIds.Distinct().ToArray();
+            if (ids.Length != req.AbschlagDocumentIds.Count)
+            {
+                return InvalidPrepayments("Each Abschlagsrechnung may only be selected once.");
+            }
+
+            var abschlaege = await db.Set<SalesDocument>()
+                .AsNoTracking()
+                .Where(d => ids.Contains(d.Id))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+            if (abschlaege.Count != ids.Length
+                || abschlaege.Any(d => d.DocumentType != DocumentType.Abschlagsrechnung
+                    || d.Status != DocumentStatus.Finalized
+                    || d.PartnerId != req.PartnerId
+                    || string.IsNullOrWhiteSpace(d.DocumentNumber)))
+            {
+                return InvalidPrepayments(
+                    "Every selected document must be a finalized Abschlagsrechnung for the same partner.");
+            }
+
+            var currency = NormalizeCurrency(create.Currency);
+            if (IsForeignCurrency(currency)
+                && !await entitlements.HasCapabilityAsync(Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
+            {
+                return ForeignCurrencyUpgradeRequired();
+            }
+
+            var tenantId = tenant.TenantId!.Value;
+            var doc = BuildDraft(create, DocumentType.Schlussrechnung, tenantId, currency);
+            db.Add(doc);
+            foreach (var abschlag in abschlaege)
+            {
+                db.Add(new SalesDocumentPrepayment
+                {
+                    TenantId = tenantId,
+                    DocumentId = doc.Id,
+                    AbschlagDocumentId = abschlag.Id,
+                    AbschlagNumber = abschlag.DocumentNumber!,
+                    AbschlagDate = abschlag.DocumentDate,
+                    NetAmount = abschlag.TotalNet,
+                    VatAmount = abschlag.TotalTax,
+                    GrossAmount = abschlag.TotalGross,
+                });
+            }
+
+            await audit.RecordAsync(
+                new SalesDocumentAuditEvent("sales_document.final_invoice_created", doc.Id, Before: null, After: Snapshot(doc)), ct)
+                .ConfigureAwait(false);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/documents/{doc.Id}", new { doc.Id });
+        });
+
         // PUT /api/documents/{id} — full update of a Draft (409 if not Draft).
         g.MapPut("/{id:guid}", async (
             Guid id,
@@ -297,6 +449,12 @@ public static class SalesDocumentEndpoints
             if (doc.Status != DocumentStatus.Draft)
             {
                 return NonDraftConflict(doc.Status);
+            }
+
+            if (IsDownPaymentDocument(req.DocumentType)
+                && !await entitlements.HasCapabilityAsync(Capability.DownPaymentInvoices, ct).ConfigureAwait(false))
+            {
+                return DownPaymentUpgradeRequired();
             }
 
             var currency = NormalizeCurrency(req.Currency);
@@ -390,6 +548,17 @@ public static class SalesDocumentEndpoints
             if (source is null)
             {
                 return Results.NotFound();
+            }
+
+            if (IsDownPaymentDocument(req.TargetType)
+                && !await entitlements.HasCapabilityAsync(Capability.DownPaymentInvoices, ct).ConfigureAwait(false))
+            {
+                return DownPaymentUpgradeRequired();
+            }
+
+            if (req.TargetType == DocumentType.Schlussrechnung)
+            {
+                return InvalidPrepayments("Use /api/documents/final-invoice to create a Schlussrechnung.");
             }
 
             if (IsForeignCurrency(source.Currency)
@@ -579,7 +748,17 @@ public static class SalesDocumentEndpoints
                     doc.TotalNet, doc.TotalTax, doc.TotalGross, doc.DocumentDate, doc.DocumentType),
                 ct).ConfigureAwait(false);
 
-            return Results.Ok(ToDetail(doc));
+            var prepayments = await db.Set<SalesDocumentPrepayment>()
+                .AsNoTracking()
+                .Where(p => p.DocumentId == doc.Id)
+                .OrderBy(p => p.AbschlagDate)
+                .ThenBy(p => p.AbschlagNumber)
+                .Select(p => new SalesDocumentPrepaymentDto(
+                    p.AbschlagDocumentId, p.AbschlagNumber, p.AbschlagDate,
+                    p.NetAmount, p.VatAmount, p.GrossAmount))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+            return Results.Ok(ToDetail(doc, prepayments));
         });
 
         // POST /api/documents/{id}/storno — cancel a finalized invoice (INV-03 + DOCS-04).
@@ -845,7 +1024,34 @@ public static class SalesDocumentEndpoints
         }
     }
 
-    private static SalesDocumentDetail ToDetail(SalesDocument d) => new(
+    private static SalesDocument BuildDraft(
+        CreateSalesDocumentRequest req,
+        DocumentType documentType,
+        Guid tenantId,
+        string currency)
+    {
+        var doc = new SalesDocument
+        {
+            TenantId = tenantId,
+            DocumentType = documentType,
+            Status = DocumentStatus.Draft,
+            PartnerId = req.PartnerId,
+            DocumentDate = req.DocumentDate,
+            ServiceDate = req.ServiceDate,
+            Notes = req.Notes,
+            BuyerReference = req.BuyerReference,
+            Currency = currency,
+            ExchangeRate = IsForeignCurrency(currency) ? req.ExchangeRate : null,
+            ExchangeRateDate = IsForeignCurrency(currency) ? req.ExchangeRateDate : null,
+        };
+        ReplaceLines(doc, req.Lines, tenantId);
+        doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
+        return doc;
+    }
+
+    private static SalesDocumentDetail ToDetail(
+        SalesDocument d,
+        IReadOnlyList<SalesDocumentPrepaymentDto>? prepayments = null) => new(
         d.Id, d.DocumentType, d.Status, d.DocumentNumber, d.PartnerId,
         d.DocumentDate, d.ServiceDate, d.ServicePeriodEnd, d.DueDate,
         d.Currency, d.ExchangeRate, d.ExchangeRateDate, d.TotalTaxEur,
@@ -864,7 +1070,8 @@ public static class SalesDocumentEndpoints
             .Select(b => new SalesTaxBreakdownDto(
                 b.Id, b.TaxCategory, b.VatRatePercent, b.TaxableBase, b.TaxAmount,
                 b.ExemptionReasonCode, b.ExemptionReasonText))
-            .ToList());
+            .ToList(),
+        prepayments ?? []);
 
     private static string Snapshot(SalesDocument d) => JsonSerializer.Serialize(new
     {
@@ -1143,6 +1350,9 @@ public static class SalesDocumentEndpoints
             or DocumentType.Abschlagsrechnung
             or DocumentType.Schlussrechnung;
 
+    private static bool IsDownPaymentDocument(DocumentType documentType) =>
+        documentType is DocumentType.Abschlagsrechnung or DocumentType.Schlussrechnung;
+
     private static string NormalizeCurrency(string? currency)
         => string.IsNullOrWhiteSpace(currency) ? "EUR" : currency.Trim().ToUpperInvariant();
 
@@ -1154,6 +1364,18 @@ public static class SalesDocumentEndpoints
             title: "Upgrade required",
             detail: "Foreign-currency invoicing requires the ForeignCurrencyInvoicing capability (plan L or XL).",
             statusCode: StatusCodes.Status403Forbidden);
+
+    private static IResult DownPaymentUpgradeRequired()
+        => Results.Problem(
+            title: "Upgrade required",
+            detail: "Down-payment invoicing requires the DownPaymentInvoices capability (plan L or XL).",
+            statusCode: StatusCodes.Status403Forbidden);
+
+    private static IResult InvalidPrepayments(string detail)
+        => Results.Problem(
+            title: "Invalid Abschlagsrechnungen",
+            detail: detail,
+            statusCode: StatusCodes.Status422UnprocessableEntity);
 }
 
 /// <summary>
