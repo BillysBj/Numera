@@ -3,6 +3,7 @@ using FluentValidation;
 using Hangfire;
 using Hangfire.PostgreSql;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
@@ -45,6 +46,7 @@ var hangfireConnectionString = builder.Configuration.GetConnectionString("Hangfi
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentTenant, TenantContext>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<ICurrentUserRole, CurrentUserRole>();
 builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(connectionString));
 
 // --- Audit + entitlements --------------------------------------------------
@@ -126,7 +128,13 @@ builder.Services.AddTransient<GenerateRecurringInvoiceJob>();
 
 // --- BFF authentication (cookie + Keycloak OIDC, tokens server-side) --------
 builder.Services.AddKeycloakBff(builder.Configuration);
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<IAuthorizationHandler, RequireOwnerHandler>();
+builder.Services.AddAuthorization(options =>
+    options.AddPolicy(
+        "RequireOwner",
+        policy => policy
+            .RequireAuthenticatedUser()
+            .AddRequirements(new RequireOwnerRequirement())));
 
 // --- Background jobs (Hangfire, Postgres-backed) ---------------------------
 // The Api hosts a server on the default queue and both enqueues and executes the
@@ -149,6 +157,7 @@ app.UseAuthorization();
 // After authentication: map the organization claim -> tenant_id -> ICurrentTenant so
 // RLS receives the tenant on every request.
 app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
 
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
