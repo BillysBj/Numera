@@ -1,0 +1,27 @@
+{
+  "tab": "Dateien",
+  "title": "Kundenakte",
+  "upload": "Datei hochladen",
+  "chooseFile": "Datei auswählen",
+  "columns": {
+    "name": "Name",
+    "type": "Typ",
+    "size": "Größe",
+    "uploadedAt": "Hochgeladen",
+    "download": "Download"
+  },
+  "download": "Herunterladen",
+  "empty": "Noch keine Dateien in der Kundenakte.",
+  "loading": "Dateien werden geladen …",
+  "appendOnlyHint": "Die Kundenakte ist unveränderbar (Belegcharakter). Hochgeladene Dateien können nicht bearbeitet oder gelöscht werden.",
+  "messages": {
+    "uploaded": "Die Datei wurde hochgeladen."
+  },
+  "errors": {
+    "load": "Die Dateien konnten nicht geladen werden.",
+    "upload": "Die Datei konnte nicht hochgeladen werden.",
+    "empty": "Bitte wählen Sie eine Datei aus.",
+    "size": "Die Datei darf höchstens 20 MB groß und nicht leer sein.",
+    "type": "Dieser Dateityp wird nicht unterstützt."
+  }
+}

@@ -48,6 +48,13 @@ import {
   type PartnerTask,
   type PartnerTaskWrite,
 } from './tasks'
+import {
+  ALLOWED_CUSTOMER_FILE_TYPES,
+  MAX_CUSTOMER_FILE_BYTES,
+  customerFileDownloadUrl,
+  useFiles,
+  useUploadFile,
+} from './files'
 
 const ACTIVITY_KEY: Record<number, string> = {
   [PartnerActivityType.PartnerCreated]: 'PartnerCreated',
@@ -428,6 +435,9 @@ export default function PartnerDetailPage() {
         {/* Partner tasks (CRM-04) */}
         <PartnerTasksSection partnerId={id} />
 
+        {/* Kundenakte files (CRM-05) */}
+        <PartnerFilesSection partnerId={id} />
+
         {/* Documents placeholder (Phase 3) */}
         <Card>
           <CardHeader>
@@ -500,6 +510,141 @@ export default function PartnerDetailPage() {
       </Dialog>
     </main>
   )
+}
+
+function PartnerFilesSection({ partnerId }: { partnerId: string }) {
+  const { t, i18n } = useTranslation('files')
+  const files = useFiles(partnerId)
+  const upload = useUploadFile(partnerId)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [inputKey, setInputKey] = useState(0)
+  const [message, setMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const submit = async () => {
+    setMessage(null)
+    setError(null)
+    if (!selectedFile) {
+      setError(t('errors.empty'))
+      return
+    }
+    if (
+      selectedFile.size <= 0 ||
+      selectedFile.size > MAX_CUSTOMER_FILE_BYTES
+    ) {
+      setError(t('errors.size'))
+      return
+    }
+    if (
+      !ALLOWED_CUSTOMER_FILE_TYPES.includes(
+        selectedFile.type as (typeof ALLOWED_CUSTOMER_FILE_TYPES)[number],
+      )
+    ) {
+      setError(t('errors.type'))
+      return
+    }
+
+    try {
+      await upload.mutateAsync(selectedFile)
+      setSelectedFile(null)
+      setInputKey((key) => key + 1)
+      setMessage(t('messages.uploaded'))
+    } catch {
+      setError(t('errors.upload'))
+    }
+  }
+
+  return (
+    <Card className="md:col-span-2">
+      <CardHeader>
+        <CardTitle>{t('title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Label htmlFor="customer-file">{t('chooseFile')}</Label>
+            <Input
+              key={inputKey}
+              id="customer-file"
+              type="file"
+              accept={ALLOWED_CUSTOMER_FILE_TYPES.join(',')}
+              onChange={(event) => {
+                setSelectedFile(event.target.files?.[0] ?? null)
+                setError(null)
+                setMessage(null)
+              }}
+            />
+          </label>
+          <Button
+            type="button"
+            disabled={!selectedFile || upload.isPending}
+            onClick={() => void submit()}
+          >
+            {t('upload')}
+          </Button>
+        </div>
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {message && <p role="status" className="text-sm text-emerald-600">{message}</p>}
+        <p className="text-sm text-muted-foreground">{t('appendOnlyHint')}</p>
+
+        {files.isLoading && (
+          <p className="text-sm text-muted-foreground">{t('loading')}</p>
+        )}
+        {files.isError && (
+          <p role="alert" className="text-sm text-destructive">{t('errors.load')}</p>
+        )}
+        {files.data && files.data.length === 0 && (
+          <p className="text-sm text-muted-foreground">{t('empty')}</p>
+        )}
+        {files.data && files.data.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('columns.name')}</TableHead>
+                <TableHead>{t('columns.type')}</TableHead>
+                <TableHead>{t('columns.size')}</TableHead>
+                <TableHead>{t('columns.uploadedAt')}</TableHead>
+                <TableHead className="text-right">{t('columns.download')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {files.data.map((file) => (
+                <TableRow key={file.id}>
+                  <TableCell className="font-medium">{file.fileName}</TableCell>
+                  <TableCell>{file.contentType}</TableCell>
+                  <TableCell>{formatBytes(file.byteSize, i18n.language)}</TableCell>
+                  <TableCell>
+                    {new Date(file.uploadedAt).toLocaleString(i18n.language)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <a
+                      className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+                      href={customerFileDownloadUrl(partnerId, file.id)}
+                    >
+                      {t('download')}
+                    </a>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function formatBytes(bytes: number, locale: string) {
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB']
+  let value = bytes / 1024
+  let unit = units[0]
+  for (let index = 1; value >= 1024 && index < units.length; index += 1) {
+    value /= 1024
+    unit = units[index]
+  }
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} ${unit}`
 }
 
 interface TaskFormValues {

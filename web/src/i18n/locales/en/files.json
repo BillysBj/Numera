@@ -1,0 +1,27 @@
+{
+  "tab": "Files",
+  "title": "Customer file",
+  "upload": "Upload file",
+  "chooseFile": "Choose file",
+  "columns": {
+    "name": "Name",
+    "type": "Type",
+    "size": "Size",
+    "uploadedAt": "Uploaded",
+    "download": "Download"
+  },
+  "download": "Download",
+  "empty": "There are no files in the customer file yet.",
+  "loading": "Loading files …",
+  "appendOnlyHint": "The customer file is immutable (documentary character). Uploaded files cannot be edited or deleted.",
+  "messages": {
+    "uploaded": "The file was uploaded."
+  },
+  "errors": {
+    "load": "The files could not be loaded.",
+    "upload": "The file could not be uploaded.",
+    "empty": "Please choose a file.",
+    "size": "The file must not be empty or larger than 20 MB.",
+    "type": "This file type is not supported."
+  }
+}

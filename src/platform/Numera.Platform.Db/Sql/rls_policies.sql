@@ -211,3 +211,13 @@ ALTER TABLE partner_tasks FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON partner_tasks
     USING (tenant_id = current_setting('app.current_tenant')::uuid)
     WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- customer files / Kundenakte (Phase 8, append-only GoBD-style attachments)
+ALTER TABLE customer_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_files FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON customer_files
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- The CustomerFiles migration additionally revokes UPDATE/DELETE from numera_app
+-- and installs customer_file_immutable BEFORE UPDATE OR DELETE as a hard backstop.

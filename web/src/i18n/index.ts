@@ -28,6 +28,8 @@ import deTeam from './locales/de/team.json'
 import enTeam from './locales/en/team.json'
 import deTasks from './locales/de/tasks.json'
 import enTasks from './locales/en/tasks.json'
+import deFiles from './locales/de/files.json'
+import enFiles from './locales/en/files.json'
 
 // Supported UI languages. German is the default/fallback (Numera is a German
 // financial product); English is the secondary locale (success criterion 5).
@@ -50,6 +52,7 @@ export const resources = {
     recurring: deRecurring,
     team: deTeam,
     tasks: deTasks,
+    files: deFiles,
   },
   en: {
     common: enCommon,
@@ -65,6 +68,7 @@ export const resources = {
     recurring: enRecurring,
     team: enTeam,
     tasks: enTasks,
+    files: enFiles,
   },
 } as const
 
@@ -77,7 +81,7 @@ i18n
     fallbackLng: 'de',
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
     nonExplicitSupportedLngs: true, // treat "de-DE" as "de"
-    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'inbound', 'payments', 'settings', 'dunning', 'recurring', 'team', 'tasks'],
+    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'inbound', 'payments', 'settings', 'dunning', 'recurring', 'team', 'tasks', 'files'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false, // React already escapes

@@ -164,6 +164,7 @@ app.MapAuthEndpoints();
 app.MapMeEndpoints();
 app.MapPartnerEndpoints();
 app.MapPartnerTaskEndpoints();
+app.MapCustomerFileEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapSalesDocumentEndpoints();
