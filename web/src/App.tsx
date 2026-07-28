@@ -16,6 +16,8 @@ import InboundListPage from './features/inbound/InboundListPage'
 import InboundDetailPage from './features/inbound/InboundDetailPage'
 import CompanyProfileSettingsPage from './features/settings/CompanyProfileSettingsPage'
 import DunningConfigSettingsPage from './features/dunning/DunningConfigSettingsPage'
+import RecurringTemplateListPage from './features/recurring/RecurringTemplateListPage'
+import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFormPage'
 
 // App-shell chrome shared by every route: brand + primary nav + language switch,
 // reachable from Login, Dashboard and the partner pages.
@@ -28,6 +30,7 @@ function AppHeader() {
   const { t: ti } = useTranslation('inbound')
   const { t: ts } = useTranslation('settings')
   const { t: tdu } = useTranslation('dunning')
+  const { t: tr } = useTranslation('recurring')
   return (
     <header className="app-header">
       <span className="brand">{t('app.name')}</span>
@@ -40,6 +43,7 @@ function AppHeader() {
         <Link to="/inbound">{ti('nav')}</Link>
         <Link to="/settings">{ts('nav')}</Link>
         <Link to="/settings/dunning">{tdu('nav')}</Link>
+        <Link to="/recurring">{tr('nav')}</Link>
       </nav>
       <LanguageSwitcher />
     </header>
@@ -69,6 +73,9 @@ export default function App() {
         <Route path="/inbound/:id" element={<InboundDetailPage />} />
         <Route path="/settings" element={<CompanyProfileSettingsPage />} />
         <Route path="/settings/dunning" element={<DunningConfigSettingsPage />} />
+        <Route path="/recurring" element={<RecurringTemplateListPage />} />
+        <Route path="/recurring/new" element={<RecurringTemplateFormPage />} />
+        <Route path="/recurring/:id/edit" element={<RecurringTemplateFormPage />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

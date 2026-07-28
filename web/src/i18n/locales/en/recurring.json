@@ -1,0 +1,98 @@
+{
+  "nav": "Recurring invoices",
+  "title": "Recurring invoices",
+  "loading": "Loading…",
+  "loadError": "Recurring invoice templates could not be loaded.",
+  "saveError": "The template could not be saved.",
+  "actionError": "The status could not be changed.",
+  "columns": {
+    "name": "Name",
+    "partner": "Customer",
+    "cadence": "Cadence",
+    "nextRun": "Next run",
+    "status": "Status",
+    "generatedCount": "Generated"
+  },
+  "cadence": "Every {{count}} {{unit}}",
+  "interval": {
+    "0": "month(s)",
+    "1": "quarter(s)",
+    "2": "year(s)",
+    "3": "week(s)"
+  },
+  "endMode": {
+    "0": "Never",
+    "1": "Until date",
+    "2": "After count"
+  },
+  "status": {
+    "0": "Active",
+    "1": "Paused",
+    "2": "Ended"
+  },
+  "actions": {
+    "new": "New template",
+    "back": "Back",
+    "save": "Save",
+    "saving": "Saving…",
+    "pause": "Pause",
+    "activate": "Activate",
+    "remove": "Remove",
+    "addLine": "Add line"
+  },
+  "form": {
+    "createTitle": "Create recurring invoice",
+    "editTitle": "Edit recurring invoice",
+    "noPartner": "No customer",
+    "sections": {
+      "details": "Template",
+      "schedule": "Schedule",
+      "lines": "Line template",
+      "automation": "Automation"
+    },
+    "fields": {
+      "name": "Name",
+      "partner": "Customer",
+      "currency": "Currency",
+      "exchangeRate": "Exchange rate to EUR",
+      "exchangeRateDate": "Rate date",
+      "intervalUnit": "Interval",
+      "intervalCount": "Every",
+      "startOn": "Start / anchor date",
+      "endMode": "End condition",
+      "endDate": "End date",
+      "maxOccurrences": "Maximum occurrences",
+      "lineName": "Name",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "price": "Net price",
+      "taxCategory": "Tax category",
+      "vatRate": "VAT %",
+      "autoFinalize": "Finalize invoices automatically",
+      "autoSend": "Send finalized invoices automatically"
+    },
+    "autoFinalizeOff": "Create as a draft for review",
+    "errors": {
+      "required": "Required",
+      "name": "Name is required.",
+      "lineName": "Line name is required.",
+      "quantityPositive": "Quantity must be greater than 0.",
+      "unitCode": "Unit is required.",
+      "netPriceMin": "Price cannot be negative.",
+      "intervalCount": "Interval must be at least 1.",
+      "exchangeRate": "Foreign currencies require a positive exchange rate and rate date.",
+      "endDate": "End date must be on or after the start date.",
+      "maxOccurrences": "Count must be greater than 0.",
+      "lines": "At least one line is required."
+    }
+  },
+  "table": {
+    "loading": "Loading…",
+    "empty": "No templates.",
+    "total": "{{count}} templates",
+    "page": "Page {{page}} of {{pages}}",
+    "prev": "Previous",
+    "next": "Next"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "nav": "Serienrechnungen",
+  "title": "Serienrechnungen",
+  "loading": "Wird geladen …",
+  "loadError": "Serienrechnungsvorlagen konnten nicht geladen werden.",
+  "saveError": "Die Vorlage konnte nicht gespeichert werden.",
+  "actionError": "Der Status konnte nicht geändert werden.",
+  "columns": {
+    "name": "Name",
+    "partner": "Kunde",
+    "cadence": "Rhythmus",
+    "nextRun": "Nächste Ausführung",
+    "status": "Status",
+    "generatedCount": "Erzeugt"
+  },
+  "cadence": "Alle {{count}} {{unit}}",
+  "interval": {
+    "0": "Monat(e)",
+    "1": "Quartal(e)",
+    "2": "Jahr(e)",
+    "3": "Woche(n)"
+  },
+  "endMode": {
+    "0": "Nie",
+    "1": "Bis Datum",
+    "2": "Nach Anzahl"
+  },
+  "status": {
+    "0": "Aktiv",
+    "1": "Pausiert",
+    "2": "Beendet"
+  },
+  "actions": {
+    "new": "Neue Vorlage",
+    "back": "Zurück",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "pause": "Pausieren",
+    "activate": "Aktivieren",
+    "remove": "Entfernen",
+    "addLine": "Position hinzufügen"
+  },
+  "form": {
+    "createTitle": "Serienrechnung anlegen",
+    "editTitle": "Serienrechnung bearbeiten",
+    "noPartner": "Kein Kunde",
+    "sections": {
+      "details": "Vorlage",
+      "schedule": "Zeitplan",
+      "lines": "Positionsvorlage",
+      "automation": "Automatisierung"
+    },
+    "fields": {
+      "name": "Name",
+      "partner": "Kunde",
+      "currency": "Währung",
+      "exchangeRate": "Wechselkurs zu EUR",
+      "exchangeRateDate": "Kursdatum",
+      "intervalUnit": "Intervall",
+      "intervalCount": "Alle",
+      "startOn": "Startdatum / Ankerdatum",
+      "endMode": "Endbedingung",
+      "endDate": "Enddatum",
+      "maxOccurrences": "Maximale Ausführungen",
+      "lineName": "Bezeichnung",
+      "description": "Beschreibung",
+      "quantity": "Menge",
+      "unit": "Einheit",
+      "price": "Nettopreis",
+      "taxCategory": "Steuerkategorie",
+      "vatRate": "USt. %",
+      "autoFinalize": "Rechnungen automatisch finalisieren",
+      "autoSend": "Finalisierte Rechnungen automatisch senden"
+    },
+    "autoFinalizeOff": "Als Entwurf zur Prüfung erzeugen",
+    "errors": {
+      "required": "Pflichtfeld",
+      "name": "Name ist erforderlich.",
+      "lineName": "Bezeichnung ist erforderlich.",
+      "quantityPositive": "Die Menge muss größer als 0 sein.",
+      "unitCode": "Einheit ist erforderlich.",
+      "netPriceMin": "Der Preis darf nicht negativ sein.",
+      "intervalCount": "Das Intervall muss mindestens 1 sein.",
+      "exchangeRate": "Für Fremdwährungen sind ein positiver Wechselkurs und ein Kursdatum erforderlich.",
+      "endDate": "Das Enddatum muss am oder nach dem Startdatum liegen.",
+      "maxOccurrences": "Die Anzahl muss größer als 0 sein.",
+      "lines": "Mindestens eine Position ist erforderlich."
+    }
+  },
+  "table": {
+    "loading": "Wird geladen …",
+    "empty": "Keine Vorlagen vorhanden.",
+    "total": "{{count}} Vorlagen",
+    "page": "Seite {{page}} von {{pages}}",
+    "prev": "Zurück",
+    "next": "Weiter"
+  }
+}
