@@ -47,6 +47,7 @@ public sealed class KoSitConformanceTests
         ["G", "ubl"], ["G", "cii"],
         ["Z", "ubl"], ["Z", "cii"],
         ["prepay", "ubl"], ["prepay", "cii"],
+        ["currency", "ubl"], ["currency", "cii"],
     ];
 
     [KositTheory]
@@ -147,6 +148,17 @@ public sealed class KoSitConformanceTests
             ],
             amountDue: 833m),
 
+        "currency" => Model(
+            lines: [Line(1, "Consulting", 1m, "HUR", 100m, 100m, TaxCategory.S, 19m)],
+            rows: [Row(TaxCategory.S, 19m, 100m, 19m)],
+            net: 100m,
+            tax: 19m,
+            gross: 119m,
+            currency: "USD",
+            exchangeRate: 1.185m,
+            exchangeRateDate: new DateOnly(2026, 7, 10),
+            totalTaxEur: 16.03m),
+
         _ => throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown VAT scenario."),
     };
 
@@ -184,13 +196,20 @@ public sealed class KoSitConformanceTests
         decimal net, decimal tax, decimal gross,
         bool isKleinunternehmer = false,
         IReadOnlyList<InvoicePdfModel.PrepaymentRow>? prepayments = null,
-        decimal? amountDue = null) => new()
+        decimal? amountDue = null,
+        string currency = "EUR",
+        decimal? exchangeRate = null,
+        DateOnly? exchangeRateDate = null,
+        decimal? totalTaxEur = null) => new()
         {
             DocumentNumber = "RE-2026-00001",
             DocumentDate = new DateOnly(2026, 7, 13),
             ServiceDate = new DateOnly(2026, 7, 1),
             DueDate = new DateOnly(2026, 7, 27),
-            Currency = "EUR",
+            Currency = currency,
+            ExchangeRate = exchangeRate,
+            ExchangeRateDate = exchangeRateDate,
+            TotalTaxEur = totalTaxEur,
             BuyerReference = "LW-991-2026",
             Notes = "Vielen Dank für Ihren Auftrag.",
             IsKleinunternehmer = isKleinunternehmer,

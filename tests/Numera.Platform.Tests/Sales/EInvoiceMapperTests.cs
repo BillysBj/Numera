@@ -332,6 +332,35 @@ public class EInvoiceMapperTests
         Assert.Equal(190m, Dec(UblDocumentTaxAmount(ubl)));
     }
 
+    [Fact]
+    public void Foreign_currency_emits_BT6_and_frozen_BT111_without_changing_BT5_or_BT110()
+    {
+        const decimal frozenTaxEur = 16.03m;
+        var model = Model(
+            lines: [Line(1, "Consulting", 1m, "HUR", 100m, 100m, TaxCategory.S, 19m)],
+            rows: [Row(TaxCategory.S, 19m, 100m, 19m)],
+            net: 100m,
+            tax: 19m,
+            gross: 119m,
+            currency: "USD",
+            exchangeRate: 1.185m,
+            exchangeRateDate: new DateOnly(2026, 7, 10),
+            totalTaxEur: frozenTaxEur);
+
+        var ubl = Parse(XRechnungGenerator.GenerateUbl(model));
+        var cii = Parse(XRechnungGenerator.GenerateCii(model));
+
+        Assert.Equal("USD", Vals(ubl, "DocumentCurrencyCode").Single());
+        Assert.Equal("EUR", Vals(ubl, "TaxCurrencyCode").Single());
+        Assert.Equal(19m, TaxAmountForCurrency(ubl, "USD"));
+        Assert.Equal(frozenTaxEur, TaxAmountForCurrency(ubl, "EUR"));
+
+        Assert.Equal("USD", Vals(cii, "InvoiceCurrencyCode").Single());
+        Assert.Equal("EUR", Vals(cii, "TaxCurrencyCode").Single());
+        Assert.Equal(19m, TaxTotalForCurrency(cii, "USD"));
+        Assert.Equal(frozenTaxEur, TaxTotalForCurrency(cii, "EUR"));
+    }
+
     // ================================================================ Fixture builders
 
     private static InvoicePdfModel.LineRow Line(
@@ -368,13 +397,20 @@ public class EInvoiceMapperTests
         bool withIban = true,
         bool isKleinunternehmer = false,
         IReadOnlyList<InvoicePdfModel.PrepaymentRow>? prepayments = null,
-        decimal? amountDue = null) => new()
+        decimal? amountDue = null,
+        string currency = "EUR",
+        decimal? exchangeRate = null,
+        DateOnly? exchangeRateDate = null,
+        decimal? totalTaxEur = null) => new()
         {
             DocumentNumber = "RE-2026-00042",
             DocumentDate = new DateOnly(2026, 7, 13),
             ServiceDate = new DateOnly(2026, 7, 1),
             DueDate = new DateOnly(2026, 7, 27),
-            Currency = "EUR",
+            Currency = currency,
+            ExchangeRate = exchangeRate,
+            ExchangeRateDate = exchangeRateDate,
+            TotalTaxEur = totalTaxEur,
             BuyerReference = buyerReference,
             Notes = "Vielen Dank.",
             IsKleinunternehmer = isKleinunternehmer,
@@ -448,6 +484,16 @@ public class EInvoiceMapperTests
 
     private static string CiiSummation(XDocument cii, string child) =>
         Child(Local(cii, "SpecifiedTradeSettlementHeaderMonetarySummation").Single(), child);
+
+    private static decimal TaxAmountForCurrency(XDocument ubl, string currency) =>
+        Dec(ubl.Root!.Elements()
+            .Where(e => e.Name.LocalName == "TaxTotal")
+            .SelectMany(e => e.Elements().Where(child => child.Name.LocalName == "TaxAmount"))
+            .Single(e => e.Attribute("currencyID")?.Value == currency)
+            .Value);
+
+    private static decimal TaxTotalForCurrency(XDocument cii, string currency) =>
+        Dec(Local(cii, "TaxTotalAmount").Single(e => e.Attribute("currencyID")?.Value == currency).Value);
 
     private static Dictionary<string, decimal> UblPerCategoryTax(XDocument ubl) =>
         Local(ubl, "TaxSubtotal").ToDictionary(
