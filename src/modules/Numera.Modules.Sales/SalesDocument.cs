@@ -32,6 +32,11 @@ namespace Numera.Modules.Sales;
 /// </remarks>
 [Table("sales_documents")]
 [Index(nameof(TenantId), nameof(DocumentType), nameof(Status))]
+[Index(
+    nameof(TenantId),
+    nameof(RecurringTemplateId),
+    nameof(RecurringPeriodKey),
+    IsUnique = true)]
 public sealed class SalesDocument : ITenantEntity
 {
     /// <summary>UUIDv7 primary key (time-ordered; maps to PG18 <c>uuidv7()</c>).</summary>
@@ -65,6 +70,12 @@ public sealed class SalesDocument : ITenantEntity
 
     /// <summary>Back-link on an original invoice to its Storno (whitelisted, set when cancelled).</summary>
     public Guid? CancelledByDocumentId { get; set; }
+
+    /// <summary>The recurring template that generated this document, when applicable.</summary>
+    public Guid? RecurringTemplateId { get; set; }
+
+    /// <summary>Stable generation period key used for per-template idempotency.</summary>
+    public string? RecurringPeriodKey { get; set; }
 
     // --- Partner reference + FROZEN snapshots (GoBD) -------------------------
 

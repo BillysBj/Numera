@@ -120,6 +120,9 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<RegistrationService>();
 builder.Services.AddTransient<WelcomeEmailJob>();
+// Recurring-invoice generation job (07-06 infra; body in 07-07). Registered like every other
+// Hangfire job so the per-template recurring schedule resolves it from DI, not just ActivatorUtilities.
+builder.Services.AddTransient<GenerateRecurringInvoiceJob>();
 
 // --- BFF authentication (cookie + Keycloak OIDC, tokens server-side) --------
 builder.Services.AddKeycloakBff(builder.Configuration);
@@ -158,5 +161,6 @@ app.MapInboundDocumentEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
 app.MapDunningEndpoints();
+app.MapRecurringInvoiceEndpoints();
 
 app.Run();

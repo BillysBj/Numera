@@ -191,3 +191,16 @@ ALTER TABLE sales_document_prepayment FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation ON sales_document_prepayment
     USING (tenant_id = current_setting('app.current_tenant')::uuid)
     WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+-- recurring invoice templates (Phase 7, one tenant-scoped schedule per template)
+ALTER TABLE recurring_invoice_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurring_invoice_templates FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON recurring_invoice_templates
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+ALTER TABLE recurring_invoice_template_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurring_invoice_template_lines FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON recurring_invoice_template_lines
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
