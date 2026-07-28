@@ -25,7 +25,10 @@ public sealed record CreateSalesDocumentRequest(
     DateOnly? ServiceDate,
     string? Notes,
     string? BuyerReference,
-    IReadOnlyList<SalesLineRequest> Lines);
+    IReadOnlyList<SalesLineRequest> Lines,
+    string? Currency = null,
+    decimal? ExchangeRate = null,
+    DateOnly? ExchangeRateDate = null);
 
 /// <summary>Payload to update an existing draft. Same shape as create (full replace of header + lines).</summary>
 public sealed record UpdateSalesDocumentRequest(
@@ -35,7 +38,10 @@ public sealed record UpdateSalesDocumentRequest(
     DateOnly? ServiceDate,
     string? Notes,
     string? BuyerReference,
-    IReadOnlyList<SalesLineRequest> Lines);
+    IReadOnlyList<SalesLineRequest> Lines,
+    string? Currency = null,
+    decimal? ExchangeRate = null,
+    DateOnly? ExchangeRateDate = null);
 
 /// <summary>
 /// One requested line (BG-25). The fields are a SNAPSHOT the client supplies (usually
@@ -84,6 +90,9 @@ public sealed record SalesDocumentDetail(
     DateOnly? ServicePeriodEnd,
     DateOnly? DueDate,
     string Currency,
+    decimal? ExchangeRate,
+    DateOnly? ExchangeRateDate,
+    decimal? TotalTaxEur,
     decimal TotalNet,
     decimal TotalTax,
     decimal TotalGross,

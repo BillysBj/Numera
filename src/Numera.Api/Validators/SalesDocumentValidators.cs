@@ -3,6 +3,7 @@ using FluentValidation;
 using Numera.Api.Contracts;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.Money;
 using Numera.Platform.Money;
 
 namespace Numera.Api.Validators;
@@ -107,7 +108,12 @@ internal static class FinalizeValidation
 internal static class SalesDocumentRules
 {
     /// <summary>Shared write rules for create/update sales-document requests.</summary>
-    public static void Apply<T>(AbstractValidator<T> v, Func<T, IReadOnlyList<SalesLineRequest>?> lines)
+    public static void Apply<T>(
+        AbstractValidator<T> v,
+        Func<T, IReadOnlyList<SalesLineRequest>?> lines,
+        Func<T, string?> currency,
+        Func<T, decimal?> exchangeRate,
+        Func<T, DateOnly?> exchangeRateDate)
     {
         v.RuleFor(x => lines(x))
             .NotNull().WithName("Lines").WithMessage("A document must have at least one line.")
@@ -116,8 +122,33 @@ internal static class SalesDocumentRules
 
         v.RuleForEach(x => lines(x))
             .SetValidator(new SalesLineRequestValidator())
+            .OverridePropertyName("Lines")
             .When(x => lines(x) is not null);
+
+        v.RuleFor(x => currency(x))
+            .Must(code => string.IsNullOrWhiteSpace(code) || CurrencyScope.IsSupported(code))
+            .WithName("Currency")
+            .WithMessage(CurrencyScope.UnsupportedReason);
+
+        v.RuleFor(x => exchangeRate(x))
+            .NotNull().WithName("ExchangeRate").WithMessage("Ein positiver Wechselkurs ist erforderlich.")
+            .GreaterThan(0m).WithName("ExchangeRate").WithMessage("Ein positiver Wechselkurs ist erforderlich.")
+            .When(x => IsForeignCurrency(currency(x)));
+
+        v.RuleFor(x => exchangeRateDate(x))
+            .NotNull().WithName("ExchangeRateDate").WithMessage("Ein Wechselkursdatum ist erforderlich.")
+            .When(x => IsForeignCurrency(currency(x)));
+
+        v.RuleFor(x => exchangeRate(x))
+            .Must(rate => rate is null or 1m)
+            .WithName("ExchangeRate")
+            .WithMessage("Für EUR muss der Wechselkurs leer oder 1 sein.")
+            .When(x => !IsForeignCurrency(currency(x)));
     }
+
+    private static bool IsForeignCurrency(string? currency)
+        => !string.IsNullOrWhiteSpace(currency)
+        && !string.Equals(currency.Trim(), "EUR", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>Validates a single <see cref="SalesLineRequest"/>.</summary>
@@ -149,12 +180,14 @@ public sealed class SalesLineRequestValidator : AbstractValidator<SalesLineReque
 public sealed class CreateSalesDocumentRequestValidator : AbstractValidator<CreateSalesDocumentRequest>
 {
     /// <summary>Configures the create rules.</summary>
-    public CreateSalesDocumentRequestValidator() => SalesDocumentRules.Apply(this, x => x.Lines);
+    public CreateSalesDocumentRequestValidator() => SalesDocumentRules.Apply(
+        this, x => x.Lines, x => x.Currency, x => x.ExchangeRate, x => x.ExchangeRateDate);
 }
 
 /// <summary>Validates <see cref="UpdateSalesDocumentRequest"/> (identical rule set to create).</summary>
 public sealed class UpdateSalesDocumentRequestValidator : AbstractValidator<UpdateSalesDocumentRequest>
 {
     /// <summary>Configures the update rules.</summary>
-    public UpdateSalesDocumentRequestValidator() => SalesDocumentRules.Apply(this, x => x.Lines);
+    public UpdateSalesDocumentRequestValidator() => SalesDocumentRules.Apply(
+        this, x => x.Lines, x => x.Currency, x => x.ExchangeRate, x => x.ExchangeRateDate);
 }

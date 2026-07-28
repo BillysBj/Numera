@@ -98,6 +98,20 @@ public sealed class SalesDocument : ITenantEntity
     /// <summary>ISO 4217 currency (BT-5). Defaults to EUR.</summary>
     public string Currency { get; set; } = "EUR";
 
+    /// <summary>
+    /// Frozen exchange rate using the convention: units of foreign currency per 1 EUR —
+    /// i.e. amountEur = amountForeign / ExchangeRate.
+    /// </summary>
+    [Precision(19, 6)]
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>Reference date of the frozen exchange rate (GoBD provenance).</summary>
+    public DateOnly? ExchangeRateDate { get; set; }
+
+    /// <summary>The frozen document VAT total in EUR (EN 16931 BT-111).</summary>
+    [Precision(19, 4)]
+    public decimal? TotalTaxEur { get; set; }
+
     /// <summary>Sum of line nets = tax basis (BT-106 / BT-109).</summary>
     [Precision(19, 4)]
     public decimal TotalNet { get; set; }

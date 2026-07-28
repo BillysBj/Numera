@@ -19,6 +19,14 @@ public readonly record struct TaxBucket(decimal TaxableBase, decimal RatePercent
 public static class RoundingPolicy
 {
     /// <summary>
+    /// Rounds a non-VAT-rate monetary conversion (for example FX conversion of an
+    /// already-rounded amount) to 2 decimal places using half-away-from-zero.
+    /// Unlike <see cref="RoundTax"/>, this does not multiply a taxable base by a VAT rate.
+    /// </summary>
+    public static decimal RoundAmount(decimal value)
+        => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+    /// <summary>
     /// Rounds the VAT for a single category to 2 decimal places using
     /// half-away-from-zero (kaufmännische Rundung), never banker's ToEven.
     /// </summary>

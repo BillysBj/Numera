@@ -21,6 +21,7 @@ using Numera.Modules.Sales.Numbering;
 using Numera.Modules.Sales.Vat;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
+using Numera.Platform.Entitlements;
 using Numera.Platform.Money;
 using Numera.Platform.Tenancy;
 
@@ -219,12 +220,20 @@ public static class SalesDocumentEndpoints
             NumeraDbContext db,
             IAuditWriter audit,
             ICurrentTenant tenant,
+            IEntitlementService entitlements,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(req, ct).ConfigureAwait(false);
             if (!result.IsValid)
             {
                 return Results.ValidationProblem(result.ToDictionary());
+            }
+
+            var currency = NormalizeCurrency(req.Currency);
+            if (IsForeignCurrency(currency)
+                && !await entitlements.HasCapabilityAsync(Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
+            {
+                return ForeignCurrencyUpgradeRequired();
             }
 
             var tenantId = tenant.TenantId!.Value;
@@ -239,7 +248,9 @@ public static class SalesDocumentEndpoints
                 ServiceDate = req.ServiceDate,
                 Notes = req.Notes,
                 BuyerReference = req.BuyerReference,
-                Currency = "EUR",
+                Currency = currency,
+                ExchangeRate = IsForeignCurrency(currency) ? req.ExchangeRate : null,
+                ExchangeRateDate = IsForeignCurrency(currency) ? req.ExchangeRateDate : null,
             };
 
             ReplaceLines(doc, req.Lines, tenantId);
@@ -264,6 +275,7 @@ public static class SalesDocumentEndpoints
             IValidator<UpdateSalesDocumentRequest> validator,
             NumeraDbContext db,
             IAuditWriter audit,
+            IEntitlementService entitlements,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(req, ct).ConfigureAwait(false);
@@ -287,6 +299,13 @@ public static class SalesDocumentEndpoints
                 return NonDraftConflict(doc.Status);
             }
 
+            var currency = NormalizeCurrency(req.Currency);
+            if (IsForeignCurrency(currency)
+                && !await entitlements.HasCapabilityAsync(Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
+            {
+                return ForeignCurrencyUpgradeRequired();
+            }
+
             var before = Snapshot(doc);
 
             doc.DocumentType = req.DocumentType;
@@ -295,6 +314,10 @@ public static class SalesDocumentEndpoints
             doc.ServiceDate = req.ServiceDate;
             doc.Notes = req.Notes;
             doc.BuyerReference = req.BuyerReference;
+            doc.Currency = currency;
+            doc.ExchangeRate = IsForeignCurrency(currency) ? req.ExchangeRate : null;
+            doc.ExchangeRateDate = IsForeignCurrency(currency) ? req.ExchangeRateDate : null;
+            doc.TotalTaxEur = null;
 
             // Delete-and-re-add lines; the parent is a Draft so the child trigger permits it.
             foreach (var old in doc.Lines.ToList())
@@ -356,6 +379,7 @@ public static class SalesDocumentEndpoints
             NumeraDbContext db,
             IAuditWriter audit,
             ICurrentTenant tenant,
+            IEntitlementService entitlements,
             CancellationToken ct) =>
         {
             var source = await db.Set<SalesDocument>()
@@ -366,6 +390,12 @@ public static class SalesDocumentEndpoints
             if (source is null)
             {
                 return Results.NotFound();
+            }
+
+            if (IsForeignCurrency(source.Currency)
+                && !await entitlements.HasCapabilityAsync(Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
+            {
+                return ForeignCurrencyUpgradeRequired();
             }
 
             var tenantId = tenant.TenantId!.Value;
@@ -381,6 +411,8 @@ public static class SalesDocumentEndpoints
                 Notes = source.Notes,
                 BuyerReference = source.BuyerReference,
                 Currency = source.Currency,
+                ExchangeRate = source.ExchangeRate,
+                ExchangeRateDate = source.ExchangeRateDate,
             };
 
             // Copy lines forward as fresh rows (new ids, same snapshot fields + order).
@@ -431,6 +463,7 @@ public static class SalesDocumentEndpoints
             IAuditWriter audit,
             ICurrentTenant tenant,
             EInvoiceService einvoice,
+            IEntitlementService entitlements,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -447,6 +480,26 @@ public static class SalesDocumentEndpoints
             if (doc.Status != DocumentStatus.Draft)
             {
                 return NonDraftConflict(doc.Status);
+            }
+
+            if (IsForeignCurrency(doc.Currency))
+            {
+                if (!await entitlements.HasCapabilityAsync(
+                        Capability.ForeignCurrencyInvoicing, ct).ConfigureAwait(false))
+                {
+                    return ForeignCurrencyUpgradeRequired();
+                }
+
+                if (doc.ExchangeRate is null or <= 0m || doc.ExchangeRateDate is null)
+                {
+                    return Results.ValidationProblem(
+                        new Dictionary<string, string[]>
+                        {
+                            ["ExchangeRate"] = ["Ein positiver Wechselkurs und ein Wechselkursdatum sind erforderlich."],
+                        },
+                        statusCode: StatusCodes.Status422UnprocessableEntity,
+                        title: "Document is not ready to finalize");
+                }
             }
 
             // 2. Load issuer (exactly one per tenant) + recipient; run the §14 completeness gate.
@@ -592,6 +645,8 @@ public static class SalesDocumentEndpoints
                 DocumentDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 ServiceDate = original.ServiceDate,
                 Currency = original.Currency,
+                ExchangeRate = original.ExchangeRate,
+                ExchangeRateDate = original.ExchangeRateDate,
                 BuyerReference = original.BuyerReference,
                 Notes = original.Notes,
             };
@@ -721,6 +776,8 @@ public static class SalesDocumentEndpoints
                 DocumentDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 ServiceDate = original.ServiceDate,
                 Currency = original.Currency,
+                ExchangeRate = original.ExchangeRate,
+                ExchangeRateDate = original.ExchangeRateDate,
                 BuyerReference = original.BuyerReference,
                 Notes = original.Notes,
             };
@@ -791,7 +848,8 @@ public static class SalesDocumentEndpoints
     private static SalesDocumentDetail ToDetail(SalesDocument d) => new(
         d.Id, d.DocumentType, d.Status, d.DocumentNumber, d.PartnerId,
         d.DocumentDate, d.ServiceDate, d.ServicePeriodEnd, d.DueDate,
-        d.Currency, d.TotalNet, d.TotalTax, d.TotalGross, d.AmountDue,
+        d.Currency, d.ExchangeRate, d.ExchangeRateDate, d.TotalTaxEur,
+        d.TotalNet, d.TotalTax, d.TotalGross, d.AmountDue,
         d.IsKleinunternehmer, d.ReverseCharge, d.BuyerReference, d.Notes,
         d.SourceDocumentId, d.CorrectsDocumentId, d.CancelledByDocumentId,
         d.IssuerSnapshot, d.RecipientSnapshot,
@@ -899,6 +957,23 @@ public static class SalesDocumentEndpoints
         doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
         doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
         doc.TotalGross = doc.TotalNet + doc.TotalTax;
+        if (IsForeignCurrency(doc.Currency))
+        {
+            if (doc.ExchangeRate is null or <= 0m || doc.ExchangeRateDate is null)
+            {
+                throw new InvalidOperationException(
+                    "A positive exchange rate and an exchange-rate date are required for a foreign-currency document.");
+            }
+
+            doc.TotalTaxEur = RoundingPolicy.RoundAmount(doc.TotalTax / doc.ExchangeRate.Value);
+        }
+        else
+        {
+            doc.ExchangeRate = null;
+            doc.ExchangeRateDate = null;
+            doc.TotalTaxEur = null;
+        }
+
         if (doc.DocumentType == DocumentType.Schlussrechnung)
         {
             var prepaidGross = await db.Set<SalesDocumentPrepayment>()
@@ -1067,6 +1142,18 @@ public static class SalesDocumentEndpoints
         documentType is DocumentType.Rechnung
             or DocumentType.Abschlagsrechnung
             or DocumentType.Schlussrechnung;
+
+    private static string NormalizeCurrency(string? currency)
+        => string.IsNullOrWhiteSpace(currency) ? "EUR" : currency.Trim().ToUpperInvariant();
+
+    private static bool IsForeignCurrency(string currency)
+        => !string.Equals(currency, "EUR", StringComparison.OrdinalIgnoreCase);
+
+    private static IResult ForeignCurrencyUpgradeRequired()
+        => Results.Problem(
+            title: "Upgrade required",
+            detail: "Foreign-currency invoicing requires the ForeignCurrencyInvoicing capability (plan L or XL).",
+            statusCode: StatusCodes.Status403Forbidden);
 }
 
 /// <summary>
