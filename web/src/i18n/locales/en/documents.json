@@ -63,7 +63,9 @@
     "2": "Delivery note",
     "3": "Invoice",
     "4": "Cancellation",
-    "5": "Credit note"
+    "5": "Credit note",
+    "6": "Down-payment invoice",
+    "7": "Final invoice"
   },
   "status": {
     "0": "Draft",
@@ -82,12 +84,16 @@
     "editTitle": "Edit document",
     "sections": {
       "header": "Header",
-      "lines": "Line items"
+      "lines": "Line items",
+      "prepayments": "Deduct down payments"
     },
     "fields": {
       "documentType": "Document type",
       "partnerId": "Business partner",
       "documentDate": "Document date",
+      "currency": "Currency",
+      "exchangeRate": "Exchange rate (1 EUR = X {{currency}})",
+      "exchangeRateDate": "Rate date",
       "buyerReference": "Buyer reference / Leitweg-ID",
       "notes": "Notes",
       "lineName": "Name",
@@ -113,7 +119,16 @@
       "net": "Net total",
       "tax": "VAT",
       "gross": "Gross total",
-      "note": "Preview — final totals are computed on save."
+      "note": "Preview — final totals are computed on save.",
+      "residual": "Estimated residual"
+    },
+    "abschlagPicker": {
+      "title": "Select down-payment invoices",
+      "description": "Finalized down-payment invoices for this partner are frozen and deducted.",
+      "partnerRequired": "Select a business partner first.",
+      "empty": "No finalized down-payment invoices found.",
+      "open": "Select down payments",
+      "done": "Apply"
     },
     "catalogPicker": {
       "title": "Pick a catalog item",
@@ -134,6 +149,7 @@
       "unitCode": "A unit is required.",
       "vatRange": "Value between 0 and 100.",
       "linesRequired": "At least one line is required.",
+      "exchangeRatePositive": "The exchange rate must be greater than 0.",
       "conflict": "This document is no longer a draft and cannot be changed.",
       "server": "Saving failed."
     }
@@ -146,7 +162,8 @@
       "lines": "Line items",
       "vatBreakdown": "VAT breakdown",
       "chain": "Document chain",
-      "meta": "Document details"
+      "meta": "Document details",
+      "prepayments": "Deducted down-payment invoices"
     },
     "fields": {
       "number": "Document number",
@@ -161,7 +178,14 @@
       "buyerReference": "Buyer reference / Leitweg-ID",
       "notes": "Notes",
       "finalizedAt": "Finalized at",
-      "currency": "Currency"
+      "currency": "Currency",
+      "taxEur": "VAT in EUR",
+      "exchangeRateNote": "Rate: 1 EUR = {{rate}} {{currency}} ({{date}})",
+      "residual": "Residual amount"
+    },
+    "prepayments": {
+      "number": "Down-payment invoice",
+      "date": "Date"
     },
     "snapshot": {
       "legalName": "Name",

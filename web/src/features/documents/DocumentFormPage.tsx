@@ -21,6 +21,8 @@ import {
 } from '@tanstack/react-query'
 import {
   createSalesDocument,
+  createAbschlag,
+  createFinalInvoice,
   getSalesDocument,
   lookupCatalogItems,
   updateSalesDocument,
@@ -30,6 +32,7 @@ import {
   TaxCategory,
   type CatalogLineItem,
   type SalesDocumentDetail,
+  type SalesDocumentListItem,
 } from '@/lib/api/documents'
 import { UNIT_CODES, unitLabel } from '../catalog/units'
 import {
@@ -47,9 +50,13 @@ import { Select } from '@/components/ui/select'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { hasCapability, useEntitlements } from '@/lib/entitlements'
+import { UpgradeHint } from '@/features/shared/UpgradeHint'
+import { AbschlagSelectDialog } from './AbschlagSelectDialog'
 
 const TAX_KEYS = ['S', 'AE', 'K', 'E', 'Z', 'G', 'O'] as const
 const TYPE_VALUES = Object.values(DocumentType) as number[]
+const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK']
 
 const eurFmt = new Intl.NumberFormat('de-DE', {
   style: 'currency',
@@ -84,6 +91,11 @@ function toFormValues(d: SalesDocumentDetail): DocumentFormValues {
     documentType: d.documentType,
     partnerId: d.partnerId ?? '',
     documentDate: d.documentDate.slice(0, 10),
+    currency: CURRENCIES.includes(d.currency)
+      ? (d.currency as DocumentFormValues['currency'])
+      : 'EUR',
+    exchangeRate: d.exchangeRate ?? undefined,
+    exchangeRateDate: d.exchangeRateDate?.slice(0, 10) ?? '',
     notes: d.notes ?? '',
     buyerReference: d.buyerReference ?? '',
     lines: d.lines.map((l) => ({
@@ -107,6 +119,20 @@ export default function DocumentFormPage() {
   const isEdit = !!id
   const [serverError, setServerError] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [abschlagPickerOpen, setAbschlagPickerOpen] = useState(false)
+  const [abschlagIds, setAbschlagIds] = useState<string[]>([])
+  const [selectedAbschlaege, setSelectedAbschlaege] = useState<
+    SalesDocumentListItem[]
+  >([])
+  const entitlements = useEntitlements()
+  const canFx = hasCapability(
+    entitlements.data?.capabilities,
+    'ForeignCurrencyInvoicing',
+  )
+  const canDownPayment = hasCapability(
+    entitlements.data?.capabilities,
+    'DownPaymentInvoices',
+  )
 
   const schema = useMemo(() => makeDocumentSchema(t), [t])
   const form = useForm<DocumentFormValues>({
@@ -131,6 +157,9 @@ export default function DocumentFormPage() {
 
   // Live preview totals — the SERVER recomputes authoritatively on save.
   const watchedLines = watch('lines')
+  const documentType = watch('documentType')
+  const currency = watch('currency')
+  const partnerId = watch('partnerId')
   const totals = useMemo(
     () =>
       computePreviewTotals(
@@ -150,6 +179,15 @@ export default function DocumentFormPage() {
       const body = toCreateRequest(values)
       if (isEdit) {
         await updateSalesDocument(id!, body)
+      } else if (values.documentType === DocumentType.Abschlagsrechnung) {
+        await createAbschlag(body)
+      } else if (values.documentType === DocumentType.Schlussrechnung) {
+        const { documentType: _, ...finalBody } = body
+        void _
+        await createFinalInvoice({
+          ...finalBody,
+          abschlagDocumentIds: abschlagIds,
+        })
       } else {
         await createSalesDocument(body)
       }
@@ -242,7 +280,15 @@ export default function DocumentFormPage() {
                   {...register('documentType', { setValueAs: (v) => Number(v) })}
                 >
                   {TYPE_VALUES.map((v) => (
-                    <option key={v} value={v}>
+                    <option
+                      key={v}
+                      value={v}
+                      disabled={
+                        (v === DocumentType.Abschlagsrechnung ||
+                          v === DocumentType.Schlussrechnung) &&
+                        !canDownPayment
+                      }
+                    >
                       {t(`type.${v}`)}
                     </option>
                   ))}
@@ -255,6 +301,38 @@ export default function DocumentFormPage() {
                 error={errors.documentDate?.message}
                 {...register('documentDate')}
               />
+              <div className="flex flex-col gap-1.5">
+                <Label>{t('form.fields.currency')}</Label>
+                <Select
+                  disabled={isReadOnly}
+                  {...register('currency')}
+                >
+                  {CURRENCIES.map((code) => (
+                    <option key={code} value={code} disabled={code !== 'EUR' && !canFx}>
+                      {code}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {currency !== 'EUR' && (
+                <>
+                  <TextField
+                    label={t('form.fields.exchangeRate', { currency })}
+                    type="number"
+                    step="0.000001"
+                    disabled={isReadOnly}
+                    error={errors.exchangeRate?.message}
+                    {...register('exchangeRate')}
+                  />
+                  <TextField
+                    label={t('form.fields.exchangeRateDate')}
+                    type="date"
+                    disabled={isReadOnly}
+                    error={errors.exchangeRateDate?.message}
+                    {...register('exchangeRateDate')}
+                  />
+                </>
+              )}
               <TextField
                 label={t('form.fields.partnerId')}
                 placeholder={t('form.partnerPlaceholder')}
@@ -272,8 +350,52 @@ export default function DocumentFormPage() {
                 <Label>{t('form.fields.notes')}</Label>
                 <Input disabled={isReadOnly} {...register('notes')} />
               </div>
+              {!canDownPayment && (
+                <UpgradeHint className="col-span-2" />
+              )}
+              {!canFx && (
+                <UpgradeHint className="col-span-2" />
+              )}
             </CardContent>
           </Card>
+
+          {documentType === DocumentType.Schlussrechnung && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>{t('form.sections.prepayments')}</CardTitle>
+                {!isReadOnly && canDownPayment && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAbschlagPickerOpen(true)}
+                    disabled={!partnerId}
+                  >
+                    {t('form.abschlagPicker.open')}
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="flex flex-col gap-2 text-sm">
+                {selectedAbschlaege.map((item) => (
+                  <div key={item.id} className="flex justify-between">
+                    <span>{item.documentNumber}</span>
+                    <span>{eurFmt.format(item.totalGross)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-border pt-2 font-medium">
+                  <span>{t('form.totals.residual')}</span>
+                  <span>
+                    {eurFmt.format(
+                      totals.gross -
+                        selectedAbschlaege.reduce(
+                          (sum, item) => sum + item.totalGross,
+                          0,
+                        ),
+                    )}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -446,6 +568,16 @@ export default function DocumentFormPage() {
       {pickerOpen && (
         <CatalogPicker onPick={onPickCatalog} onClose={() => setPickerOpen(false)} />
       )}
+      <AbschlagSelectDialog
+        open={abschlagPickerOpen}
+        partnerId={partnerId ?? ''}
+        selectedIds={abschlagIds}
+        onChange={(ids, docs) => {
+          setAbschlagIds(ids)
+          setSelectedAbschlaege(docs)
+        }}
+        onOpenChange={setAbschlagPickerOpen}
+      />
     </main>
   )
 }

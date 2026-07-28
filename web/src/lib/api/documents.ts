@@ -35,6 +35,8 @@ export const DocumentType = {
   Rechnung: 3,
   Storno: 4,
   Gutschrift: 5,
+  Abschlagsrechnung: 6,
+  Schlussrechnung: 7,
 } as const
 export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType]
 
@@ -131,6 +133,9 @@ export interface SalesDocumentDetail {
   servicePeriodEnd?: string | null
   dueDate?: string | null
   currency: string
+  exchangeRate?: number | null
+  exchangeRateDate?: string | null
+  totalTaxEur?: number | null
   totalNet: number
   totalTax: number
   totalGross: number
@@ -148,6 +153,7 @@ export interface SalesDocumentDetail {
   cancelledByDocumentId?: string | null
   lines: SalesLine[]
   taxBreakdown: SalesTaxBreakdownRow[]
+  prepayments: SalesDocumentPrepayment[]
   // Frozen §14 issuer + recipient snapshots (jsonb). The server MAY expose these as a
   // nested object or a JSON string (or omit them from the leaner projection); typed as
   // `unknown` and read through `parseSnapshot` so the page never depends on the exact
@@ -155,6 +161,15 @@ export interface SalesDocumentDetail {
   // the source of truth (RESEARCH Pitfall 2).
   issuerSnapshot?: unknown
   recipientSnapshot?: unknown
+}
+
+export interface SalesDocumentPrepayment {
+  abschlagDocumentId: string
+  abschlagNumber: string
+  abschlagDate: string
+  netAmount: number
+  vatAmount: number
+  grossAmount: number
 }
 
 /**
@@ -202,6 +217,14 @@ export interface CreateSalesDocumentRequest {
   notes?: string | null
   buyerReference?: string | null
   lines: SalesLineRequest[]
+  currency?: string | null
+  exchangeRate?: number | null
+  exchangeRateDate?: string | null
+}
+
+export interface FinalInvoiceRequest
+  extends Omit<CreateSalesDocumentRequest, 'documentType'> {
+  abschlagDocumentIds: string[]
 }
 
 // ---- fetch helper (same posture as lib/api.ts `request`) -------------------
@@ -240,6 +263,7 @@ export interface ListSalesDocumentsParams {
   q?: string
   type?: DocumentType | null
   status?: DocumentStatus | null
+  partnerId?: string | null
 }
 
 /** GET /api/documents — server-side paged/filterable list ({items,page,pageSize,total}). */
@@ -252,6 +276,7 @@ export function listSalesDocuments(
   if (params.q) qs.set('q', params.q)
   if (params.type != null) qs.set('type', String(params.type))
   if (params.status != null) qs.set('status', String(params.status))
+  if (params.partnerId) qs.set('partnerId', params.partnerId)
   return request<SalesDocumentListResponse>(`/documents?${qs.toString()}`)
 }
 
@@ -267,6 +292,35 @@ export function createSalesDocument(
   return request<{ id: string }>('/documents', {
     method: 'POST',
     body: JSON.stringify(body),
+  })
+}
+
+export function createAbschlag(
+  body: CreateSalesDocumentRequest,
+): Promise<{ id: string }> {
+  return request<{ id: string }>('/documents/abschlag', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function createFinalInvoice(
+  body: FinalInvoiceRequest,
+): Promise<{ id: string }> {
+  return request<{ id: string }>('/documents/final-invoice', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function listAbschlaege(
+  partnerId: string,
+): Promise<SalesDocumentListResponse> {
+  return listSalesDocuments({
+    pageSize: 100,
+    type: DocumentType.Abschlagsrechnung,
+    status: DocumentStatus.Finalized,
+    partnerId,
   })
 }
 

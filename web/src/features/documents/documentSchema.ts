@@ -50,10 +50,33 @@ export function makeDocumentSchema(t: Translate) {
     documentType: z.number().int(),
     partnerId: z.string().trim().optional().or(z.literal('')),
     documentDate: z.string().trim().min(1, t('form.errors.required')),
+    currency: z.enum(['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK']),
+    exchangeRate: z.preprocess(
+      (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
+      z.number().positive(t('form.errors.exchangeRatePositive')).optional(),
+    ),
+    exchangeRateDate: z.string().trim().optional().or(z.literal('')),
     notes: z.string().trim().max(4000).optional().or(z.literal('')),
     buyerReference: z.string().trim().max(200).optional().or(z.literal('')),
     // A document must carry at least one line (mirrors the server NotEmpty rule).
     lines: z.array(makeLineSchema(t)).min(1, t('form.errors.linesRequired')),
+  }).superRefine((value, ctx) => {
+    if (value.currency !== 'EUR') {
+      if (value.exchangeRate == null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['exchangeRate'],
+          message: t('form.errors.required'),
+        })
+      }
+      if (!value.exchangeRateDate) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['exchangeRateDate'],
+          message: t('form.errors.required'),
+        })
+      }
+    }
   })
 }
 
@@ -82,6 +105,9 @@ export function emptyDocumentForm(): DocumentFormValues {
     documentType: DocumentType.Rechnung,
     partnerId: '',
     documentDate: new Date().toISOString().slice(0, 10),
+    currency: 'EUR',
+    exchangeRate: undefined,
+    exchangeRateDate: '',
     notes: '',
     buyerReference: '',
     lines: [emptyLine()],
@@ -110,6 +136,9 @@ export function toCreateRequest(v: DocumentFormValues): CreateSalesDocumentReque
         vatRatePercent: l.vatRatePercent,
       }),
     ),
+    currency: v.currency,
+    exchangeRate: v.currency === 'EUR' ? null : v.exchangeRate,
+    exchangeRateDate: v.currency === 'EUR' ? null : nn(v.exchangeRateDate),
   }
 }
 

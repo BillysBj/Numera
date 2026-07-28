@@ -63,7 +63,9 @@
     "2": "Lieferschein",
     "3": "Rechnung",
     "4": "Storno",
-    "5": "Gutschrift"
+    "5": "Gutschrift",
+    "6": "Abschlagsrechnung",
+    "7": "Schlussrechnung"
   },
   "status": {
     "0": "Entwurf",
@@ -82,12 +84,16 @@
     "editTitle": "Beleg bearbeiten",
     "sections": {
       "header": "Kopfdaten",
-      "lines": "Positionen"
+      "lines": "Positionen",
+      "prepayments": "Abschläge verrechnen"
     },
     "fields": {
       "documentType": "Belegart",
       "partnerId": "Geschäftspartner",
       "documentDate": "Belegdatum",
+      "currency": "Währung",
+      "exchangeRate": "Wechselkurs (1 EUR = X {{currency}})",
+      "exchangeRateDate": "Kursdatum",
       "buyerReference": "Leitweg-ID / Referenz",
       "notes": "Anmerkungen",
       "lineName": "Bezeichnung",
@@ -113,7 +119,16 @@
       "net": "Nettosumme",
       "tax": "USt.",
       "gross": "Bruttosumme",
-      "note": "Vorschau – die endgültigen Beträge werden beim Speichern berechnet."
+      "note": "Vorschau – die endgültigen Beträge werden beim Speichern berechnet.",
+      "residual": "Voraussichtlicher Restbetrag"
+    },
+    "abschlagPicker": {
+      "title": "Abschlagsrechnungen auswählen",
+      "description": "Finalisierte Abschlagsrechnungen dieses Geschäftspartners werden eingefroren und verrechnet.",
+      "partnerRequired": "Bitte zuerst einen Geschäftspartner auswählen.",
+      "empty": "Keine finalisierten Abschlagsrechnungen gefunden.",
+      "open": "Abschläge auswählen",
+      "done": "Übernehmen"
     },
     "catalogPicker": {
       "title": "Artikel auswählen",
@@ -134,6 +149,7 @@
       "unitCode": "Einheit ist erforderlich.",
       "vatRange": "Wert zwischen 0 und 100.",
       "linesRequired": "Mindestens eine Position ist erforderlich.",
+      "exchangeRatePositive": "Der Wechselkurs muss größer als 0 sein.",
       "conflict": "Dieser Beleg ist kein Entwurf mehr und kann nicht geändert werden.",
       "server": "Speichern fehlgeschlagen."
     }
@@ -146,7 +162,8 @@
       "lines": "Positionen",
       "vatBreakdown": "Umsatzsteuer-Aufschlüsselung",
       "chain": "Belegkette",
-      "meta": "Belegdaten"
+      "meta": "Belegdaten",
+      "prepayments": "Verrechnete Abschlagsrechnungen"
     },
     "fields": {
       "number": "Belegnummer",
@@ -161,7 +178,14 @@
       "buyerReference": "Leitweg-ID / Referenz",
       "notes": "Anmerkungen",
       "finalizedAt": "Finalisiert am",
-      "currency": "Währung"
+      "currency": "Währung",
+      "taxEur": "USt. in EUR",
+      "exchangeRateNote": "Kurs: 1 EUR = {{rate}} {{currency}} ({{date}})",
+      "residual": "Restbetrag"
+    },
+    "prepayments": {
+      "number": "Abschlagsrechnung",
+      "date": "Datum"
     },
     "snapshot": {
       "legalName": "Name",

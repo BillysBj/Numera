@@ -667,6 +667,12 @@ export default function DocumentDetailPage() {
             <div className="ml-auto flex w-full max-w-xs flex-col gap-1 border-t border-border pt-3 text-sm">
               <TotalRow label={t('detail.fields.net')} value={money(d.totalNet)} />
               <TotalRow label={t('detail.fields.tax')} value={money(d.totalTax)} />
+              {d.currency !== 'EUR' && d.totalTaxEur != null && (
+                <TotalRow
+                  label={t('detail.fields.taxEur')}
+                  value={makeMoney('EUR')(d.totalTaxEur)}
+                />
+              )}
               <TotalRow
                 label={t('detail.fields.gross')}
                 value={money(d.totalGross)}
@@ -676,9 +682,64 @@ export default function DocumentDetailPage() {
                 label={t('detail.fields.amountDue')}
                 value={money(d.amountDue)}
               />
+              {d.currency !== 'EUR' && d.exchangeRate && (
+                <p className="pt-1 text-xs text-muted-foreground">
+                  {t('detail.fields.exchangeRateNote', {
+                    rate: d.exchangeRate,
+                    currency: d.currency,
+                    date: formatDate(d.exchangeRateDate),
+                  })}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
+
+        {d.documentType === DocumentType.Schlussrechnung && (
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>{t('detail.sections.prepayments')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('detail.prepayments.number')}</TableHead>
+                    <TableHead>{t('detail.prepayments.date')}</TableHead>
+                    <TableHead className="text-right">{t('detail.fields.net')}</TableHead>
+                    <TableHead className="text-right">{t('detail.fields.tax')}</TableHead>
+                    <TableHead className="text-right">{t('detail.fields.gross')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {d.prepayments.map((prepayment) => (
+                    <TableRow key={prepayment.abschlagDocumentId}>
+                      <TableCell>
+                        <Link
+                          to={`/documents/${prepayment.abschlagDocumentId}`}
+                          className="text-primary hover:underline"
+                        >
+                          {prepayment.abschlagNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{formatDate(prepayment.abschlagDate)}</TableCell>
+                      <TableCell className="text-right">{money(prepayment.netAmount)}</TableCell>
+                      <TableCell className="text-right">{money(prepayment.vatAmount)}</TableCell>
+                      <TableCell className="text-right">{money(prepayment.grossAmount)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="ml-auto w-full max-w-xs">
+                <TotalRow
+                  label={t('detail.fields.residual')}
+                  value={money(d.amountDue)}
+                  strong
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Chain links */}
         <Card className="md:col-span-2">
