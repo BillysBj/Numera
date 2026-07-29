@@ -193,10 +193,15 @@ Plans:
   2. PWA-Installation und Offline-Entwurfsverhalten funktionieren zuverlässig; Finalisierung bleibt online-gebunden
   3. Tarif-Feature-Gates sind durchgängig mit klarer UX umgesetzt (Upgrade-Hinweise statt Fehler)
   4. Ein GoBD-Konformitätspass ist abgeschlossen: Verfahrensdokumentation als Entwurf vorhanden, „GoBD-konform"-Formulierungen geprüft (kein „zertifiziert"-Claim), Cross-Tenant-Sicherheitssuite grün
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 09-01: TBD (verfeinert in plan-phase)
+- [ ] 09-01-PLAN.md — DSGVO tenant-data export: streamed ZIP (per-table JSON + blobs), GET /api/export Owner-only, DataExport-gated, audited [wave 1]
+- [ ] 09-02-PLAN.md — Tarif-gate server enforcement: EInvoicing (L+) on e-invoice endpoints + auto-enqueue, Dunning (L+) on config/run [wave 1]
+- [ ] 09-03-PLAN.md — Cross-tenant RLS completeness test over the 10 phase-6→8 tables (IgnoreQueryFilters isolation + WITH CHECK reject) [wave 1]
+- [ ] 09-04-PLAN.md — GoBD Verfahrensdokumentation draft (4-part, versioned) + wording audit + no-"zertifiziert" guard test [wave 1]
+- [ ] 09-05-PLAN.md — Frontend: entitlements bug fix + plan indicator + tier-aware UpgradeHints (e-invoice + dunning) + export download + PWA offline degradation [wave 2]
+- [ ] 09-06-PLAN.md — Final verification battery + human-verify checkpoint (install/offline/export/gate UX) [wave 3]
 
 ## Progress
 
@@ -213,4 +218,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Offene Posten & Mahnwesen | 5/5 | ✓ Complete | 2026-07-28 |
 | 7. Erweiterte Rechnungstypen | 9/9 | ✓ Complete | 2026-07-28 |
 | 8. CRM-Ausbau & Steuerberater-Zugang | 5/5 | ✓ Complete | 2026-07-28 |
-| 9. v1-Feinschliff & Compliance | 0/TBD | Next | - |
+| 9. v1-Feinschliff & Compliance | 0/6 | Next | - |
