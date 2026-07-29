@@ -13,6 +13,7 @@ using Numera.Modules.Sales;
 using Numera.Modules.Sales.Dunning;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
+using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Endpoints;
@@ -25,8 +26,16 @@ public static class DunningEndpoints
     {
         var group = app.MapGroup("/api/dunning").RequireAuthorization();
 
-        group.MapGet("/config", async (DunningConfigService service, CancellationToken ct) =>
+        group.MapGet("/config", async (
+            DunningConfigService service,
+            IEntitlementService entitlements,
+            CancellationToken ct) =>
         {
+            if (!await entitlements.HasCapabilityAsync(Capability.Dunning, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
             var levels = await service.GetConfigAsync(ct).ConfigureAwait(false);
             return Results.Ok(new DunningConfigResponse(levels));
         });
@@ -34,8 +43,14 @@ public static class DunningEndpoints
         group.MapPut("/config", async (
             UpdateDunningConfigRequest request,
             DunningConfigService service,
+            IEntitlementService entitlements,
             CancellationToken ct) =>
         {
+            if (!await entitlements.HasCapabilityAsync(Capability.Dunning, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
             var result = await service.UpsertConfigAsync(request.Levels, ct).ConfigureAwait(false);
             return result.IsValid
                 ? Results.Ok(new DunningConfigResponse(result.Levels!))
@@ -49,10 +64,16 @@ public static class DunningEndpoints
     internal static async Task<IResult> RunAsync(
         NumeraDbContext db,
         ICurrentTenant currentTenant,
+        IEntitlementService entitlements,
         IAuditWriter audit,
         IBackgroundJobClient jobs,
         CancellationToken ct)
     {
+        if (!await entitlements.HasCapabilityAsync(Capability.Dunning, ct).ConfigureAwait(false))
+        {
+            return UpgradeRequired();
+        }
+
         var tenantId = currentTenant.TenantId
             ?? throw new InvalidOperationException("A tenant is required to run dunning.");
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -196,6 +217,13 @@ public static class DunningEndpoints
         parameter.Value = value;
         command.Parameters.Add(parameter);
     }
+
+    // The server-authoritative Dunning (plan L+) gate result: a 403 upgrade hint (locked 09-CONTEXT §3).
+    private static IResult UpgradeRequired()
+        => Results.Problem(
+            title: "Upgrade required",
+            detail: "Mahnwesen (dunning) requires the Dunning capability (plan L or XL).",
+            statusCode: StatusCodes.Status403Forbidden);
 }
 
 internal sealed record DunningNoticeAuditEvent(
