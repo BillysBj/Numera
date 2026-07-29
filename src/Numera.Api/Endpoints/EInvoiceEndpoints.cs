@@ -12,6 +12,7 @@ using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.Email;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
+using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Endpoints;
@@ -42,9 +43,15 @@ public static class EInvoiceEndpoints
         g.MapGet("/{id:guid}/xrechnung", async (
             Guid id,
             EInvoiceService einvoice,
+            IEntitlementService entitlements,
             CancellationToken ct,
             string? syntax = null) =>
         {
+            if (!await entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
             var format = ParseSyntax(syntax);
             var result = await einvoice.GetOrGenerate(id, format, ct).ConfigureAwait(false);
             return result.Result switch
@@ -64,8 +71,14 @@ public static class EInvoiceEndpoints
         g.MapGet("/{id:guid}/zugferd", async (
             Guid id,
             EInvoiceService einvoice,
+            IEntitlementService entitlements,
             CancellationToken ct) =>
         {
+            if (!await entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
             var result = await einvoice.GetOrGenerate(id, EInvoiceFormat.ZugferdPdfA3, ct).ConfigureAwait(false);
             return result.Result switch
             {
@@ -88,11 +101,17 @@ public static class EInvoiceEndpoints
             SendDocumentEmailRequest? req,
             NumeraDbContext db,
             EInvoiceService einvoice,
+            IEntitlementService entitlements,
             IAuditWriter audit,
             ICurrentTenant tenant,
             IBackgroundJobClient jobs,
             CancellationToken ct) =>
         {
+            if (!await entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
             var doc = await db.Set<SalesDocument>()
                 .AsNoTracking()
                 .Select(d => new { d.Id, d.Status, d.DocumentType, d.DocumentNumber, d.RecipientSnapshot })
@@ -182,6 +201,14 @@ public static class EInvoiceEndpoints
 
         return app;
     }
+
+    // The server-authoritative EInvoicing (plan L+) gate result: a 403 upgrade hint. Core finalize,
+    // §14 PDF and e-mail stay all-tier; only the e-invoice ARTIFACTS are L+ (locked 09-CONTEXT §3).
+    private static IResult UpgradeRequired()
+        => Results.Problem(
+            title: "Upgrade required",
+            detail: "E-Rechnung (XRechnung/ZUGFeRD) requires the EInvoicing capability (plan L or XL).",
+            statusCode: StatusCodes.Status403Forbidden);
 
     // Maps the ?syntax query to a format (default UBL). CII on an explicit "cii".
     private static EInvoiceFormat ParseSyntax(string? syntax) =>

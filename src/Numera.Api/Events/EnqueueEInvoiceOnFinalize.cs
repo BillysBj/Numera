@@ -3,6 +3,7 @@ using Hangfire;
 using Numera.Api.Jobs;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Events;
+using Numera.Platform.Entitlements;
 
 namespace Numera.Api.Events;
 
@@ -32,12 +33,17 @@ namespace Numera.Api.Events;
 public sealed class EnqueueEInvoiceOnFinalize : IDomainEventHandler<InvoiceFinalized>
 {
     private readonly IBackgroundJobClient _jobs;
+    private readonly IEntitlementService _entitlements;
 
-    /// <summary>Creates the handler over the Hangfire client.</summary>
-    public EnqueueEInvoiceOnFinalize(IBackgroundJobClient jobs) => _jobs = jobs;
+    /// <summary>Creates the handler over the Hangfire client + the current tenant's entitlements.</summary>
+    public EnqueueEInvoiceOnFinalize(IBackgroundJobClient jobs, IEntitlementService entitlements)
+    {
+        _jobs = jobs;
+        _entitlements = entitlements;
+    }
 
     /// <inheritdoc />
-    public Task HandleAsync(InvoiceFinalized domainEvent, CancellationToken ct)
+    public async Task HandleAsync(InvoiceFinalized domainEvent, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(domainEvent);
 
@@ -46,13 +52,20 @@ public sealed class EnqueueEInvoiceOnFinalize : IDomainEventHandler<InvoiceFinal
             or DocumentType.Abschlagsrechnung
             or DocumentType.Schlussrechnung))
         {
-            return Task.CompletedTask;
+            return;
+        }
+
+        // Tarif gate (locked 09-CONTEXT §3): e-invoice ARTIFACTS are EInvoicing (plan L+). A tenant
+        // without EInvoicing still finalizes + gets the §14 PDF + e-mail (all-tier), but produces NO
+        // document_einvoice. This handler runs in the request scope AFTER the finalize commit, so the
+        // tenant is set and entitlements resolve for the correct tenant. Skip the enqueue entirely.
+        if (!await _entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+        {
+            return;
         }
 
         // Enqueue ONLY — never generate inline (keeps finalize fast; the job re-establishes tenant).
         _jobs.Enqueue<GenerateEInvoiceJob>(
             j => j.RunAsync(domainEvent.TenantId, domainEvent.DocumentId, CancellationToken.None));
-
-        return Task.CompletedTask;
     }
 }
