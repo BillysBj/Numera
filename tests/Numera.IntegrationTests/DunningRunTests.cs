@@ -200,6 +200,7 @@ public sealed class DunningRunTests(PostgresFixture fixture)
         _ = await DunningEndpoints.RunAsync(
             db,
             tenantContext,
+            FakeEntitlementService.Granting,
             new NoOpAuditWriter(),
             jobs,
             CancellationToken.None);

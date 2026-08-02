@@ -125,7 +125,8 @@ public sealed class EInvoiceOutboundTests
         var docId = Guid.CreateVersion7();
 
         var client = new RecordingJobClient();
-        var handler = new EnqueueEInvoiceOnFinalize(client);
+        // EInvoicing granted (L+): the enqueue proceeds, so this proves enqueue-not-inline.
+        var handler = new EnqueueEInvoiceOnFinalize(client, FakeEntitlementService.Granting);
 
         await handler.HandleAsync(
             new InvoiceFinalized(tenant, docId, "RE-2026-00042", 100m, 19m, 119m, new DateOnly(2026, 6, 1), DocumentType.Rechnung),
@@ -145,7 +146,8 @@ public sealed class EInvoiceOutboundTests
     public async Task Finalize_hook_does_not_enqueue_for_a_non_rechnung()
     {
         var client = new RecordingJobClient();
-        var handler = new EnqueueEInvoiceOnFinalize(client);
+        // EInvoicing granted: proves the TYPE gate (not the tarif gate) is what skips a non-Rechnung.
+        var handler = new EnqueueEInvoiceOnFinalize(client, FakeEntitlementService.Granting);
 
         // A Gutschrift/Storno is out of v1 e-invoicing scope — the type gate must skip it.
         await handler.HandleAsync(

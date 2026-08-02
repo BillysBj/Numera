@@ -31,7 +31,7 @@ public static class DunningEndpoints
             IEntitlementService entitlements,
             CancellationToken ct) =>
         {
-            if (!await entitlements.HasCapabilityAsync(Capability.Dunning, ct).ConfigureAwait(false))
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
             {
                 return UpgradeRequired();
             }
@@ -46,7 +46,7 @@ public static class DunningEndpoints
             IEntitlementService entitlements,
             CancellationToken ct) =>
         {
-            if (!await entitlements.HasCapabilityAsync(Capability.Dunning, ct).ConfigureAwait(false))
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
             {
                 return UpgradeRequired();
             }
@@ -69,7 +69,7 @@ public static class DunningEndpoints
         IBackgroundJobClient jobs,
         CancellationToken ct)
     {
-        if (!await entitlements.HasCapabilityAsync(Capability.Dunning, ct).ConfigureAwait(false))
+        if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
         {
             return UpgradeRequired();
         }
@@ -218,8 +218,13 @@ public static class DunningEndpoints
         command.Parameters.Add(parameter);
     }
 
+    // The server-authoritative Dunning (plan L+) gate predicate — the single testable seam the
+    // config + run handlers share (mirrors RecurringInvoiceEndpoints.HasCapabilityAsync).
+    internal static Task<bool> HasCapabilityAsync(IEntitlementService entitlements, CancellationToken ct)
+        => entitlements.HasCapabilityAsync(Capability.Dunning, ct);
+
     // The server-authoritative Dunning (plan L+) gate result: a 403 upgrade hint (locked 09-CONTEXT §3).
-    private static IResult UpgradeRequired()
+    internal static IResult UpgradeRequired()
         => Results.Problem(
             title: "Upgrade required",
             detail: "Mahnwesen (dunning) requires the Dunning capability (plan L or XL).",

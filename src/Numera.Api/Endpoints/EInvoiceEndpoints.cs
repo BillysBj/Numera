@@ -47,7 +47,7 @@ public static class EInvoiceEndpoints
             CancellationToken ct,
             string? syntax = null) =>
         {
-            if (!await entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
             {
                 return UpgradeRequired();
             }
@@ -74,7 +74,7 @@ public static class EInvoiceEndpoints
             IEntitlementService entitlements,
             CancellationToken ct) =>
         {
-            if (!await entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
             {
                 return UpgradeRequired();
             }
@@ -107,7 +107,7 @@ public static class EInvoiceEndpoints
             IBackgroundJobClient jobs,
             CancellationToken ct) =>
         {
-            if (!await entitlements.HasCapabilityAsync(Capability.EInvoicing, ct).ConfigureAwait(false))
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
             {
                 return UpgradeRequired();
             }
@@ -202,9 +202,14 @@ public static class EInvoiceEndpoints
         return app;
     }
 
+    // The server-authoritative EInvoicing (plan L+) gate predicate — the single testable seam the
+    // three e-invoice handlers share (mirrors RecurringInvoiceEndpoints.HasCapabilityAsync).
+    internal static Task<bool> HasCapabilityAsync(IEntitlementService entitlements, CancellationToken ct)
+        => entitlements.HasCapabilityAsync(Capability.EInvoicing, ct);
+
     // The server-authoritative EInvoicing (plan L+) gate result: a 403 upgrade hint. Core finalize,
     // §14 PDF and e-mail stay all-tier; only the e-invoice ARTIFACTS are L+ (locked 09-CONTEXT §3).
-    private static IResult UpgradeRequired()
+    internal static IResult UpgradeRequired()
         => Results.Problem(
             title: "Upgrade required",
             detail: "E-Rechnung (XRechnung/ZUGFeRD) requires the EInvoicing capability (plan L or XL).",
