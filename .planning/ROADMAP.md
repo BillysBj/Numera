@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Offene Posten & Mahnwesen** - Zahlungserfassung, OP-Zuordnung, mehrstufige Mahnungen ✓ 2026-07-28
 - [x] **Phase 7: Erweiterte Rechnungstypen** - Fremdwährung, Serienrechnungen, Abschlags-/Schlussrechnungen ✓ 2026-07-28
 - [x] **Phase 8: CRM-Ausbau & Steuerberater-Zugang** - Aufgaben/Erinnerungen, Kundenakte, Steuerberater-Rolle (lesend) ✓ 2026-07-28
-- [ ] **Phase 9: v1-Feinschliff & Compliance** - PWA-Installation/Offline, DSGVO-Export, GoBD-Konformitätspass, Tarif-Gate-UX
+- [x] **Phase 9: v1-Feinschliff & Compliance** - PWA-Installation/Offline, DSGVO-Export, GoBD-Konformitätspass, Tarif-Gate-UX ✓ 2026-08-02
 
 ## Phase Details
 
@@ -196,12 +196,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — DSGVO tenant-data export: streamed ZIP (per-table JSON + blobs), GET /api/export Owner-only, DataExport-gated, audited [wave 1]
-- [ ] 09-02-PLAN.md — Tarif-gate server enforcement: EInvoicing (L+) on e-invoice endpoints + auto-enqueue, Dunning (L+) on config/run [wave 1]
-- [ ] 09-03-PLAN.md — Cross-tenant RLS completeness test over the 10 phase-6→8 tables (IgnoreQueryFilters isolation + WITH CHECK reject) [wave 1]
-- [ ] 09-04-PLAN.md — GoBD Verfahrensdokumentation draft (4-part, versioned) + wording audit + no-"zertifiziert" guard test [wave 1]
-- [ ] 09-05-PLAN.md — Frontend: entitlements bug fix + plan indicator + tier-aware UpgradeHints (e-invoice + dunning) + export download + PWA offline degradation [wave 2]
-- [ ] 09-06-PLAN.md — Final verification battery + human-verify checkpoint (install/offline/export/gate UX) [wave 3]
+- [x] 09-01-PLAN.md — DSGVO tenant-data export: streamed ZIP (per-table JSON + blobs), GET /api/export Owner-only, DataExport-gated, audited [wave 1]
+- [x] 09-02-PLAN.md — Tarif-gate server enforcement: EInvoicing (L+) on e-invoice endpoints + auto-enqueue, Dunning (L+) on config/run [wave 1]
+- [x] 09-03-PLAN.md — Cross-tenant RLS completeness test over the 11 phase-6→8 tables (IgnoreQueryFilters isolation + WITH CHECK reject) [wave 1]
+- [x] 09-04-PLAN.md — GoBD Verfahrensdokumentation draft (4-part, versioned) + wording audit + no-"zertifiziert" guard test [wave 1]
+- [x] 09-05-PLAN.md — Frontend: entitlements bug fix + plan indicator + tier-aware UpgradeHints (e-invoice + dunning) + export download + PWA offline degradation [wave 2]
+- [x] 09-06-PLAN.md — Final verification battery + human-verify checkpoint (install/offline/export/gate UX) [wave 3]
 
 ## Progress
 
@@ -218,4 +218,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. Offene Posten & Mahnwesen | 5/5 | ✓ Complete | 2026-07-28 |
 | 7. Erweiterte Rechnungstypen | 9/9 | ✓ Complete | 2026-07-28 |
 | 8. CRM-Ausbau & Steuerberater-Zugang | 5/5 | ✓ Complete | 2026-07-28 |
-| 9. v1-Feinschliff & Compliance | 0/6 | Next | - |
+| 9. v1-Feinschliff & Compliance | 6/6 | ✓ Complete | 2026-08-02 |
