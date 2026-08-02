@@ -122,6 +122,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<RegistrationService>();
 builder.Services.AddScoped<InvitationService>();
+builder.Services.AddScoped<TenantExportService>();
 builder.Services.AddTransient<WelcomeEmailJob>();
 // Recurring-invoice generation job (07-06 infra; body in 07-07). Registered like every other
 // Hangfire job so the per-template recurring schedule resolves it from DI, not just ActivatorUtilities.
@@ -175,5 +176,6 @@ app.MapPaymentEndpoints();
 app.MapDunningEndpoints();
 app.MapRecurringInvoiceEndpoints();
 app.MapTeamEndpoints();
+app.MapExportEndpoints();
 
 app.Run();
