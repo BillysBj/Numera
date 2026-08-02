@@ -177,8 +177,14 @@ public sealed class RegistrationService
 
     private async Task<Guid> CreateOrganizationAsync(HttpClient http, string realm, RegistrationRequest request, CancellationToken ct)
     {
-        var alias = Slugify(request.CompanyName);
-        var domain = EmailDomain(request.Email);
+        // Every registration is its OWN tenant, so the Keycloak organization identity must be
+        // unique per realm. It must NOT be derived from the email domain: Keycloak requires a
+        // unique org domain, and many small businesses share a provider domain (gmail.com,
+        // gmx.de, web.de) — deriving from it makes the second sign-up collide. Use a synthetic,
+        // guaranteed-unique alias + domain; the human-readable company name is carried in `name`.
+        var token = Guid.NewGuid().ToString("N")[..8];
+        var alias = $"{Slugify(request.CompanyName)}-{token}";
+        var domain = $"{alias}.numera.local";
 
         var payload = new
         {
@@ -232,12 +238,6 @@ public sealed class RegistrationService
 
     private string Require(string key) =>
         _configuration[key] ?? throw new InvalidOperationException($"Configuration '{key}' is not set.");
-
-    private static string EmailDomain(string email)
-    {
-        var at = email.IndexOf('@', StringComparison.Ordinal);
-        return at >= 0 && at < email.Length - 1 ? email[(at + 1)..] : "example.invalid";
-    }
 
     private static string Slugify(string value)
     {
