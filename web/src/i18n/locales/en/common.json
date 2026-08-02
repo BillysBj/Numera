@@ -1,12 +1,25 @@
 {
   "app": {
     "name": "Numera",
-    "tagline": "Platform core"
+    "tagline": "Invoicing & e-invoicing"
   },
   "nav": {
     "dashboard": "Dashboard",
     "login": "Sign in",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "sections": {
+      "sales": "Sales",
+      "masterData": "Master data",
+      "system": "System"
+    }
+  },
+  "ui": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "themeLight": "Light theme",
+    "themeDark": "Dark theme",
+    "signOut": "Sign out",
+    "account": "Account"
   },
   "language": {
     "label": "Language",

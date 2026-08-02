@@ -1,12 +1,25 @@
 {
   "app": {
     "name": "Numera",
-    "tagline": "Plattform-Kern"
+    "tagline": "Rechnungen & E-Rechnung"
   },
   "nav": {
     "dashboard": "Übersicht",
     "login": "Anmelden",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "sections": {
+      "sales": "Verkauf",
+      "masterData": "Stammdaten",
+      "system": "System"
+    }
+  },
+  "ui": {
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
+    "themeLight": "Helles Design",
+    "themeDark": "Dunkles Design",
+    "signOut": "Abmelden",
+    "account": "Konto"
   },
   "language": {
     "label": "Sprache",

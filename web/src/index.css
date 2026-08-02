@@ -1,37 +1,101 @@
-/* Tailwind v4 — single import, no PostCSS/tailwind.config.js (RESEARCH Open Q5). */
+/* Tailwind v4 — single import, no PostCSS/tailwind.config.js. */
 @import "tailwindcss";
 
-/* shadcn/ui design tokens (v4 style). The partner UI uses these; the legacy
-   app-shell styles below keep Login/Dashboard visually unchanged. */
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================================================
+   Numera design system — "Präzise & ruhig"
+   A light-first financial operational console with a true dark mode. The brand
+   accent is a deep teal-emerald ("positive balance"); numbers are set in
+   tabular figures. Every shadcn component reads these tokens, so the whole app
+   recolors from here.
+   ========================================================================== */
+
 :root {
-  --radius: 0.5rem;
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --radius: 0.625rem;
+
+  --background: #f5f6f8;
+  --foreground: #0e1116;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0e1116;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0ea5e9;
-  --primary-foreground: #082f49;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted-color: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent-color: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --popover-foreground: #0e1116;
+
+  --primary: #0c7c6d;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f4;
+  --secondary-foreground: #26303b;
+
+  --muted-color: #eef1f4;
+  --muted-foreground: #667085;
+  --accent-color: #e6f4f1;
+  --accent-foreground: #0a5a4f;
+
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border-color: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0ea5e9;
+  --success: #0c7c6d;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+
+  --border-color: #e5e8ec;
+  --input: #dfe3e8;
+  --ring: #0c7c6d;
+
+  /* Sidebar surface (a distinct panel against the off-white content canvas). */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e1116;
+  --sidebar-muted: #6b7583;
+  --sidebar-accent: #e6f4f1;
+  --sidebar-accent-foreground: #0a5a4f;
+  --sidebar-border: #e5e8ec;
+}
+
+.dark {
+  --background: #0b0e12;
+  --foreground: #e7eaee;
+  --card: #14181e;
+  --card-foreground: #e7eaee;
+  --popover: #14181e;
+  --popover-foreground: #e7eaee;
+
+  --primary: #18a897;
+  --primary-foreground: #04120f;
+  --secondary: #1b2027;
+  --secondary-foreground: #d6dbe1;
+
+  --muted-color: #1b2027;
+  --muted-foreground: #98a2b0;
+  --accent-color: #10261f;
+  --accent-foreground: #7fe3d1;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #18a897;
+  --success-foreground: #04120f;
+  --warning: #e0a12f;
+  --warning-foreground: #17130a;
+
+  --border-color: #242a31;
+  --input: #2a313a;
+  --ring: #18a897;
+
+  --sidebar: #0e1217;
+  --sidebar-foreground: #e7eaee;
+  --sidebar-muted: #98a2b0;
+  --sidebar-accent: #12271f;
+  --sidebar-accent-foreground: #7fe3d1;
+  --sidebar-border: #1e242b;
 }
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -48,117 +112,116 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-border: var(--border-color);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
 }
 
-/* --- Legacy app-shell styles (Phase 1 Login/Dashboard) — keep working. --- */
-:root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-  color-scheme: light dark;
-  --bg: #0f172a;
-  --fg: #f8fafc;
-  --muted: #94a3b8;
-  --accent: #38bdf8;
-  --surface: #1e293b;
-  --border: #334155;
-}
+/* --- Base ------------------------------------------------------------------ */
 
 * {
   box-sizing: border-box;
+  border-color: var(--border-color);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: light dark;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--bg);
-  color: var(--fg);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+h1, h2, h3, h4 {
+  letter-spacing: -0.01em;
 }
 
-.app-header .brand {
-  font-weight: 700;
-  font-size: 1.125rem;
-  letter-spacing: 0.02em;
+/* Numbers read as data everywhere they appear. */
+.tnum,
+th,
+td {
+  font-variant-numeric: tabular-nums;
 }
 
+::selection {
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Quiet, modern scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 40%, transparent) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* --- Shared page primitives (consumed by existing pages) ------------------- */
+
+/* The content container each page renders into. */
 .app-main {
-  flex: 1;
-  padding: 1.5rem 1.25rem;
-  max-width: 720px;
   width: 100%;
+  max-width: 1120px;
   margin: 0 auto;
+  padding: 1.75rem 1.5rem 3.5rem;
 }
 
-button {
-  cursor: pointer;
-  font: inherit;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--fg);
-  padding: 0.5rem 0.9rem;
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #082f49;
-  font-weight: 600;
-}
-
-.lang-switcher {
-  display: inline-flex;
-  gap: 0.25rem;
-}
-
-.lang-switcher button[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #082f49;
-  font-weight: 600;
-}
-
-.offline-banner {
-  background: #7c2d12;
-  color: #fed7aa;
-  padding: 0.5rem 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-}
-
-form.stack {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-width: 360px;
-}
-
-form.stack input {
-  font: inherit;
-  padding: 0.5rem 0.7rem;
-  border-radius: 0.5rem;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--fg);
+@media (max-width: 640px) {
+  .app-main { padding: 1.25rem 1rem 3rem; }
 }
 
 .muted {
-  color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+/* Offline / online-only notice used on the dashboard + document detail. */
+.offline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--warning);
+  background: color-mix(in oklab, var(--warning) 12%, var(--card));
+  border-bottom: 1px solid color-mix(in oklab, var(--warning) 30%, transparent);
 }

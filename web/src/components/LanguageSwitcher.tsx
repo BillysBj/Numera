@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '../i18n'
+import { cn } from '../lib/utils'
 
 // Persist the chosen language so the BFF/SSR agree on the locale.
 // i18next-browser-languagedetector already caches to localStorage + cookie,
@@ -27,17 +28,30 @@ export function LanguageSwitcher() {
   }
 
   return (
-    <div className="lang-switcher" role="group" aria-label={t('language.label')}>
-      {SUPPORTED_LANGUAGES.map((lng) => (
-        <button
-          key={lng}
-          type="button"
-          aria-pressed={active === lng}
-          onClick={() => change(lng)}
-        >
-          {t(`language.${lng}`)}
-        </button>
-      ))}
+    <div
+      className="hidden items-center rounded-lg border border-border bg-secondary/60 p-0.5 sm:inline-flex"
+      role="group"
+      aria-label={t('language.label')}
+    >
+      {SUPPORTED_LANGUAGES.map((lng) => {
+        const isActive = active === lng
+        return (
+          <button
+            key={lng}
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => change(lng)}
+            className={cn(
+              'rounded-[0.4rem] px-2.5 py-1 text-xs font-semibold transition-colors',
+              isActive
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {t(`language.${lng}`)}
+          </button>
+        )
+      })}
     </div>
   )
 }
