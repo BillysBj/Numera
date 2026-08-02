@@ -426,6 +426,68 @@ export async function downloadDocumentPdf(
   return res.blob()
 }
 
+/**
+ * GET /api/documents/{id}/xrechnung?syntax=ubl|cii — download the finalized invoice's XRechnung
+ * (EN 16931, render-if-absent from the frozen snapshot). Returns the raw XML `Blob`. Server-gated
+ * on the EInvoicing capability (403 without it — plan L+); 409 Draft, 404 unknown under RLS.
+ */
+export async function downloadXRechnung(
+  id: string,
+  syntax: 'ubl' | 'cii' = 'ubl',
+): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/documents/${id}/xrechnung?syntax=${syntax}`, {
+    credentials: 'include',
+    headers: { Accept: 'application/xml' },
+  })
+  if (!res.ok) {
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch {
+      body = await res.text().catch(() => undefined)
+    }
+    throw new ApiError(res.status, `Request failed: ${res.status}`, body)
+  }
+  return res.blob()
+}
+
+/**
+ * GET /api/documents/{id}/zugferd — download the finalized invoice's ZUGFeRD PDF/A-3 (a valid
+ * e-invoice AND a human-readable PDF). Returns the raw PDF `Blob`. Server-gated on EInvoicing
+ * (403 without it); 409 Draft, 404 unknown.
+ */
+export async function downloadZugferd(id: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/documents/${id}/zugferd`, {
+    credentials: 'include',
+    headers: { Accept: 'application/pdf' },
+  })
+  if (!res.ok) {
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch {
+      body = await res.text().catch(() => undefined)
+    }
+    throw new ApiError(res.status, `Request failed: ${res.status}`, body)
+  }
+  return res.blob()
+}
+
+/**
+ * POST /api/documents/{id}/send-einvoice — the authoritative stage-2 send gate: dispatches the
+ * stored XRechnung only if KoSIT Accepted it. Records a Queued `document_email` + enqueues the
+ * send job. Server-gated on EInvoicing (403); 409 Draft/not-validated; 422 rejected/no recipient.
+ */
+export function sendEInvoice(
+  id: string,
+  body: SendDocumentEmailRequest = {},
+): Promise<{ id: string; status: EmailStatus }> {
+  return request<{ id: string; status: EmailStatus }>(
+    `/documents/${id}/send-einvoice`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+}
+
 /** Optional overrides for {@link sendDocumentEmail}. */
 export interface SendDocumentEmailRequest {
   /** Override recipient address; omit → the frozen recipient e-mail on the document. */

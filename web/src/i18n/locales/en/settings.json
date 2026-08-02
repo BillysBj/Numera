@@ -1,6 +1,11 @@
 {
   "nav": "Settings",
   "title": "Company profile",
+  "export": {
+    "title": "Data export (GDPR)",
+    "description": "Export all of your tenant's data as a ZIP archive (machine-readable JSON per table plus the associated original files). GDPR-compliant (Art. 20 – data portability). Available to the owner only.",
+    "download": "Export all data"
+  },
   "frozenNote": "These details are frozen when an invoice is finalized (§14 UStG). A compliant invoice cannot be finalized without a complete profile.",
   "loading": "Loading …",
   "loadError": "Could not load the company profile.",

@@ -4,10 +4,12 @@ import { cn } from '@/lib/utils'
 
 export interface UpgradeHintProps {
   className?: string
+  /** The tier that unlocks the feature. Drives the copy; defaults to 'L' for back-compat. */
+  requiredTier?: 'M' | 'L' | 'XL'
 }
 
 /** Informational cosmetic gate; it never replaces server-side authorization. */
-export function UpgradeHint({ className }: UpgradeHintProps) {
+export function UpgradeHint({ className, requiredTier = 'L' }: UpgradeHintProps) {
   const { t } = useTranslation('common')
 
   return (
@@ -19,8 +21,8 @@ export function UpgradeHint({ className }: UpgradeHintProps) {
       )}
     >
       {t('entitlements.upgradeHint', {
-        defaultValue: 'Diese Funktion ist ab Tarif L verfügbar',
-        defaultValue_en: 'This feature is available from plan L',
+        tier: requiredTier,
+        defaultValue: 'Diese Funktion ist ab Tarif {{tier}} verfügbar',
       })}
     </div>
   )

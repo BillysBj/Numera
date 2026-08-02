@@ -20,6 +20,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEntitlements, hasCapability } from '@/lib/entitlements'
+import { UpgradeHint } from '@/features/shared/UpgradeHint'
 import { cn } from '@/lib/utils'
 
 function validationErrors(error: unknown): Record<string, string> | null {
@@ -36,6 +38,8 @@ function validationErrors(error: unknown): Record<string, string> | null {
 export default function DunningConfigSettingsPage() {
   const { t } = useTranslation('dunning')
   const queryClient = useQueryClient()
+  const caps = useEntitlements()
+  const canDunning = hasCapability(caps.data?.capabilities, 'Dunning')
   const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const schema = useMemo(() => makeDunningConfigSchema(t), [t])
@@ -89,6 +93,9 @@ export default function DunningConfigSettingsPage() {
     <main className="app-main" style={{ maxWidth: '1100px' }}>
       <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
       <p className="mt-1 text-sm text-muted-foreground">{t('settings.description')}</p>
+
+      {/* Mahnwesen is plan L+ (server-gated, 09-02): show an upgrade hint and disable saving. */}
+      {!canDunning && <UpgradeHint requiredTier="L" className="mt-4" />}
 
       <Form {...form}>
         <form onSubmit={onSubmit} className="mt-5 flex flex-col gap-4">
@@ -156,7 +163,7 @@ export default function DunningConfigSettingsPage() {
           )}
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
           {saved && <p role="status" className="text-sm text-emerald-600">{t('settings.saved')}</p>}
-          <Button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" disabled={mutation.isPending || !canDunning}>
             {mutation.isPending ? t('settings.saving') : t('settings.save')}
           </Button>
         </form>

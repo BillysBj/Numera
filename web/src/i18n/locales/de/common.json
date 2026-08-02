@@ -23,9 +23,14 @@
     "error": "Daten konnten nicht geladen werden."
   },
   "entitlements": {
-    "upgradeHint": "Diese Funktion ist ab Tarif L verfügbar"
+    "upgradeHint": "Diese Funktion ist ab Tarif {{tier}} verfügbar"
+  },
+  "plan": {
+    "badge": "Tarif {{plan}}",
+    "indicator": "Aktueller Tarif: {{plan}}"
   },
   "offline": {
-    "banner": "Offline – Finanzdaten sind nur online verfügbar."
+    "banner": "Offline – Finanzdaten sind nur online verfügbar.",
+    "actionsDisabled": "Diese Aktion ist nur online verfügbar."
   }
 }

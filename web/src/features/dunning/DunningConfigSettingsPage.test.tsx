@@ -33,6 +33,19 @@ vi.mock('@/lib/api/openItems', async (importOriginal) => {
   return { ...actual, listOpenItems: vi.fn() }
 })
 
+// The dunning surfaces are plan L+ (09-05): grant the Dunning capability so the config form and
+// the Mahnlauf button are enabled (an L-tier tenant). hasCapability stays real.
+vi.mock('@/lib/entitlements', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/entitlements')>()
+  return {
+    ...actual,
+    useEntitlements: () =>
+      ({ data: { capabilities: ['Dunning'] } }) as unknown as ReturnType<
+        typeof actual.useEntitlements
+      >,
+  }
+})
+
 const mockedGetConfig = vi.mocked(getConfig)
 const mockedSaveConfig = vi.mocked(saveConfig)
 const mockedRunDunning = vi.mocked(runDunning)

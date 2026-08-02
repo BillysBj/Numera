@@ -23,9 +23,14 @@
     "error": "Could not load data."
   },
   "entitlements": {
-    "upgradeHint": "This feature is available from plan L"
+    "upgradeHint": "This feature is available from plan {{tier}}"
+  },
+  "plan": {
+    "badge": "Plan {{plan}}",
+    "indicator": "Current plan: {{plan}}"
   },
   "offline": {
-    "banner": "Offline – financial data is only available online."
+    "banner": "Offline – financial data is only available online.",
+    "actionsDisabled": "This action is only available online."
   }
 }

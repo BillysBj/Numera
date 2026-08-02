@@ -1,6 +1,11 @@
 {
   "nav": "Einstellungen",
   "title": "Firmenprofil",
+  "export": {
+    "title": "Datenexport (DSGVO)",
+    "description": "Exportieren Sie alle Daten Ihres Mandanten als ZIP-Archiv (maschinenlesbares JSON je Tabelle plus die zugehörigen Originaldateien). DSGVO-konform (Art. 20 – Datenübertragbarkeit). Nur für Inhaber verfügbar.",
+    "download": "Alle Daten exportieren"
+  },
   "frozenNote": "Diese Angaben werden bei der Rechnungs-Finalisierung eingefroren (§14 UStG). Ohne vollständiges Profil kann keine rechtskonforme Rechnung finalisiert werden.",
   "loading": "Wird geladen …",
   "loadError": "Das Firmenprofil konnte nicht geladen werden.",

@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import RecordPaymentDialog from '@/features/payments/RecordPaymentDialog'
 import { runDunning } from '@/lib/api/dunning'
+import { useEntitlements, hasCapability } from '@/lib/entitlements'
+import { UpgradeHint } from '@/features/shared/UpgradeHint'
 
 // Amount display formatter — EUR, exactly 2 fraction digits. The wire value is a decimal
 // serialized as a JSON number; formatted for PRESENTATION only (no arithmetic) so there
@@ -57,6 +59,8 @@ export default function OpenItemsListPage() {
   const { t } = useTranslation('openItems')
   const { t: td } = useTranslation('dunning')
   const queryClient = useQueryClient()
+  const caps = useEntitlements()
+  const canDunning = hasCapability(caps.data?.capabilities, 'Dunning')
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -212,11 +216,14 @@ export default function OpenItemsListPage() {
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <Button
           onClick={() => dunningRun.mutate()}
-          disabled={dunningRun.isPending}
+          disabled={dunningRun.isPending || !canDunning}
         >
           {dunningRun.isPending ? td('run.running') : td('run.button')}
         </Button>
       </div>
+
+      {/* Mahnwesen is plan L+ (server-gated, 09-02): an upgrade hint replaces the raw 403. */}
+      {!canDunning && <UpgradeHint requiredTier="L" className="mb-3" />}
 
       {runResult && <p role="status" className="mb-3 text-sm text-emerald-600">{runResult}</p>}
       {runError && <p role="alert" className="mb-3 text-sm text-destructive">{td('run.error')}</p>}

@@ -30,6 +30,11 @@
     "sending": "Sending …",
     "confirmSend": "Send this document as a PDF by e-mail to the recipient?",
     "sendQueued": "The e-mail is being sent. The status updates once delivery completes.",
+    "downloadXRechnung": "XRechnung (XML)",
+    "downloadZugferd": "ZUGFeRD (PDF/A-3)",
+    "sendEInvoice": "Send e-invoice",
+    "confirmSendEInvoice": "Send the validated e-invoice (XRechnung) by e-mail to the recipient?",
+    "sendEInvoiceQueued": "The e-invoice is being sent. The status updates once delivery completes.",
     "working": "Working …"
   },
   "lang": {

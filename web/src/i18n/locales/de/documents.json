@@ -30,6 +30,11 @@
     "sending": "Wird gesendet …",
     "confirmSend": "Diesen Beleg als PDF per E-Mail an den Empfänger senden?",
     "sendQueued": "E-Mail wird versendet. Der Status aktualisiert sich, sobald der Versand abgeschlossen ist.",
+    "downloadXRechnung": "XRechnung (XML)",
+    "downloadZugferd": "ZUGFeRD (PDF/A-3)",
+    "sendEInvoice": "E-Rechnung senden",
+    "confirmSendEInvoice": "Die geprüfte E-Rechnung (XRechnung) per E-Mail an den Empfänger senden?",
+    "sendEInvoiceQueued": "Die E-Rechnung wird versendet. Der Status aktualisiert sich, sobald der Versand abgeschlossen ist.",
     "working": "Wird verarbeitet …"
   },
   "lang": {

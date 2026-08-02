@@ -51,16 +51,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ---- Typed responses (server remains authoritative) -----------------------
 
+/** Mirrors the nested shape of `GET /api/me` (user + tenant + role). */
 export interface Me {
-  userId: string
-  email: string
-  tenantId: string
-  tenantName: string
+  user: { sub: string | null; email: string | null; name: string | null }
+  /** Null only in the (handled) no-tenant-in-scope case. `plan` is the tier string, e.g. "L". */
+  tenant: { id: string; name: string; plan: string } | null
+  /** Membership role string, e.g. "Owner" | "Employee" | "TaxAdvisor". */
+  role: string | null
 }
 
 export interface Entitlements {
-  /** Cosmetic feature flags; the server enforces the real gates. */
-  features: string[]
+  /** Cosmetic capability names; the server enforces the real gates. `GET /api/me/entitlements`. */
+  capabilities: string[]
 }
 
 export interface RegisterCompanyRequest {

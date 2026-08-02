@@ -6,15 +6,21 @@ import {
   convertSalesDocument,
   createCreditNote,
   downloadDocumentPdf,
+  downloadXRechnung,
+  downloadZugferd,
   finalizeSalesDocument,
   getSalesDocument,
   parseSnapshot,
   sendDocumentEmail,
+  sendEInvoice,
   stornoSalesDocument,
   ApiError,
   DocumentStatus,
   DocumentType,
 } from '@/lib/api/documents'
+import { useEntitlements, hasCapability } from '@/lib/entitlements'
+import { useOnline } from '@/lib/useOnline'
+import { UpgradeHint } from '@/features/shared/UpgradeHint'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
@@ -153,11 +159,26 @@ function actionErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+// Trigger a browser "save as" for a fetched Blob (e-invoice XML / ZUGFeRD PDF downloads).
+function saveBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export default function DocumentDetailPage() {
   const { t } = useTranslation('documents')
   const { id = '' } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const online = useOnline()
+  const caps = useEntitlements()
+  const canEInvoice = hasCapability(caps.data?.capabilities, 'EInvoicing')
 
   const [banner, setBanner] = useState<
     { kind: 'error' | 'success'; text: string } | null
@@ -245,13 +266,46 @@ export default function DocumentDetailPage() {
     onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
   })
 
+  // Download the finalized invoice's XRechnung (EInvoicing-gated on the server; 09-02). The
+  // UI additionally hides these behind the capability so a non-L tenant sees an UpgradeHint.
+  const downloadXml = useMutation({
+    mutationFn: () => downloadXRechnung(id, 'ubl'),
+    onSuccess: (blob) =>
+      saveBlob(blob, `${doc.data?.documentNumber?.trim() || 'rechnung'}.xml`),
+    onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
+  })
+
+  const downloadZug = useMutation({
+    mutationFn: () => downloadZugferd(id),
+    onSuccess: (blob) =>
+      saveBlob(blob, `${doc.data?.documentNumber?.trim() || 'rechnung'}-zugferd.pdf`),
+    onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
+  })
+
+  const sendEinvoice = useMutation({
+    mutationFn: () => sendEInvoice(id),
+    onSuccess: () => {
+      setBanner({ kind: 'success', text: t('actions.sendEInvoiceQueued') })
+      refresh()
+    },
+    onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
+  })
+
   const busy =
     finalize.isPending ||
     storno.isPending ||
     creditNote.isPending ||
     convert.isPending ||
     download.isPending ||
-    send.isPending
+    send.isPending ||
+    downloadXml.isPending ||
+    downloadZug.isPending ||
+    sendEinvoice.isPending
+
+  // Online-only: /api is NetworkOnly (PWA), so financial actions must not fire a throwing fetch
+  // offline. Disabled = a mutation is in-flight OR the browser is offline.
+  const offline = !online
+  const actionsDisabled = busy || offline
 
   const money = useMemo(
     () => makeMoney(doc.data?.currency ?? 'EUR'),
@@ -332,7 +386,7 @@ export default function DocumentDetailPage() {
             </Link>
             <Button
               size="sm"
-              disabled={busy}
+              disabled={actionsDisabled}
               onClick={() =>
                 confirmRun(t('actions.confirmFinalize'), () => finalize.mutate())
               }
@@ -347,7 +401,7 @@ export default function DocumentDetailPage() {
             <Button
               variant="destructive"
               size="sm"
-              disabled={busy}
+              disabled={actionsDisabled}
               onClick={() =>
                 confirmRun(t('actions.confirmStorno'), () => storno.mutate())
               }
@@ -357,7 +411,7 @@ export default function DocumentDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={busy}
+              disabled={actionsDisabled}
               onClick={() =>
                 confirmRun(t('actions.confirmCreditNote'), () =>
                   creditNote.mutate(),
@@ -377,7 +431,7 @@ export default function DocumentDetailPage() {
               <Select
                 className="h-9 w-[5.5rem]"
                 value={pdfLang}
-                disabled={busy}
+                disabled={actionsDisabled}
                 onChange={(e) => setPdfLang(e.target.value as 'de' | 'en')}
               >
                 <option value="de">{t('lang.de')}</option>
@@ -386,7 +440,7 @@ export default function DocumentDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={busy}
+                disabled={actionsDisabled}
                 onClick={() => {
                   setBanner(null)
                   download.mutate(pdfLang)
@@ -401,7 +455,7 @@ export default function DocumentDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={busy}
+                disabled={actionsDisabled}
                 onClick={() =>
                   confirmRun(t('actions.confirmSend'), () => send.mutate())
                 }
@@ -412,12 +466,62 @@ export default function DocumentDetailPage() {
           </>
         )}
 
+        {/* E-Rechnung actions — finalized invoices only. XRechnung/ZUGFeRD are EInvoicing (plan
+            L+); the server 403s regardless (09-02), so here we show an UpgradeHint instead of the
+            buttons for a tenant that lacks the capability. */}
+        {!isDraft && isRechnung && canEInvoice && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={actionsDisabled}
+              onClick={() => {
+                setBanner(null)
+                downloadXml.mutate()
+              }}
+            >
+              {downloadXml.isPending
+                ? t('actions.downloading')
+                : t('actions.downloadXRechnung')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={actionsDisabled}
+              onClick={() => {
+                setBanner(null)
+                downloadZug.mutate()
+              }}
+            >
+              {downloadZug.isPending
+                ? t('actions.downloading')
+                : t('actions.downloadZugferd')}
+            </Button>
+            {!isCancelled && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={actionsDisabled}
+                onClick={() =>
+                  confirmRun(t('actions.confirmSendEInvoice'), () =>
+                    sendEinvoice.mutate(),
+                  )
+                }
+              >
+                {sendEinvoice.isPending
+                  ? t('actions.sending')
+                  : t('actions.sendEInvoice')}
+              </Button>
+            )}
+          </>
+        )}
+
         {!isCancelled && (
           <div className="flex items-center gap-1">
             <Select
               className="h-9 max-w-[12rem]"
               value={String(convertTarget)}
-              disabled={busy}
+              disabled={actionsDisabled}
               onChange={(e) =>
                 setConvertTarget(Number(e.target.value) as DocumentType)
               }
@@ -431,7 +535,7 @@ export default function DocumentDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={busy}
+              disabled={actionsDisabled}
               onClick={() => convert.mutate()}
             >
               {t('actions.convert')}
@@ -439,6 +543,23 @@ export default function DocumentDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Offline: /api is NetworkOnly, so the online-only actions above are disabled and this
+          banner explains why (no throwing fetch, no crash). */}
+      {offline && (
+        <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          {t('offline.actionsDisabled', {
+            ns: 'common',
+            defaultValue: 'Offline – Finanzaktionen sind nur online verfügbar.',
+          })}
+        </div>
+      )}
+
+      {/* E-Rechnung is plan L+: a tenant without EInvoicing sees an upgrade hint instead of the
+          e-invoice buttons on a finalized invoice. */}
+      {!isDraft && isRechnung && !canEInvoice && (
+        <UpgradeHint requiredTier="L" className="mb-4" />
+      )}
 
       {banner && (
         <div

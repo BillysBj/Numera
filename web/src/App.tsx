@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from '@tanstack/react-query'
+import { getMe } from './lib/api'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -33,9 +35,19 @@ function AppHeader() {
   const { t: tdu } = useTranslation('dunning')
   const { t: tr } = useTranslation('recurring')
   const { t: tt } = useTranslation('team')
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const plan = me.data?.tenant?.plan
   return (
     <header className="app-header">
       <span className="brand">{t('app.name')}</span>
+      {plan && (
+        <span
+          className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+          title={t('plan.indicator', { plan, defaultValue: 'Tarif {{plan}}' })}
+        >
+          {t('plan.badge', { plan, defaultValue: 'Tarif {{plan}}' })}
+        </span>
+      )}
       <nav style={{ display: 'flex', gap: '1rem', marginRight: 'auto', marginLeft: '1.5rem' }}>
         <Link to="/dashboard">{t('dashboard.title')}</Link>
         <Link to="/partners">{tp('nav')}</Link>

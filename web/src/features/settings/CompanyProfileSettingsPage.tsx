@@ -33,8 +33,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { getMe } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
 const TAX_KEYS = ['S', 'AE', 'K', 'E', 'Z', 'G', 'O'] as const
@@ -82,6 +83,8 @@ function toFormValues(p: CompanyProfileDto): CompanyProfileFormValues {
 export default function CompanyProfileSettingsPage() {
   const { t } = useTranslation('settings')
   const queryClient = useQueryClient()
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const isOwner = me.data?.role === 'Owner'
   const [serverError, setServerError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
@@ -155,6 +158,25 @@ export default function CompanyProfileSettingsPage() {
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t('frozenNote')}</p>
       </div>
+
+      {/* DSGVO Art. 20 data export (09-01). Owner-only both here and on the server; a direct
+          same-origin GET streams the ZIP (the session cookie flows on navigation). */}
+      {isOwner && (
+        <Card className="mb-5">
+          <CardHeader>
+            <CardTitle>{t('export.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            <p className="text-sm text-muted-foreground">{t('export.description')}</p>
+            <a
+              href="/api/export"
+              className={cn(buttonVariants({ variant: 'outline' }), 'w-fit')}
+            >
+              {t('export.download')}
+            </a>
+          </CardContent>
+        </Card>
+      )}
 
       <Form {...form}>
         <form onSubmit={onSubmit} className="flex flex-col gap-5">
