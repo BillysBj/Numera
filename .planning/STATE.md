@@ -5,11 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-08-02)
 
 **Core value:** Ein Unternehmen erledigt seine komplette Auftrags- und Finanzverwaltung — von der Rechnung inkl. gesetzlicher E-Rechnung bis zur Buchhaltung — rechtskonform (GoBD, E-Rechnungspflicht) an einem Ort, auf jedem Gerät.
-**Current focus:** 🎉 **v1.0 „Rechnungen & E-Rechnung" SHIPPED 2026-08-02** (9 Phasen, 61 Pläne). Milestone archiviert (milestones/v1.0-*), Git-Tag v1.0. **Next: `/gsd:new-milestone`** to define v1.1/v2.0.
+**Current focus:** 🚧 **Milestone v2.0 — Buchhaltung, Banking & Belege** gestartet (2026-08-02). Fokus (User-Auswahl): Buchhaltung (SKR03/04, EÜR/GuV/BWA, USt-VA), Banking (finAPI + Zahlungsabgleich + SEPA), Belege & Ausgaben (Scan/OCR + E-Mail-Empfang + GoBD-Archiv), Monetarisierung (Stripe-Abo + Self-Service-Tarifwechsel). Phase 1 von v1 endete bei Phase 9 → v2 nummeriert ab Phase 10.
 
 ## Current Position
 
-**MILESTONE v1.0 COMPLETE + ARCHIVED (2026-08-02).** All 9 phases shipped + verified; ROADMAP collapsed, REQUIREMENTS archived+deleted, PROJECT.md evolved (v1 reqs → Validated), MILESTONES.md written, git tag v1.0. → NEXT: `/gsd:new-milestone` (questioning → research → requirements → roadmap) for the next release. v2 backlog: Belegerfassung+OCR, Buchhaltung (SKR03/04, EÜR/GuV/BWA, USt-VA), Multibanking (finAPI), DATEV-Export, Stripe-Abrechnung.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Milestone v2.0 gestartet — Requirements werden definiert (Research → Requirements → Roadmap)
+Last activity: 2026-08-02 — Milestone v2.0 gestartet; PROJECT.md + STATE.md aktualisiert. v1.0 vollständig ausgeliefert + getaggt.
+
+Prior — Milestone v1.0 (SHIPPED 2026-08-02): All 9 phases shipped + verified; archived to milestones/v1.0-*, git tag v1.0.
 
 Prior — Phase 9 (closed v1):
 Phase: 9 ✓ COMPLETE (2026-08-02). All 6 plans executed + human-verify APPROVED.

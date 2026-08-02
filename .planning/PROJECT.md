@@ -8,6 +8,16 @@ Numera ist eine cloudbasierte Buchhaltungs- und Rechnungssoftware für den deuts
 
 Ein Unternehmen kann seine komplette Auftrags- und Finanzverwaltung — von der Rechnung (inkl. gesetzlich verpflichtender E-Rechnung) bis zur Buchhaltung — rechtskonform (GoBD, E-Rechnungspflicht seit 01.01.2025) an einem Ort erledigen, auf jedem Gerät.
 
+## Current Milestone: v2.0 — Buchhaltung, Banking & Belege
+
+**Goal:** Aus der Rechnungs-Software wird die komplette Finanzverwaltung: Numera schließt den Kreis von der Ausgangsrechnung über Bankdaten und Eingangsbelege bis zur Buchhaltung und zur echten Tarif-Abrechnung.
+
+**Target features (v2.0):**
+- **Buchhaltung** — Kontenrahmen SKR03/SKR04, Buchungslogik, elektronisches Kassenbuch, EÜR/GuV/BWA-Berichte, USt-Voranmeldung (Berechnung + Export)
+- **Banking** — Multibanking über Bank-API (finAPI): Kontoumsätze, automatischer Zahlungsabgleich mit offenen Posten, SEPA-Überweisungen
+- **Belege & Ausgaben** — Belegscan (Kamera/Upload) + OCR-Belegprüfung, automatischer Belegempfang per E-Mail, GoBD-konformes revisionssicheres Langzeitarchiv
+- **Monetarisierung** — Stripe-Abo-Abrechnung: Self-Service-Tarifwechsel (Upgrade/Downgrade), Trial, Zahlungsverwaltung
+
 ## Requirements
 
 ### Validated
@@ -101,4 +111,4 @@ Bekannte Grenzen / Tech-Debt: keine WebApplicationFactory → Owner-only/TaxAdvi
 Via `/gsd:new-milestone` zu definieren. Naheliegende Richtungen aus dem v2-Backlog: Belegerfassung + OCR, Buchhaltung (SKR03/04, EÜR/GuV/BWA, USt-VA), Multibanking (finAPI) + Zahlungsabgleich, DATEV-Export/Pendelakte, Stripe-Abo-Abrechnung.
 
 ---
-*Last updated: 2026-08-02 after v1.0 milestone*
+*Last updated: 2026-08-02 — started milestone v2.0 (Buchhaltung, Banking, Belege, Monetarisierung)*
