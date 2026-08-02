@@ -22,6 +22,7 @@ import {
   IconMenu,
   IconClose,
 } from './components/icons'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import PartnerListPage from './features/partners/PartnerListPage'
@@ -334,6 +335,7 @@ function AppShell() {
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/*" element={<AppShell />} />
     </Routes>
