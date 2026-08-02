@@ -29,11 +29,44 @@
   "dashboard": {
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}",
+    "subtitle": "Your finance overview at a glance",
+    "demoNotice": "Sample data – real figures appear once you have documents.",
+    "period": "Last 12 months",
     "tenant": "Company",
     "entitlements": "Enabled features",
     "noEntitlements": "No features enabled yet.",
     "loading": "Loading …",
-    "error": "Could not load data."
+    "error": "Could not load data.",
+    "kpi": {
+      "revenueYear": "Revenue (year)",
+      "openItems": "Open items",
+      "overdue": "Overdue",
+      "documentsMonth": "Documents (month)"
+    },
+    "charts": {
+      "revenue": "Revenue trend",
+      "aging": "Open items by due date",
+      "status": "Documents by status"
+    },
+    "aging": {
+      "notDue": "Not due",
+      "d1_30": "1–30 days",
+      "d31_60": "31–60 days",
+      "d60plus": "over 60 days",
+      "center": "Total"
+    },
+    "docStatus": {
+      "paid": "Paid",
+      "finalized": "Finalized",
+      "draft": "Draft",
+      "cancelled": "Cancelled",
+      "center": "Documents"
+    },
+    "planCard": {
+      "title": "Your plan",
+      "capabilities": "{{count}} features active",
+      "unknown": "Not signed in"
+    }
   },
   "entitlements": {
     "upgradeHint": "This feature is available from plan {{tier}}"

@@ -29,11 +29,44 @@
   "dashboard": {
     "title": "Übersicht",
     "welcome": "Willkommen, {{name}}",
+    "subtitle": "Ihr Finanzüberblick auf einen Blick",
+    "demoNotice": "Beispieldaten – echte Werte erscheinen, sobald Belege vorhanden sind.",
+    "period": "Letzte 12 Monate",
     "tenant": "Unternehmen",
     "entitlements": "Freigeschaltete Funktionen",
     "noEntitlements": "Noch keine Funktionen freigeschaltet.",
     "loading": "Wird geladen …",
-    "error": "Daten konnten nicht geladen werden."
+    "error": "Daten konnten nicht geladen werden.",
+    "kpi": {
+      "revenueYear": "Umsatz (Jahr)",
+      "openItems": "Offene Posten",
+      "overdue": "Überfällig",
+      "documentsMonth": "Belege (Monat)"
+    },
+    "charts": {
+      "revenue": "Umsatzentwicklung",
+      "aging": "Offene Posten nach Fälligkeit",
+      "status": "Belege nach Status"
+    },
+    "aging": {
+      "notDue": "Nicht fällig",
+      "d1_30": "1–30 Tage",
+      "d31_60": "31–60 Tage",
+      "d60plus": "über 60 Tage",
+      "center": "Gesamt"
+    },
+    "docStatus": {
+      "paid": "Bezahlt",
+      "finalized": "Finalisiert",
+      "draft": "Entwurf",
+      "cancelled": "Storniert",
+      "center": "Belege"
+    },
+    "planCard": {
+      "title": "Ihr Tarif",
+      "capabilities": "{{count}} Funktionen aktiv",
+      "unknown": "Nicht angemeldet"
+    }
   },
   "entitlements": {
     "upgradeHint": "Diese Funktion ist ab Tarif {{tier}} verfügbar"
