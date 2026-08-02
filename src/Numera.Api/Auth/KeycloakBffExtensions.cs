@@ -118,6 +118,24 @@ public static class KeycloakBffExtensions
                 options.ClaimActions.MapJsonKey("organization", "organization");
                 options.ClaimActions.MapJsonKey("email", "email");
                 options.ClaimActions.MapJsonKey("name", "name");
+
+                // Dev over plain HTTP only: the OIDC correlation + nonce cookies default to
+                // SameSite=None, which requires Secure — and browsers drop Secure cookies over
+                // http, breaking the callback with "Correlation failed". Code flow returns on a
+                // top-level GET, so SameSite=Lax is delivered and works. Production (https
+                // authority) keeps the strict None+Secure defaults untouched.
+                if (!requireHttpsMetadata)
+                {
+                    // The default response_mode is form_post — a cross-site POST back to the
+                    // callback, on which the browser sends NO Lax cookie (and None needs Secure,
+                    // dropped over http) → "Correlation failed". Query mode makes the callback a
+                    // top-level GET, where the Lax correlation/nonce cookies below are delivered.
+                    options.ResponseMode = OpenIdConnectResponseMode.Query;
+                    options.NonceCookie.SameSite = SameSiteMode.Lax;
+                    options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+                    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                }
             });
 
         return services;

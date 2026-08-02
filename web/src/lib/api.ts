@@ -94,7 +94,11 @@ export function registerCompany(body: RegisterCompanyRequest): Promise<void> {
 /**
  * Start the BFF OIDC challenge. This is a full-page navigation (not fetch): the
  * BFF redirects to the identity provider and sets the session cookie on return.
+ * `returnUrl` is the SPA origin so the user lands back on the app (not the API
+ * origin) after the Keycloak round-trip; the host-scoped session cookie applies.
  */
 export function loginUrl(): string {
-  return `${API_BASE}/auth/login`
+  const returnUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : '/dashboard'
+  return `${API_BASE}/auth/login?returnUrl=${encodeURIComponent(returnUrl)}`
 }
