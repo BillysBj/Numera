@@ -26,7 +26,7 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 
 ### 🚧 v2.0 Buchhaltung, Banking & Belege (Phasen 10–14)
 
-- [ ] **Phase 10: Buchhaltungs-Fundament** — SKR03/04-Kontenrahmen, doppische unveränderbare Buchungs-Engine, Steuerschlüssel-Mapping, Auto-Buchung aus Rechnungen & Zahlungen, Journal/Konto-Sichten, Periodensperre
+- [x] **Phase 10: Buchhaltungs-Fundament** — SKR03/04-Kontenrahmen, doppische unveränderbare Buchungs-Engine, Steuerschlüssel-Mapping, Auto-Buchung aus Rechnungen & Zahlungen, Journal/Konto-Sichten, Periodensperre — ✓ 2026-08-03
 - [ ] **Phase 11: Berichte & USt-Voranmeldung** — EÜR + USt-Voranmeldung (Kennziffern-Berechnung + ELSTER-XML/Druck-Export, kein ERiC-Direktversand)
 - [ ] **Phase 12: Belege & Ausgaben** — Belegscan (Kamera/Upload) + OCR + Buchungsvorschlag, strukturierte E-Rechnungs-Lesung, GoBD-Langzeitarchiv, Lieferanten-Match, E-Mail-Eingang
 - [ ] **Phase 13: Banking & Zahlungsabgleich** — finAPI-Anbindung, Umsatz-Sync, automatischer Abgleich mit offenen Posten (+ Buchung), manuelle Zuordnung/Split, CSV/CAMT-Fallback
@@ -44,13 +44,13 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 3. Gebuchte Journalzeilen sind DB-seitig unveränderbar (REVOKE + Trigger, ausgeglichen erzwungen); eine Korrektur entsteht nur als Storno-Buchung.
 4. Nutzer sieht Buchungsjournal und Kontoauszug je Konto; eine festgeschriebene (gesperrte) Periode nimmt keine neuen Buchungen mehr an.
 
-**Plans:** 6 plans (5 waves)
-- [ ] 10-01-PLAN.md — Ledger-Schema-Fundament + GoBD-DB-Enforcement (RLS, Unveränderbarkeit, Balance-, Periodensperre-Trigger) [ACCT-02]
-- [ ] 10-02-PLAN.md — SKR03/04-Seed + Setup-Endpoint (mandantenspezifischer aktiver Kontensatz) [ACCT-01]
-- [ ] 10-03-PLAN.md — Buchungs-Engine: AccountResolver + IPostingSource (Rechnung/Zahlung/Ausgabe) + Golden-File-Tests [ACCT-02, ACCT-05]
-- [ ] 10-04-PLAN.md — Auto-Buchung Ausgangsrechnung (inline in FinalizeCore) + Storno-Generalumkehr [ACCT-03]
-- [ ] 10-05-PLAN.md — Auto-Buchung Zahlung (Bank↔Forderung inline in PaymentService) + Reversal [ACCT-04]
-- [ ] 10-06-PLAN.md — Journal- + Kontoauszug-Sichten + Festschreibung (lückenlose Journalnummern, Periodensperre) [ACCT-06, ACCT-09]
+**Plans:** 6 plans (5 waves) — ✓ all complete 2026-08-03
+- [x] 10-01-PLAN.md — Ledger-Schema-Fundament + GoBD-DB-Enforcement (RLS, Unveränderbarkeit, Balance-, Periodensperre-Trigger) [ACCT-02]
+- [x] 10-02-PLAN.md — SKR03/04-Seed + Setup-Endpoint (mandantenspezifischer aktiver Kontensatz) [ACCT-01]
+- [x] 10-03-PLAN.md — Buchungs-Engine: AccountResolver + IPostingSource (Rechnung/Zahlung/Ausgabe) + Golden-File-Tests [ACCT-02, ACCT-05]
+- [x] 10-04-PLAN.md — Auto-Buchung Ausgangsrechnung (inline in FinalizeCore) + Storno-Generalumkehr [ACCT-03]
+- [x] 10-05-PLAN.md — Auto-Buchung Zahlung (Bank↔Forderung inline in PaymentService) + Reversal [ACCT-04]
+- [x] 10-06-PLAN.md — Journal- + Kontoauszug-Sichten + Festschreibung (lückenlose Journalnummern, Periodensperre) [ACCT-06, ACCT-09]
 
 ### Phase 11: Berichte & USt-Voranmeldung
 **Goal**: Nutzer kann seine steuerlichen Pflichtauswertungen erzeugen — die EÜR und die USt-Voranmeldung — direkt und korrekt aus den Buchungen.
@@ -98,8 +98,8 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
 | 1.–9. (v1.0) | v1.0 | 61/61 | ✓ Complete | 2026-08-02 |
-| 10. Buchhaltungs-Fundament | v2.0 | 0/6 | Next | - |
-| 11. Berichte & USt-Voranmeldung | v2.0 | 0/? | Pending | - |
+| 10. Buchhaltungs-Fundament | v2.0 | 6/6 | ✓ Complete | 2026-08-03 |
+| 11. Berichte & USt-Voranmeldung | v2.0 | 0/? | Next | - |
 | 12. Belege & Ausgaben | v2.0 | 0/? | Pending | - |
 | 13. Banking & Zahlungsabgleich | v2.0 | 0/? | Pending | - |
 | 14. Monetarisierung (Stripe) | v2.0 | 0/? | Pending | - |

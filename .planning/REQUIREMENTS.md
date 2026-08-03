@@ -12,15 +12,15 @@ Committed scope for this milestone. Each maps to a roadmap phase (numbering cont
 
 ### Buchhaltung (ACCT) — the foundation
 
-- [ ] **ACCT-01**: Nutzer wählt beim Setup einen Kontenrahmen (SKR03 oder SKR04); Numera führt einen mandantenspezifischen aktiven Kontensatz
-- [ ] **ACCT-02**: Doppische Buchungs-Engine mit unveränderbarem, ausgeglichenem Soll/Haben-Journal (GoBD-fest, DB-erzwungen); Korrekturen entstehen als Storno-Buchung, nie durch Bearbeiten
-- [ ] **ACCT-03**: Finalisierte Ausgangsrechnungen werden automatisch verbucht (Konto- + Steuerschlüssel-Zuordnung je Kontenrahmen, EN-16931-USt-Kategorien)
-- [ ] **ACCT-04**: Erfasste Zahlungen werden automatisch verbucht und gleichen den offenen Posten aus (Bank ↔ Forderung)
-- [ ] **ACCT-05**: Eingangsrechnungen/Ausgaben werden ins Journal gebucht (Aufwand + Vorsteuer) und speisen EÜR/USt-VA
-- [ ] **ACCT-06**: Nutzer sieht Buchungsjournal und Kontoauszug je Konto (revisionssichere Lesesichten)
+- [x] **ACCT-01**: Nutzer wählt beim Setup einen Kontenrahmen (SKR03 oder SKR04); Numera führt einen mandantenspezifischen aktiven Kontensatz
+- [x] **ACCT-02**: Doppische Buchungs-Engine mit unveränderbarem, ausgeglichenem Soll/Haben-Journal (GoBD-fest, DB-erzwungen); Korrekturen entstehen als Storno-Buchung, nie durch Bearbeiten
+- [x] **ACCT-03**: Finalisierte Ausgangsrechnungen werden automatisch verbucht (Konto- + Steuerschlüssel-Zuordnung je Kontenrahmen, EN-16931-USt-Kategorien)
+- [x] **ACCT-04**: Erfasste Zahlungen werden automatisch verbucht und gleichen den offenen Posten aus (Bank ↔ Forderung)
+- [x] **ACCT-05**: Eingangsrechnungen/Ausgaben werden ins Journal gebucht (Aufwand + Vorsteuer) und speisen EÜR/USt-VA *(Buchungsregel + Tests in Phase 10; Beleg-Erfassungs-Einstieg in Phase 12)*
+- [x] **ACCT-06**: Nutzer sieht Buchungsjournal und Kontoauszug je Konto (revisionssichere Lesesichten)
 - [ ] **ACCT-07**: EÜR-Bericht (Struktur der Anlage EÜR, Zufluss/Abfluss-Prinzip) für Freiberufler/Kleinunternehmer
 - [ ] **ACCT-08**: USt-Voranmeldung — Kennziffern-Berechnung (Kz 81/86/35/66/83/41/89/46/47/61) + Prüfansicht + Export als ELSTER-XML/Druck (kein ERiC-Direktversand)
-- [ ] **ACCT-09**: Buchungsperioden lassen sich sperren (Festschreibung); gesperrte Perioden sind unveränderbar
+- [x] **ACCT-09**: Buchungsperioden lassen sich sperren (Festschreibung); gesperrte Perioden sind unveränderbar
 
 ### Banking (BANK) — Multibanking & Abgleich
 
@@ -107,7 +107,7 @@ Wird bei der Roadmap-Erstellung befüllt (jede Anforderung → genau eine Phase,
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-09 | Phase 10 — Buchhaltungs-Fundament | Pending |
+| ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-09 | Phase 10 — Buchhaltungs-Fundament | ✓ Done (2026-08-03) — ACCT-05 = posting rule + tests; runtime entry point in Phase 12 |
 | ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | Pending |
 | BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | Pending |
 | BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | Pending |
