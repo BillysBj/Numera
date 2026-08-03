@@ -1,8 +1,11 @@
 using System.Text.Json;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Numera.Api.Contracts;
+using Numera.Modules.Crm;
+using Numera.Modules.Ledger;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Payments;
 using Numera.Platform.Audit;
@@ -19,13 +22,37 @@ public sealed class PaymentService
     private readonly NumeraDbContext _db;
     private readonly ICurrentTenant _currentTenant;
     private readonly IAuditWriter _audit;
+    private readonly PostingEngine _postingEngine;
+    private readonly AccountResolver _accountResolver;
+    private readonly ILogger<PaymentService> _logger;
 
     /// <summary>Creates the service over the request-scoped DbContext + tenant + audit writer.</summary>
     public PaymentService(NumeraDbContext db, ICurrentTenant currentTenant, IAuditWriter audit)
+        : this(
+            db,
+            currentTenant,
+            audit,
+            new PostingEngine(db),
+            new AccountResolver(db),
+            NullLogger<PaymentService>.Instance)
+    {
+    }
+
+    /// <summary>Creates the service with the request-scoped ledger posting collaborators.</summary>
+    public PaymentService(
+        NumeraDbContext db,
+        ICurrentTenant currentTenant,
+        IAuditWriter audit,
+        PostingEngine postingEngine,
+        AccountResolver accountResolver,
+        ILogger<PaymentService> logger)
     {
         _db = db;
         _currentTenant = currentTenant;
         _audit = audit;
+        _postingEngine = postingEngine;
+        _accountResolver = accountResolver;
+        _logger = logger;
     }
 
     /// <summary>Records a payment, its allocations, open-item changes and audit event in one transaction.</summary>
@@ -132,6 +159,9 @@ public sealed class PaymentService
             }
         }
 
+        await PostRecordedPaymentAsync(
+            payment, request.Allocations, openItems, tenantId, ct).ConfigureAwait(false);
+
         await _audit.RecordAsync(
             new PaymentAuditEvent(
                 "payment.recorded", payment.Id, Before: null,
@@ -225,6 +255,10 @@ public sealed class PaymentService
             }
         }
 
+        await PostPaymentReversalAsync(
+            original, reversal, tenantId, ct)
+            .ConfigureAwait(false);
+
         await _audit.RecordAsync(
             new PaymentAuditEvent(
                 "payment.reversed", reversal.Id, Before: Snapshot(original, originalAllocations),
@@ -234,6 +268,196 @@ public sealed class PaymentService
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
         await tx.CommitAsync(ct).ConfigureAwait(false);
         return PaymentOperationResult.Ok(reversal.Id);
+    }
+
+    private async Task PostRecordedPaymentAsync(
+        Payment payment,
+        IReadOnlyList<PaymentAllocationInput> allocations,
+        IReadOnlyDictionary<Guid, OpenItem> openItems,
+        Guid tenantId,
+        CancellationToken ct)
+    {
+        var sourceRef = payment.Id.ToString();
+        if (await _db.Set<JournalEntry>()
+                .AnyAsync(
+                    entry => entry.SourceType == LedgerSourceType.Payment
+                        && entry.SourceRef == sourceRef,
+                    ct)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var chartVariant = await TryResolveChartVariantAsync(tenantId, payment.Id, ct)
+            .ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            return;
+        }
+
+        var debtorOverrides = await ResolveDebtorOverridesAsync(openItems.Values, ct)
+            .ConfigureAwait(false);
+        var input = new PaymentPostingInput(
+            // MVP: every PaymentMethod books to the chart's standard Bank account.
+            // A dedicated Kasse/payment-method mapping is a later refinement.
+            BankAccount: null,
+            payment.ValueDate,
+            allocations
+                .Select(allocation => new PaymentPostingAllocation(
+                    debtorOverrides.GetValueOrDefault(allocation.OpenItemId),
+                    allocation.Amount))
+                .ToList(),
+            IsReversal: false);
+        var header = new JournalEntry
+        {
+            TenantId = tenantId,
+            EntryDate = payment.ValueDate,
+            SourceRef = sourceRef,
+            SourceType = LedgerSourceType.Payment,
+            Description = $"Zahlung {payment.Reference ?? payment.Id.ToString()}",
+            PostingType = PostingType.Normal,
+        };
+
+        await _postingEngine.PostAsync(
+            new PaymentPostingSource(tenantId, chartVariant.Value, input, _accountResolver),
+            header,
+            ct).ConfigureAwait(false);
+    }
+
+    private async Task PostPaymentReversalAsync(
+        Payment original,
+        Payment reversal,
+        Guid tenantId,
+        CancellationToken ct)
+    {
+        var reversalSourceRef = reversal.Id.ToString();
+        if (await _db.Set<JournalEntry>()
+                .AnyAsync(
+                    entry => entry.SourceType == LedgerSourceType.Payment
+                        && entry.SourceRef == reversalSourceRef,
+                    ct)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var originalSourceRef = original.Id.ToString();
+        var originalEntry = await _db.Set<JournalEntry>()
+            .AsNoTracking()
+            .Include(entry => entry.Postings)
+            .SingleOrDefaultAsync(
+                entry => entry.SourceType == LedgerSourceType.Payment
+                    && entry.SourceRef == originalSourceRef,
+                ct)
+            .ConfigureAwait(false);
+        if (originalEntry is null)
+        {
+            _logger.LogWarning(
+                "Skipping ledger reversal for payment {ReversalPaymentId}: original payment "
+                + "{OriginalPaymentId} has no journal entry.",
+                reversal.Id,
+                original.Id);
+            return;
+        }
+
+        var chartVariant = await TryResolveChartVariantAsync(tenantId, reversal.Id, ct)
+            .ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            return;
+        }
+
+        var accountIds = originalEntry.Postings
+            .Select(posting => posting.AccountId)
+            .Distinct()
+            .ToArray();
+        var accountNumbers = await _db.Set<Account>()
+            .AsNoTracking()
+            .Where(account => accountIds.Contains(account.Id))
+            .ToDictionaryAsync(account => account.Id, account => account.Number, ct)
+            .ConfigureAwait(false);
+        var bankPosting = originalEntry.Postings.Single(
+            posting => posting.Direction == PostingDirection.Debit);
+        var receivablePostings = originalEntry.Postings
+            .Where(posting => posting.Direction == PostingDirection.Credit)
+            .ToList();
+        var input = new PaymentPostingInput(
+            accountNumbers[bankPosting.AccountId],
+            reversal.ValueDate,
+            receivablePostings
+                .Select(posting => new PaymentPostingAllocation(
+                    accountNumbers[posting.AccountId],
+                    posting.Amount))
+                .ToList(),
+            IsReversal: true);
+        var header = new JournalEntry
+        {
+            TenantId = tenantId,
+            EntryDate = reversal.ValueDate,
+            SourceRef = reversalSourceRef,
+            SourceType = LedgerSourceType.Payment,
+            Description = $"Zahlungsstorno {original.Reference ?? original.Id.ToString()}",
+            PostingType = PostingType.Storno,
+            ReversesEntryId = originalEntry.Id,
+        };
+
+        await _postingEngine.PostAsync(
+            new PaymentPostingSource(tenantId, chartVariant.Value, input, _accountResolver),
+            header,
+            ct).ConfigureAwait(false);
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, string?>> ResolveDebtorOverridesAsync(
+        IEnumerable<OpenItem> openItems,
+        CancellationToken ct)
+    {
+        var items = openItems.ToList();
+        var documentIds = items.Select(item => item.DocumentId).Distinct().ToArray();
+        var documentPartners = await _db.Set<SalesDocument>()
+            .AsNoTracking()
+            .Where(document => documentIds.Contains(document.Id))
+            .Select(document => new { document.Id, document.PartnerId })
+            .ToDictionaryAsync(document => document.Id, document => document.PartnerId, ct)
+            .ConfigureAwait(false);
+        var partnerIds = documentPartners.Values
+            .OfType<Guid>()
+            .Distinct()
+            .ToArray();
+        var debtorAccounts = await _db.Set<BusinessPartner>()
+            .AsNoTracking()
+            .Where(partner => partnerIds.Contains(partner.Id))
+            .ToDictionaryAsync(partner => partner.Id, partner => partner.DebtorAccount, ct)
+            .ConfigureAwait(false);
+
+        return items.ToDictionary(
+            item => item.Id,
+            item => documentPartners.TryGetValue(item.DocumentId, out var partnerId)
+                && partnerId is { } id
+                && debtorAccounts.TryGetValue(id, out var account)
+                    ? account
+                    : null);
+    }
+
+    private async Task<ChartVariant?> TryResolveChartVariantAsync(
+        Guid tenantId,
+        Guid paymentId,
+        CancellationToken ct)
+    {
+        var chartVariant = await _db.Set<LedgerSettings>()
+            .AsNoTracking()
+            .Where(settings => settings.TenantId == tenantId)
+            .Select(settings => (ChartVariant?)settings.ChartVariant)
+            .SingleOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            _logger.LogWarning(
+                "Skipping ledger booking for payment {PaymentId}: tenant {TenantId} has no ledger settings.",
+                paymentId,
+                tenantId);
+        }
+
+        return chartVariant;
     }
 
     private static string Snapshot(Payment payment, IEnumerable<PaymentAllocationInput> allocations)
