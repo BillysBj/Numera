@@ -216,68 +216,83 @@ namespace Numera.Platform.Db.Migrations
                 "END IF; END $$;");
 
             migrationBuilder.Sql(
-                "CREATE FUNCTION postings_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ " +
-                "BEGIN RAISE EXCEPTION 'posting rows are append-only (GoBD); reverse via Stornobuchung'; END; $$;");
+                """
+                CREATE FUNCTION postings_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                  RAISE EXCEPTION 'posting rows are append-only (GoBD); reverse via Stornobuchung';
+                END;
+                $$;
+                """);
             migrationBuilder.Sql(
                 "CREATE TRIGGER postings_immutable BEFORE UPDATE OR DELETE ON postings " +
                 "FOR EACH ROW EXECUTE FUNCTION postings_immutable();");
 
             migrationBuilder.Sql(
-                "CREATE FUNCTION journal_entries_immutable() RETURNS trigger LANGUAGE plpgsql AS $$ " +
-                "BEGIN " +
-                "  IF (TG_OP = 'DELETE') THEN " +
-                "    RAISE EXCEPTION 'journal entries are append-only (GoBD); reverse via Stornobuchung'; " +
-                "  END IF; " +
-                "  -- Only the Festschreibung stamp may ever change, and only once (NULL -> value). " +
-                "  IF OLD.journal_number IS NOT NULL OR OLD.festgeschrieben_at IS NOT NULL THEN " +
-                "    RAISE EXCEPTION 'journal entry is festgeschrieben and immutable'; " +
-                "  END IF; " +
-                "  IF NEW.tenant_id      IS DISTINCT FROM OLD.tenant_id " +
-                "     OR NEW.entry_date   IS DISTINCT FROM OLD.entry_date " +
-                "     OR NEW.source_ref   IS DISTINCT FROM OLD.source_ref " +
-                "     OR NEW.source_type  IS DISTINCT FROM OLD.source_type " +
-                "     OR NEW.description  IS DISTINCT FROM OLD.description " +
-                "     OR NEW.posting_type IS DISTINCT FROM OLD.posting_type " +
-                "     OR NEW.reverses_entry_id IS DISTINCT FROM OLD.reverses_entry_id " +
-                "  THEN RAISE EXCEPTION 'journal entry business fields are frozen; only Festschreibung may stamp journal_number'; " +
-                "  END IF; " +
-                "  RETURN NEW; " +
-                "END; $$;");
+                """
+                CREATE FUNCTION journal_entries_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN
+                  IF (TG_OP = 'DELETE') THEN
+                    RAISE EXCEPTION 'journal entries are append-only (GoBD); reverse via Stornobuchung';
+                  END IF;
+                  -- Only the Festschreibung stamp may ever change, and only once (NULL -> value).
+                  IF OLD.journal_number IS NOT NULL OR OLD.festgeschrieben_at IS NOT NULL THEN
+                    RAISE EXCEPTION 'journal entry is festgeschrieben and immutable';
+                  END IF;
+                  IF NEW.tenant_id      IS DISTINCT FROM OLD.tenant_id
+                     OR NEW.entry_date   IS DISTINCT FROM OLD.entry_date
+                     OR NEW.source_ref   IS DISTINCT FROM OLD.source_ref
+                     OR NEW.source_type  IS DISTINCT FROM OLD.source_type
+                     OR NEW.description  IS DISTINCT FROM OLD.description
+                     OR NEW.posting_type IS DISTINCT FROM OLD.posting_type
+                     OR NEW.reverses_entry_id IS DISTINCT FROM OLD.reverses_entry_id
+                  THEN
+                    RAISE EXCEPTION 'journal entry business fields are frozen; only Festschreibung may stamp journal_number';
+                  END IF;
+                  RETURN NEW;
+                END;
+                $$;
+                """);
             migrationBuilder.Sql(
                 "CREATE TRIGGER journal_entries_immutable BEFORE UPDATE OR DELETE ON journal_entries " +
                 "FOR EACH ROW EXECUTE FUNCTION journal_entries_immutable();");
 
             migrationBuilder.Sql(
-                "CREATE FUNCTION postings_balanced() RETURNS trigger LANGUAGE plpgsql AS $$ " +
-                "DECLARE d numeric(19,4); c numeric(19,4); " +
-                "BEGIN " +
-                "  SELECT COALESCE(SUM(amount) FILTER (WHERE direction = 1), 0), " +
-                "         COALESCE(SUM(amount) FILTER (WHERE direction = 2), 0) " +
-                "    INTO d, c FROM postings WHERE journal_entry_id = NEW.journal_entry_id; " +
-                "  IF d <> c THEN " +
-                "    RAISE EXCEPTION 'journal entry % is unbalanced: Soll % <> Haben %', NEW.journal_entry_id, d, c; " +
-                "  END IF; " +
-                "  RETURN NULL; " +
-                "END; $$;");
+                """
+                CREATE FUNCTION postings_balanced() RETURNS trigger LANGUAGE plpgsql AS $$
+                DECLARE d numeric(19,4); c numeric(19,4);
+                BEGIN
+                  SELECT COALESCE(SUM(amount) FILTER (WHERE direction = 1), 0),
+                         COALESCE(SUM(amount) FILTER (WHERE direction = 2), 0)
+                    INTO d, c FROM postings WHERE journal_entry_id = NEW.journal_entry_id;
+                  IF d <> c THEN
+                    RAISE EXCEPTION 'journal entry % is unbalanced: Soll % <> Haben %', NEW.journal_entry_id, d, c;
+                  END IF;
+                  RETURN NULL;
+                END;
+                $$;
+                """);
             migrationBuilder.Sql(
                 "CREATE CONSTRAINT TRIGGER postings_balanced AFTER INSERT ON postings " +
                 "DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION postings_balanced();");
 
             migrationBuilder.Sql(
-                "CREATE FUNCTION journal_entries_period_lock() RETURNS trigger LANGUAGE plpgsql AS $$ " +
-                "DECLARE locked int; " +
-                "BEGIN " +
-                "  SELECT COUNT(*) INTO locked FROM fiscal_periods " +
-                "    WHERE tenant_id = NEW.tenant_id " +
-                "      AND year  = EXTRACT(YEAR  FROM NEW.entry_date)::int " +
-                "      AND month = EXTRACT(MONTH FROM NEW.entry_date)::int " +
-                "      AND status = 1; " +
-                "  IF locked > 0 THEN " +
-                "    RAISE EXCEPTION 'fiscal period %-% is festgeschrieben (locked); no new bookings', " +
-                "      EXTRACT(YEAR FROM NEW.entry_date)::int, EXTRACT(MONTH FROM NEW.entry_date)::int; " +
-                "  END IF; " +
-                "  RETURN NEW; " +
-                "END; $$;");
+                """
+                CREATE FUNCTION journal_entries_period_lock() RETURNS trigger LANGUAGE plpgsql AS $$
+                DECLARE locked int;
+                BEGIN
+                  SELECT COUNT(*) INTO locked FROM fiscal_periods
+                    WHERE tenant_id = NEW.tenant_id
+                      AND year  = EXTRACT(YEAR  FROM NEW.entry_date)::int
+                      AND month = EXTRACT(MONTH FROM NEW.entry_date)::int
+                      AND status = 1;
+                  IF locked > 0 THEN
+                    RAISE EXCEPTION 'fiscal period %-% is festgeschrieben (locked); no new bookings',
+                      EXTRACT(YEAR FROM NEW.entry_date)::int, EXTRACT(MONTH FROM NEW.entry_date)::int;
+                  END IF;
+                  RETURN NEW;
+                END;
+                $$;
+                """);
             migrationBuilder.Sql(
                 "CREATE TRIGGER journal_entries_period_lock BEFORE INSERT ON journal_entries " +
                 "FOR EACH ROW EXECUTE FUNCTION journal_entries_period_lock();");
