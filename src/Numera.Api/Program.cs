@@ -13,6 +13,7 @@ using Numera.Api.Endpoints;
 using Numera.Api.Events;
 using Numera.Api.Jobs;
 using Numera.Api.Services;
+using Numera.Modules.Ledger;
 using Numera.Modules.Ledger.Seed;
 using Numera.Modules.Sales.EInvoice.Inbound;
 using Numera.Modules.Sales.Events;
@@ -58,6 +59,8 @@ builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 // Materializes the selected embedded SKR03/SKR04 chart in the caller's tenant
 // transaction. The request pipeline owns tenant resolution and the RLS GUC.
 builder.Services.AddScoped<ChartSeeder>();
+builder.Services.AddScoped<AccountResolver>();
+builder.Services.AddScoped<PostingEngine>();
 
 // --- Sales finalize services (plan 03-05) ----------------------------------
 // NumberingService claims the race-safe document number inside the finalize
