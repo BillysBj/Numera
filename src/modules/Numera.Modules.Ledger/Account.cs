@@ -25,9 +25,8 @@ public enum AccountType
 /// A single account in the tenant's chart of accounts (Kontenrahmen).
 /// </summary>
 /// <remarks>
-/// Part of the <b>inert</b> ledger schema present from day one (ARCHITECTURE.md:
-/// "ledger present from day one, even if inert"). This entity is a stable schema
-/// seam only — there is no posting or numbering logic in Phase 1.
+/// Mutable master data for the tenant's SKR03 or SKR04 chart. Posted journal
+/// entries and posting legs remain immutable independently of later account edits.
 /// </remarks>
 public sealed class Account : ITenantEntity
 {
@@ -39,8 +38,7 @@ public sealed class Account : ITenantEntity
 
     /// <summary>
     /// Account number, SKR03/SKR04-ready. Modelled as a plain string column, NOT a
-    /// Postgres <c>SEQUENCE</c>/<c>SERIAL</c> — gapless legal numbering is Phase 3
-    /// (RESEARCH.md anti-pattern: never lean on DB sequences for legal numbers).
+    /// Postgres <c>SEQUENCE</c>/<c>SERIAL</c>; legal numbering never uses DB sequences.
     /// </summary>
     public required string Number { get; set; }
 
@@ -49,4 +47,22 @@ public sealed class Account : ITenantEntity
 
     /// <summary>The account's double-entry classification.</summary>
     public AccountType Type { get; set; }
+
+    /// <summary>The chart of accounts this account belongs to.</summary>
+    public ChartVariant ChartVariant { get; set; } = ChartVariant.Skr03;
+
+    /// <summary>The DATEV BU tax key implied by this account, when applicable.</summary>
+    public Steuerschluessel? Steuerschluessel { get; set; }
+
+    /// <summary>Whether the account automatically derives VAT postings.</summary>
+    public bool IsAutomatikkonto { get; set; }
+
+    /// <summary>Optional Umsatzsteuer-Voranmeldung Kennziffer.</summary>
+    public string? UstvaKennziffer { get; set; }
+
+    /// <summary>Whether the account is available for new postings.</summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>Optional parent account number used to group the chart.</summary>
+    public string? ParentNumber { get; set; }
 }

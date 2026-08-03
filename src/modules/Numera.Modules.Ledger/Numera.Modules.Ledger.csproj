@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
   </ItemGroup>
 
 </Project>

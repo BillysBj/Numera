@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 
 using Numera.Platform.Db;
+using Numera.Platform.Money;
 
 namespace Numera.Modules.Ledger;
 
@@ -19,15 +20,13 @@ public enum PostingDirection
 /// </summary>
 /// <remarks>
 /// <para>
-/// Inert Phase 1 schema. The core double-entry invariant — <b>the postings of a
-/// single <see cref="JournalEntry"/> must sum to zero</b> (total debits equal total
-/// credits, per matching VAT/currency scope) — is a documented target only. No
-/// runtime balancing logic exists in Phase 1; invoicing will produce balanced
-/// posting sets via <see cref="IPostingSource"/> in a later milestone.
+/// Posting rows are strictly append-only. A deferred database constraint enforces
+/// that the postings of a single <see cref="JournalEntry"/> have equal total debits
+/// and credits before the transaction can commit.
 /// </para>
 /// <para>
 /// <see cref="Amount"/> is <see cref="decimal"/> mapped to Postgres
-/// <c>numeric(19,4)</c> — money is never <c>float</c>/<c>double</c>.
+/// <c>numeric(19,4)</c>; money is never <c>float</c>/<c>double</c>.
 /// </para>
 /// </remarks>
 public sealed class Posting : ITenantEntity
@@ -51,4 +50,14 @@ public sealed class Posting : ITenantEntity
 
     /// <summary>Whether this leg is a debit (Soll) or credit (Haben).</summary>
     public PostingDirection Direction { get; set; }
+
+    /// <summary>The DATEV BU tax key captured when this leg was posted.</summary>
+    public Steuerschluessel? Steuerschluessel { get; set; }
+
+    /// <summary>The VAT rate captured when this leg was posted.</summary>
+    [Column(TypeName = "numeric(5,2)")]
+    public decimal? TaxRatePercent { get; set; }
+
+    /// <summary>The EN 16931 VAT category captured when this leg was posted.</summary>
+    public TaxCategory? TaxCategory { get; set; }
 }

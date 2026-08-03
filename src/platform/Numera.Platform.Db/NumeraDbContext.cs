@@ -104,14 +104,63 @@ public class NumeraDbContext : DbContext
             ["Account"] = "accounts",
             ["JournalEntry"] = "journal_entries",
             ["Posting"] = "postings",
+            ["LedgerSettings"] = "ledger_settings",
+            ["FiscalPeriod"] = "fiscal_periods",
         };
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             if (ledgerTables.TryGetValue(entityType.ClrType.Name, out var table))
             {
-                modelBuilder.Entity(entityType.ClrType).ToTable(table);
+                var builder = modelBuilder.Entity(entityType.ClrType);
+                builder.ToTable(table);
+
+                switch (entityType.ClrType.Name)
+                {
+                    case "Account":
+                        var chartVariant = entityType.FindProperty("ChartVariant")!;
+                        builder.Property("ChartVariant")
+                            .HasDefaultValue(Enum.ToObject(chartVariant.ClrType, 3));
+                        builder.Property("IsActive").HasDefaultValue(true);
+                        break;
+                    case "JournalEntry":
+                        builder.HasIndex(nameof(ITenantEntity.TenantId), "EntryDate")
+                            .HasDatabaseName("ix_journal_entries_tenant_id_entry_date");
+                        break;
+                    case "Posting":
+                        builder.HasIndex("AccountId")
+                            .HasDatabaseName("ix_postings_account_id");
+                        break;
+                    case "LedgerSettings":
+                        builder.HasIndex(nameof(ITenantEntity.TenantId))
+                            .IsUnique()
+                            .HasDatabaseName("ux_ledger_settings_tenant_id");
+                        break;
+                    case "FiscalPeriod":
+                        builder.HasIndex(nameof(ITenantEntity.TenantId), "Year", "Month")
+                            .IsUnique()
+                            .HasDatabaseName("ux_fiscal_periods_tenant_id_year_month");
+                        break;
+                }
             }
+        }
+
+        var journalEntry = modelBuilder.Model.GetEntityTypes()
+            .SingleOrDefault(e => e.ClrType.Name == "JournalEntry");
+        var fiscalPeriod = modelBuilder.Model.GetEntityTypes()
+            .SingleOrDefault(e => e.ClrType.Name == "FiscalPeriod");
+
+        if (journalEntry is not null && fiscalPeriod is not null)
+        {
+            var journalBuilder = modelBuilder.Entity(journalEntry.ClrType);
+            journalBuilder.HasOne(fiscalPeriod.ClrType, null)
+                .WithMany()
+                .HasForeignKey("PeriodId")
+                .OnDelete(DeleteBehavior.Restrict);
+            journalBuilder.HasOne(journalEntry.ClrType, null)
+                .WithMany()
+                .HasForeignKey("ReversesEntryId")
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 
