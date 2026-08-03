@@ -61,6 +61,7 @@ builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 builder.Services.AddScoped<ChartSeeder>();
 builder.Services.AddScoped<AccountResolver>();
 builder.Services.AddScoped<PostingEngine>();
+builder.Services.AddScoped<FestschreibungService>();
 
 // --- Sales finalize services (plan 03-05) ----------------------------------
 // NumberingService claims the race-safe document number inside the finalize
@@ -178,6 +179,7 @@ app.MapCustomerFileEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapLedgerSetupEndpoints();
+app.MapLedgerEndpoints();
 app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
