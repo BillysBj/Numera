@@ -9,10 +9,12 @@ See: .planning/PROJECT.md (updated 2026-08-02)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 10 (Buchhaltungs-Fundament) — NEXT, noch nicht geplant.
 Plan: —
-Status: Milestone v2.0 gestartet — Requirements werden definiert (Research → Requirements → Roadmap)
-Last activity: 2026-08-02 — Milestone v2.0 gestartet; PROJECT.md + STATE.md aktualisiert. v1.0 vollständig ausgeliefert + getaggt.
+Status: Milestone v2.0 aufgesetzt — Research + Requirements + Roadmap fertig & committet. Bereit für `/gsd:plan-phase 10`.
+Last activity: 2026-08-02 — v2.0 Roadmap erstellt (5 Phasen 10–14, 29 Requirements ACCT/BANK/BELEG/BILL, 100% gemappt).
+
+**v2.0 Roadmap (Phasen 10–14):** 10 Buchhaltungs-Fundament (SKR03/04 + doppische unveränderbare Engine + Auto-Buchung aus Rechnung/Zahlung + Journal/Konto-Sichten + Periodensperre; ACCT-01..06,09) → 11 Berichte & USt-VA (EÜR + USt-Voranmeldung Kennziffern + ELSTER-XML/Druck-Export, kein ERiC; ACCT-07,08) → 12 Belege & Ausgaben (Scan/OCR + Buchungsvorschlag + strukturierte E-Rechnungs-Lesung + GoBD-WORM-Archiv + Lieferanten-Match + E-Mail-Eingang; BELEG-01..07) → 13 Banking (finAPI Sync + Auto-Abgleich mit offenen Posten + Buchung + manuell/Split + CSV/CAMT; BANK-01..06) → 14 Monetarisierung Stripe (Checkout + Webhook-Entitlement → tenants.plan-Gate + Portal-Self-Service + Trial + Abo-Mahnwesen + USt-korrekte Eigen-Abrechnung; BILL-01..07 — unabhängig, parallelisierbar). RESEARCH-Kernentscheide (in .planning/research/): finAPI (keine eigene PSD2-Lizenz via RegShield; kein .NET-SDK → Client aus OpenAPI; NICHT GoCardless/Nordigen [geschlossen]); Buchhaltung = Ledger-Modul erweitern (keine neue Lib), SKR selbst seeden; Belege OCR = Azure Document Intelligence EU-Region hinter IReceiptExtractor-Port, nie ohne Prüfung buchen; Stripe.net, Webhooks = Quelle der Wahrheit; SCOPE-FALLEN vermeiden: KEINE TSE/Registrierkasse (Kassenbuch ≠ POS), KEIN ERiC-Direktversand (calc+export), keine eigene PSD2-Lizenz, keine Kartenformulare. Build-Reihenfolge: Buchhaltung-Engine zuerst (Fundament), finAPI-Onboarding wegen Lizenz-/Vertragsvorlauf SOFORT parallel anstoßen.
 
 Prior — Milestone v1.0 (SHIPPED 2026-08-02): All 9 phases shipped + verified; archived to milestones/v1.0-*, git tag v1.0.
 

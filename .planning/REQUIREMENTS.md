@@ -107,15 +107,16 @@ Wird bei der Roadmap-Erstellung befüllt (jede Anforderung → genau eine Phase,
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ACCT-01 … ACCT-09 | TBD (Phase 10+) | Pending |
-| BANK-01 … BANK-06 | TBD | Pending |
-| BELEG-01 … BELEG-07 | TBD | Pending |
-| BILL-01 … BILL-07 | TBD | Pending |
+| ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-09 | Phase 10 — Buchhaltungs-Fundament | Pending |
+| ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | Pending |
+| BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | Pending |
+| BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | Pending |
+| BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07 | Phase 14 — Monetarisierung (Stripe) | Pending |
 
 **Coverage:**
 - v2.0 requirements: 29 total (ACCT 9, BANK 6, BELEG 7, BILL 7)
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 29 ⚠️ (until roadmap)
+- Mapped to phases: 29 (Phasen 10–14)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-02 for milestone v2.0*
