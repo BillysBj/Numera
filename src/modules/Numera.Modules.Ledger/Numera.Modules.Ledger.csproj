@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Seed\*.json" />
+  </ItemGroup>
+
 </Project>

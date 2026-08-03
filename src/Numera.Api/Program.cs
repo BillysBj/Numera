@@ -13,6 +13,7 @@ using Numera.Api.Endpoints;
 using Numera.Api.Events;
 using Numera.Api.Jobs;
 using Numera.Api.Services;
+using Numera.Modules.Ledger.Seed;
 using Numera.Modules.Sales.EInvoice.Inbound;
 using Numera.Modules.Sales.Events;
 using Numera.Modules.Sales.Numbering;
@@ -52,6 +53,11 @@ builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(conn
 // --- Audit + entitlements --------------------------------------------------
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
+
+// --- Ledger setup ---------------------------------------------------------
+// Materializes the selected embedded SKR03/SKR04 chart in the caller's tenant
+// transaction. The request pipeline owns tenant resolution and the RLS GUC.
+builder.Services.AddScoped<ChartSeeder>();
 
 // --- Sales finalize services (plan 03-05) ----------------------------------
 // NumberingService claims the race-safe document number inside the finalize
@@ -168,6 +174,7 @@ app.MapPartnerTaskEndpoints();
 app.MapCustomerFileEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
+app.MapLedgerSetupEndpoints();
 app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();

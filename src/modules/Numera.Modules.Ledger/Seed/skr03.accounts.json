@@ -1,0 +1,106 @@
+[
+  {
+    "number": "8400",
+    "name": "Erlöse 19 % USt",
+    "type": "Revenue",
+    "isAutomatikkonto": true,
+    "steuerschluessel": 3,
+    "ustvaKennziffer": "81"
+  },
+  {
+    "number": "8300",
+    "name": "Erlöse 7 % USt",
+    "type": "Revenue",
+    "isAutomatikkonto": true,
+    "steuerschluessel": 2,
+    "ustvaKennziffer": "86"
+  },
+  {
+    "number": "8200",
+    "name": "Steuerfreie Erlöse",
+    "type": "Revenue",
+    "isAutomatikkonto": false,
+    "steuerschluessel": 0,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1400",
+    "name": "Forderungen aus Lieferungen und Leistungen",
+    "type": "Asset",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1600",
+    "name": "Verbindlichkeiten aus Lieferungen und Leistungen",
+    "type": "Liability",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1200",
+    "name": "Bank",
+    "type": "Asset",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1000",
+    "name": "Kasse",
+    "type": "Asset",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1776",
+    "name": "Umsatzsteuer 19 %",
+    "type": "Liability",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1771",
+    "name": "Umsatzsteuer 7 %",
+    "type": "Liability",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "1576",
+    "name": "Abziehbare Vorsteuer 19 %",
+    "type": "Asset",
+    "isAutomatikkonto": false,
+    "steuerschluessel": 9,
+    "ustvaKennziffer": "66"
+  },
+  {
+    "number": "1571",
+    "name": "Abziehbare Vorsteuer 7 %",
+    "type": "Asset",
+    "isAutomatikkonto": false,
+    "steuerschluessel": 8,
+    "ustvaKennziffer": "66"
+  },
+  {
+    "number": "3400",
+    "name": "Wareneingang mit 19 % Vorsteuer",
+    "type": "Expense",
+    "isAutomatikkonto": true,
+    "steuerschluessel": 9,
+    "ustvaKennziffer": "66"
+  },
+  {
+    "number": "4980",
+    "name": "Sonstige betriebliche Aufwendungen",
+    "type": "Expense",
+    "isAutomatikkonto": false,
+    "steuerschluessel": 9,
+    "ustvaKennziffer": "66"
+  }
+]
