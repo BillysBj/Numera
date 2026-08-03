@@ -5,6 +5,7 @@ using FluentValidation;
 using Hangfire;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Npgsql;
 
@@ -13,6 +14,7 @@ using Numera.Api.Jobs;
 using Numera.Api.Services;
 using Numera.Api.Validators;
 using Numera.Modules.Crm;
+using Numera.Modules.Ledger;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.Email;
@@ -633,6 +635,8 @@ public static class SalesDocumentEndpoints
             ICurrentTenant tenant,
             EInvoiceService einvoice,
             IEntitlementService entitlements,
+            PostingEngine postingEngine,
+            AccountResolver accountResolver,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -727,7 +731,8 @@ public static class SalesDocumentEndpoints
             try
             {
                 await FinalizeCoreAsync(
-                    doc, profile!, partner, db, numbering, audit, tenantId,
+                    doc, profile!, partner, db, numbering, audit,
+                    postingEngine, accountResolver, loggerFactory, tenantId,
                     "sales_document.finalized", ct).ConfigureAwait(false);
                 await tx.CommitAsync(ct).ConfigureAwait(false);
             }
@@ -774,6 +779,9 @@ public static class SalesDocumentEndpoints
             IDomainEventPublisher publisher,
             IAuditWriter audit,
             ICurrentTenant tenant,
+            PostingEngine postingEngine,
+            AccountResolver accountResolver,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             // 1. Load the original TRACKED with its lines. It MUST be a finalized Rechnung
@@ -865,7 +873,8 @@ public static class SalesDocumentEndpoints
                 // 4. Finalize the Storno via the SAME core (own Storno-series number, negative
                 //    breakdown + totals, snapshots). Storno is not a Rechnung → NO open item.
                 await FinalizeCoreAsync(
-                    storno, profile!, partner, db, numbering, audit, tenantId,
+                    storno, profile!, partner, db, numbering, audit,
+                    postingEngine, accountResolver, loggerFactory, tenantId,
                     "sales_document.storno", ct).ConfigureAwait(false);
 
                 // 5. Mutate the ORIGINAL using ONLY whitelisted lifecycle columns (the DB
@@ -887,6 +896,10 @@ public static class SalesDocumentEndpoints
 
                 await audit.RecordAsync(
                     new SalesDocumentAuditEvent("sales_document.cancelled", original.Id, origBefore, Snapshot(original)), ct)
+                    .ConfigureAwait(false);
+
+                await PostStornoReversalAsync(
+                    original, storno, db, postingEngine, loggerFactory, tenantId, ct)
                     .ConfigureAwait(false);
 
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -1124,6 +1137,21 @@ public static class SalesDocumentEndpoints
     // written while status is still Draft (first SaveChanges) so the child immutability trigger
     // permits the child INSERTs; the status flip is a SECOND SaveChanges (OLD.status = 0 passes
     // the parent trigger). Audit is recorded before the final SaveChanges (atomic).
+    internal static Task FinalizeCoreAsync(
+        SalesDocument doc,
+        CompanyProfile profile,
+        BusinessPartner? partner,
+        NumeraDbContext db,
+        NumberingService numbering,
+        IAuditWriter audit,
+        Guid tenantId,
+        string auditAction,
+        CancellationToken ct) =>
+        FinalizeCoreAsync(
+            doc, profile, partner, db, numbering, audit,
+            new PostingEngine(db), new AccountResolver(db), NullLoggerFactory.Instance,
+            tenantId, auditAction, ct);
+
     internal static async Task FinalizeCoreAsync(
         SalesDocument doc,
         CompanyProfile profile,
@@ -1131,6 +1159,9 @@ public static class SalesDocumentEndpoints
         NumeraDbContext db,
         NumberingService numbering,
         IAuditWriter audit,
+        PostingEngine postingEngine,
+        AccountResolver accountResolver,
+        ILoggerFactory loggerFactory,
         Guid tenantId,
         string auditAction,
         CancellationToken ct)
@@ -1146,9 +1177,8 @@ public static class SalesDocumentEndpoints
         var vatInputs = doc.Lines
             .Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount));
         var rows = VatCalculationService.Calculate(vatInputs, profile.IsKleinunternehmer);
-        foreach (var row in rows)
-        {
-            db.Add(new SalesDocumentTaxBreakdown
+        var breakdownRows = rows
+            .Select(row => new SalesDocumentTaxBreakdown
             {
                 TenantId = tenantId,
                 DocumentId = doc.Id,      // FK already set — the navigation is not needed to force Added
@@ -1158,8 +1188,9 @@ public static class SalesDocumentEndpoints
                 TaxAmount = row.TaxAmount,
                 ExemptionReasonCode = row.ExemptionCode,
                 ExemptionReasonText = row.ExemptionText,
-            });
-        }
+            })
+            .ToList();
+        db.AddRange(breakdownRows);
 
         doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
         doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
@@ -1220,6 +1251,13 @@ public static class SalesDocumentEndpoints
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         // Flip status LAST — the parent trigger allows this UPDATE because OLD.status = 0.
+        if (IsReceivableInvoice(doc.DocumentType))
+        {
+            await PostInvoiceAsync(
+                doc, partner, breakdownRows, db, postingEngine, accountResolver,
+                loggerFactory, tenantId, ct).ConfigureAwait(false);
+        }
+
         doc.Status = DocumentStatus.Finalized;
         doc.FinalizedAt = DateTimeOffset.UtcNow;
 
@@ -1231,6 +1269,171 @@ public static class SalesDocumentEndpoints
     }
 
     // A collision on the partial unique (tenant, doc_type, document_number) index → clean 409.
+    private static async Task PostInvoiceAsync(
+        SalesDocument doc,
+        BusinessPartner? partner,
+        IReadOnlyList<SalesDocumentTaxBreakdown> breakdownRows,
+        NumeraDbContext db,
+        PostingEngine postingEngine,
+        AccountResolver accountResolver,
+        ILoggerFactory loggerFactory,
+        Guid tenantId,
+        CancellationToken ct)
+    {
+        var sourceRef = doc.Id.ToString();
+        if (await db.Set<JournalEntry>()
+                .AnyAsync(
+                    entry => entry.SourceType == LedgerSourceType.Invoice && entry.SourceRef == sourceRef,
+                    ct)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var chartVariant = await TryResolveChartVariant(
+            db, loggerFactory, tenantId, doc.Id, ct).ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            return;
+        }
+
+        var input = new InvoicePostingInput(
+            tenantId,
+            doc.Id,
+            doc.DocumentNumber!,
+            doc.DocumentDate,
+            chartVariant.Value,
+            partner?.DebtorAccount,
+            breakdownRows
+                .Select(row => new InvoicePostingBreakdown(
+                    row.TaxCategory,
+                    row.VatRatePercent,
+                    row.TaxableBase,
+                    row.TaxAmount))
+                .ToList(),
+            doc.TotalGross,
+            doc.IsKleinunternehmer,
+            doc.ReverseCharge);
+
+        var header = new JournalEntry
+        {
+            TenantId = tenantId,
+            EntryDate = doc.DocumentDate,
+            SourceRef = sourceRef,
+            SourceType = LedgerSourceType.Invoice,
+            Description = $"{doc.DocumentType} {doc.DocumentNumber}",
+            PostingType = PostingType.Normal,
+        };
+
+        await postingEngine.PostAsync(
+            new InvoicePostingSource(input, accountResolver), header, ct).ConfigureAwait(false);
+    }
+
+    internal static async Task PostStornoReversalAsync(
+        SalesDocument original,
+        SalesDocument storno,
+        NumeraDbContext db,
+        PostingEngine postingEngine,
+        ILoggerFactory loggerFactory,
+        Guid tenantId,
+        CancellationToken ct)
+    {
+        var stornoSourceRef = storno.Id.ToString();
+        if (await db.Set<JournalEntry>()
+                .AnyAsync(
+                    entry => entry.SourceType == LedgerSourceType.Invoice
+                        && entry.SourceRef == stornoSourceRef,
+                    ct)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        if (await TryResolveChartVariant(
+                db, loggerFactory, tenantId, storno.Id, ct).ConfigureAwait(false) is null)
+        {
+            return;
+        }
+
+        var originalSourceRef = original.Id.ToString();
+        var originalEntry = await db.Set<JournalEntry>()
+            .AsNoTracking()
+            .Include(entry => entry.Postings)
+            .SingleOrDefaultAsync(
+                entry => entry.SourceType == LedgerSourceType.Invoice
+                    && entry.SourceRef == originalSourceRef,
+                ct)
+            .ConfigureAwait(false);
+        if (originalEntry is null)
+        {
+            loggerFactory.CreateLogger("LedgerInvoicePosting").LogWarning(
+                "Skipping ledger reversal for Storno {StornoDocumentId}: original document "
+                + "{OriginalDocumentId} has no invoice journal entry.",
+                storno.Id,
+                original.Id);
+            return;
+        }
+
+        var header = new JournalEntry
+        {
+            TenantId = tenantId,
+            EntryDate = storno.DocumentDate,
+            SourceRef = stornoSourceRef,
+            SourceType = LedgerSourceType.Invoice,
+            Description = $"Storno {storno.DocumentNumber} zu {original.DocumentNumber}",
+            PostingType = PostingType.Storno,
+            ReversesEntryId = originalEntry.Id,
+        };
+
+        await postingEngine.PostAsync(
+            new ReversalPostingSource(originalEntry.Postings, tenantId), header, ct)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<ChartVariant?> TryResolveChartVariant(
+        NumeraDbContext db,
+        ILoggerFactory loggerFactory,
+        Guid tenantId,
+        Guid documentId,
+        CancellationToken ct)
+    {
+        var chartVariant = await db.Set<LedgerSettings>()
+            .AsNoTracking()
+            .Where(settings => settings.TenantId == tenantId)
+            .Select(settings => (ChartVariant?)settings.ChartVariant)
+            .SingleOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            loggerFactory.CreateLogger("LedgerInvoicePosting").LogWarning(
+                "Skipping ledger booking for document {DocumentId}: tenant {TenantId} has no ledger settings.",
+                documentId,
+                tenantId);
+        }
+
+        return chartVariant;
+    }
+
+    private sealed class ReversalPostingSource(
+        IEnumerable<Posting> originalPostings,
+        Guid tenantId) : IPostingSource
+    {
+        public IReadOnlyList<Posting> BuildPostings() => originalPostings
+            .Select(posting => new Posting
+            {
+                TenantId = tenantId,
+                AccountId = posting.AccountId,
+                Amount = posting.Amount,
+                Direction = posting.Direction == PostingDirection.Debit
+                    ? PostingDirection.Credit
+                    : PostingDirection.Debit,
+                Steuerschluessel = posting.Steuerschluessel,
+                TaxRatePercent = posting.TaxRatePercent,
+                TaxCategory = posting.TaxCategory,
+            })
+            .ToList();
+    }
+
     private static IResult DuplicateNumberConflict() =>
         Results.Problem(
             title: "Document number collision",
