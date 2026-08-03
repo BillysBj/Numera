@@ -1,182 +1,356 @@
 # Pitfalls Research
 
-**Domain:** Multi-tenant German accounting & e-invoicing SaaS (Lexware Office / sevDesk competitor)
-**Researched:** 2026-07-09
-**Confidence:** HIGH for legal/e-invoicing facts (EU Commission, BMF, EBA sources); MEDIUM for product/market wisdom (community + competitor observation)
+**Domain:** German accounting/invoicing SaaS — v2.0 new domains (Buchhaltung, Banking, Belege/OCR, Monetarisierung) added to an existing GoBD/DSGVO multi-tenant .NET 10 + Postgres RLS system
+**Researched:** 2026-08-02
+**Confidence:** HIGH for German accounting/GoBD rules and integration with the existing v1 (well-established law + known codebase); MEDIUM for finAPI/Stripe operational specifics (verify current API behaviour during the owning phase)
 
-> Scope note: This project is legally regulated software. Unlike a generic SaaS, several pitfalls here are not "bugs" — they are **liability**. A wrong VAT calculation, a mutable finalized invoice, or a tenant data leak in accounting software has tax-law and DSGVO consequences for *your customers*, which flows back to you. Treat the "Critical Pitfalls" below as gating requirements, not backlog items.
+> Phase names below refer to *suggested* v2.0 phases (the v2 roadmap is not yet cut). Map them to real phase numbers when the roadmap is created. Suggested domain/phase buckets:
+> **B1 Buchhaltungs-Fundament** (Kontenrahmen SKR03/04, Buchungslogik, Journal, Festschreibung) · **B2 Kassenbuch** · **B3 Auswertungen** (EÜR/GuV/BWA, USt-VA) · **BK1 Banking-Anbindung** (finAPI, Umsatzimport) · **BK2 Zahlungsabgleich** · **BK3 SEPA-Überweisung (PIS)** · **BE1 Belegscan/OCR** · **BE2 E-Mail-Intake** · **BE3 GoBD-Archiv** · **M1 Stripe-Abrechnung**.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Treating a PDF (even a nice one) as an "e-invoice"
+### Pitfall 1: Unbalanced postings / Soll≠Haben slips into the journal
 
 **What goes wrong:**
-Teams build a beautiful PDF renderer, call it "e-invoicing," and ship. But since 1 Jan 2025 a German B2B e-invoice (*E-Rechnung*) is legally a **structured, machine-readable format** (XRechnung XML, or ZUGFeRD/Factur-X where the XML is the binding part). A plain PDF — even a PDF/A — is a *sonstige Rechnung*, not an e-invoice. The structured XML is the legally binding artifact; the PDF is only a human-readable convenience.
+A booking (Buchungssatz) is persisted where the sum of debits (Soll) ≠ sum of credits (Haben), or a multi-line split booking rounds each line independently and the total drifts by a cent. Every downstream report (GuV, BWA, USt-VA, Summen- und Saldenliste) is then silently wrong, and a Bilanz will not close.
 
 **Why it happens:**
-Invoicing intuition says "invoice = the document the human reads." EN 16931 inverts this: the XML is primary, the visual is secondary. Teams also conflate "we email a PDF" with "we do e-invoicing."
+Teams model a booking as a flat row (one debit account + one credit account + amount) and only later discover split bookings (one gross line → net + multiple tax lines, or one payment → several open items). Balance is then enforced per-UI-form instead of as a hard invariant in the domain/DB.
 
 **How to avoid:**
-- Architect the invoice as **data first** (an EN 16931 semantic model), render both XML and PDF from that single source of truth. Never hand-build the XML from a rendered PDF.
-- For ZUGFeRD/Factur-X: the embedded XML and the PDF's visible figures **must agree exactly** — a mismatch (e.g., PDF shows 100.00, XML says 99.99 due to rounding) is a documented audit red flag and a common validator finding.
-- Validate every generated invoice against the **KoSIT validator** (the official German EN 16931 / XRechnung validator) in CI and at runtime before the invoice can be finalized.
+- Model a booking as a **header + N lines**, each line carrying a signed amount or an explicit Soll/Haben side. Enforce `SUM(soll) = SUM(haben)` as a domain invariant *and* a DB-level check (deferrable constraint or a trigger over the lines) — never trust the UI.
+- Store all amounts as `decimal` (reuse v1's money type). Compute tax on the document total, then derive the balancing net; never round each split line independently and hope they add up. Apply one documented rounding rule and put the rounding remainder on a defined line.
+- Golden-file tests: a set of canonical bookings (gross with 19%, 7%, §13b reverse-charge, i.g. Erwerb, split payment across 3 open items) that must balance to the cent.
 
 **Warning signs:**
-"We generate the PDF and then extract the XML from it." Two code paths that compute totals independently. No KoSIT validation step.
+GuV total ≠ Summen-/Saldenliste; a "Differenzkonto"/"Verrechnungskonto" slowly accumulates cents; USt-VA Zahllast off by small amounts.
 
-**Phase to address:** E-invoicing core phase (v1). This is foundational — the data model must be EN 16931-shaped from day one.
+**Phase to address:** B1 Buchhaltungs-Fundament (must be an invariant from the first booking written).
 
 ---
 
-### Pitfall 2: Money as floating-point / inconsistent rounding (per-line vs per-document)
+### Pitfall 2: Editing/deleting a posted booking — violating GoBD immutability (Unveränderbarkeit)
 
 **What goes wrong:**
-Using `float`/`double` for money, or rounding inconsistently, causes cent-level drift that EN 16931 validation rejects outright. The killer rules:
-- **BR-CO-10:** sum of line net amounts must equal the document line-total.
-- **BR-CO-15:** grand total = total net + total tax.
-- **BR-S-08 / per-category:** each VAT-category tax amount (BT-117) must equal taxable base (BT-116) × rate (BT-119)/100, **rounded to 2 decimals** — and the document total VAT must equal the *sum of the rounded per-category amounts*, not a re-rounded grand total.
-
-If you round per line but total per document (or vice versa), or truncate instead of round-half-up, these rules fire and the invoice is rejected by the recipient / KoSIT.
+A "festgeschriebene" (recorded/finalised) booking is edited or hard-deleted in place. This breaks GoBD (Unveränderbarkeit, Nachvollziehbarkeit) exactly like editing a finalised invoice would — and it is the single most common way German accounting software becomes non-compliant. The tax office can reject the whole bookkeeping (Verwerfung der Buchführung) and estimate (Schätzung).
 
 **Why it happens:**
-Float is the language default. Rounding order feels like an implementation detail. Developers "round at the end" intuitively, but EN 16931 mandates rounding each subtotal *first*, then summing.
+Developers reuse ordinary CRUD/EF update semantics. In accounting there is a legal line: a booking may be freely edited only while it is a *draft/Stapel (unfestgeschrieben)*; once *festgeschrieben* it is immutable and corrections happen only via a **Stornobuchung/Generalumkehr** (reversal) plus a new correct booking.
 
 **How to avoid:**
-- Use **integer minor units (cents)** or a `Decimal`/`BigDecimal` type end-to-end. Never `float` for money. (Postgres `numeric`, not `float8`.)
-- Codify one rounding policy: round each VAT category's tax to 2 decimals, then sum categories for the document VAT total. Round-half-up (kaufmännisch), matching the EN 16931 expectation.
-- Write **property-based / golden-file tests** that feed known invoices through generation and assert against KoSIT-validated reference XML. Include nasty cases: 7% + 19% mixed, discounts (BT-107 allowances), reverse-charge €0 tax lines.
+- Two-state model: **Stapelbuchung (draft, editable/deletable)** vs **festgeschriebene Buchung (immutable)**. After Festschreibung, block UPDATE/DELETE at the domain layer and with Postgres (revoke row updates via RLS/trigger; the trigger raises on any change to a festgeschrieben row). Reuse the v1 GoBD-immutability pattern already proven on the Belegkette.
+- Corrections = new reversal booking (Storno/Generalumkehr) that references the original, never mutation. Keep the append-only audit log (reuse v1's unveränderbares Audit-Log).
+- Every booking carries an immutable, gap-free journal number (fortlaufende Belegnummer/Journalnummer) assigned at Festschreibung, using the v1 race-safe numbering pattern.
 
 **Warning signs:**
-`float` in any money column or DTO. Totals computed in the UI/JS layer. BR-CO-10 / BR-CO-15 / BR-S-* rejections. "It's off by one cent sometimes."
+An `UPDATE ledger_entry` appears anywhere outside draft state; "delete booking" button on a posted item; audit log has fewer rows than corrections made.
 
-**Phase to address:** Foundational data-model phase, before invoicing. Retrofitting money types is a full-schema migration.
+**Phase to address:** B1 Buchhaltungs-Fundament (Festschreibung + reversal model is foundational; retrofitting is a rewrite).
 
 ---
 
-### Pitfall 3: Editing finalized invoices (GoBD immutability violation)
+### Pitfall 3: Period locks / Festschreibung done too weakly (or too late)
 
 **What goes wrong:**
-A finalized/sent invoice is edited in place — corrected typo, changed amount, re-issued under the same record. This violates GoBD *Unveränderbarkeit* (immutability): booked/issued documents must not be silently alterable. In accounting software this is not a UX preference; it makes the customer's books non-GoBD-conform and can invalidate them in an audit (*Betriebsprüfung*).
+Bookings can still be added to or changed in a period that was already reported to the Finanzamt (USt-VA submitted). A late booking into a closed period changes the VAT that was already declared → the declaration is now wrong and must be corrected (berichtigte Anmeldung), or worse, goes undetected.
 
 **Why it happens:**
-CRUD instinct — an invoice is "just a row you can UPDATE." Draft and finalized states aren't modeled distinctly. No concept of a correction document (*Korrekturrechnung* / *Stornorechnung*).
+Festschreibung is treated as a per-booking flag only, with no concept of a **closed accounting period (Voranmeldungszeitraum / Wirtschaftsjahr)**. Or Festschreibung is deferred "until the user clicks export", leaving a long window of mutable history.
 
 **How to avoid:**
-- Model an explicit lifecycle: **Draft (fully mutable) → Finalized (immutable)**. Finalization is a one-way gate that assigns the invoice number and freezes content.
-- Corrections after finalization are **new documents** (cancellation invoice + new invoice, or a credit note), never in-place edits. Keep an immutable audit trail (append-only history) of state changes.
-- Enforce immutability at the **database layer** (append-only, or DB triggers / row-versioning), not just in app code — GoBD cares about the actual system behavior, and app-layer guards get bypassed.
+- Two levels: (1) per-booking Festschreibung, (2) **period close** (Zeitraum-Sperre) that hard-blocks new/changed bookings with a `buchungsdatum` inside a locked period. A booking into a locked period must be rejected or forced into the next open period with an explicit user decision.
+- Lock the period automatically when its USt-VA is generated/exported; require an explicit "Berichtigung" flow to touch a locked period (creates a correcting declaration, never silent).
+- GoBD expects Festschreibung "zeitnah" — at the latest by the USt-VA deadline of the following month. Prompt/auto-festschreiben rather than leaving drafts open for months.
 
 **Warning signs:**
-An `UPDATE invoices SET amount=…` path reachable after finalization. No `status` distinction between draft and issued. Delete buttons on issued invoices. No cancellation-invoice concept.
+`buchungsdatum` in a period whose USt-VA status = submitted; two different USt-VA totals for the same period without a Berichtigung record.
 
-**Phase to address:** Invoicing core (v1). The state machine must exist before the first invoice is issued.
+**Phase to address:** B3 Auswertungen (period lock tied to USt-VA), foundations in B1.
 
 ---
 
-### Pitfall 4: Multi-tenant data leakage (the existential SaaS bug)
+### Pitfall 4: Wrong SKR03/04 account mapping and misused VAT keys (Steuerschlüssel / Automatikkonten)
 
 **What goes wrong:**
-Tenant A sees / modifies Tenant B's invoices, customers, or bank data. In accounting software this is simultaneously a DSGVO breach (Art. 33 reportable), a trade-secret leak, and a trust-ending event. A single missing `WHERE tenant_id = ?` does it.
+Accounts are mapped incorrectly between SKR03 and SKR04, or a VAT key (Steuerschlüssel) is applied on top of an **Automatikkonto** that already carries a built-in tax rate — producing double VAT or the wrong Kennziffer on the USt-VA. Classic: posting 19% to an account that is a 7% automatic account, or manually adding a tax key to an Automatikkonto (e.g. SKR03 8400) that already implies 19%.
 
 **Why it happens:**
-Tenant scoping is enforced ad hoc in application code, so one forgotten filter — in a new endpoint, a report query, a background job, an admin tool, a cache key — leaks. ORMs and raw SQL bypass app-layer guards.
+SKR03 (Prozessgliederung, account 8400 = Erlöse 19%) and SKR04 (Abschlussgliederung, revenues in the 4000s) are *different numbering schemes*, and many accounts are **Automatikkonten** with an implicit tax rate + implicit USt-VA Kennziffer. Teams model accounts as dumb numbers and bolt VAT on separately, unaware of the automatic behaviour DATEV/Lexware users expect.
 
 **How to avoid:**
-- Enforce isolation at the **database layer with Postgres Row-Level Security (RLS)**, keyed off a session variable (`app.current_tenant`) set per request. App-code filters are defense-in-depth, not the primary control.
-- Ensure **every** table with tenant data has a `tenant_id` and an RLS policy; add a test/lint that fails CI if a tenant table lacks a policy.
-- Watch the leaks RLS *doesn't* automatically cover: cache keys, file/blob storage paths, background jobs, full-text search indexes, exported files, and connection pooling that reuses a session with a stale `SET`. Reset the tenant context explicitly per checkout.
-- Add automated **cross-tenant tests**: authenticate as Tenant A, attempt to read Tenant B's IDs, assert 404/403 for every resource type.
+- Ship **both** SKR03 and SKR04 as seeded, versioned chart-of-accounts data (per-tenant choice, fixed at company setup). Store each account's properties: type (Aktiv/Passiv/Aufwand/Ertrag), whether it is an Automatikkonto, its implicit Steuerschlüssel, and its USt-VA Kennziffer mapping.
+- Model Steuerschlüssel as first-class (e.g. DATEV-style keys plus reverse-charge/§13b and i.g. keys). Validation: reject a manual tax key on an Automatikkonto that already implies one; reject a revenue account posting whose rate contradicts the account.
+- Drive the USt-VA from the **account + Steuerschlüssel**, not from re-deriving VAT at report time. This is the single source of truth DATEV-literate accountants and Steuerberater will audit.
 
 **Warning signs:**
-Tenant filtering only in service/ORM code. IDs that are guessable sequential integers exposed in URLs. "We'll add RLS later." Shared caches keyed without tenant. No cross-tenant test suite.
+VAT appears twice on a booking; a Steuerberater flags "falscher Steuerschlüssel"; the same economic transaction maps to different Kennziffern depending on SKR chosen.
 
-**Phase to address:** Foundational tenancy/auth phase, phase 1. RLS retrofitted onto an existing schema is high-risk and easy to get subtly wrong.
+**Phase to address:** B1 Buchhaltungs-Fundament (chart + Steuerschlüssel are the core data model).
 
 ---
 
-### Pitfall 5: Per-tenant invoice numbering race conditions
+### Pitfall 5: USt-Voranmeldung Kennziffern wrong, or wrong period / Ist- vs Soll-Versteuerung
 
 **What goes wrong:**
-Two invoices get the same number, or a global sequence leaks tenant B's volume to tenant A, or gaps appear that the customer can't explain. Concurrent finalizations under a naive "SELECT MAX(number)+1" produce duplicates under load.
+The USt-VA reports the wrong Kennziffern (e.g. revenue in Kz 81/86, Vorsteuer in Kz 66, §13b in Kz 60/67, i.g. Erwerb in Kz 89/61) or computes the wrong Zahllast (Kz 83). Or — the deeper trap — VAT is recognised in the wrong period because the tenant is on **Ist-Versteuerung** (VAT due when payment received) but the software books it **Soll** (VAT due when invoice issued), or vice-versa. Wrong period = wrong declaration every single month.
 
 **Why it happens:**
-Numbering feels trivial. A global DB sequence is per-database, not per-tenant. `MAX()+1` has a classic read-modify-write race. Teams also over-correct into a **numbering myth** (see below).
+Ist- vs Soll-Versteuerung (§20 vs §16/§13 UStG) is a per-tenant tax setting most developers have never heard of. Under Ist-Versteuerung the *bank/payment date* drives the USt-VA period, not the invoice date — which couples Banking/reconciliation directly into the VAT engine. Kennziffern mapping is fiddly and version-dependent (the ELSTER form changes yearly).
 
 **How to avoid:**
-- Numbering must be **per-tenant** (each tenant has independent series). A single global sequence both collides logically and leaks business volume.
-- Generate the number **atomically at finalization** inside the same transaction, using a per-tenant counter row locked with `SELECT … FOR UPDATE` or an `INSERT … ON CONFLICT` upsert — not `MAX()+1`.
-- **Kill the "gapless" myth:** German law (and case law) requires invoice numbers to be **unique and traceable (*einmalig, nachvollziehbar*)** — it does **not** require a gapless (*lückenlose*) sequence. `fortlaufend` ≠ no gaps. Gaps from cancelled drafts are fine *if the numbering system is documented* (in the *Verfahrensdokumentation*). Do not build brittle gapless-guarantee logic that forces you to reuse numbers (which *is* forbidden) or block on failures.
+- Store **Besteuerungsart (Ist/Soll)** per tenant/company and make it drive which date (Leistungs-/Rechnungsdatum vs Zahlungsdatum) determines the USt-VA period. Under Ist, unpaid open items must NOT yet appear in the USt-VA — only reconciled payments do.
+- Encode the Kennziffern mapping as versioned data keyed by year (the UStVA form is amended annually). Test the calculation against worked examples for 19%, 7%, 0/§19 Kleinunternehmer, §13b reverse-charge, i.g. Lieferung/Erwerb.
+- Dauerfristverlängerung and Sondervorauszahlung (Kz 38/39) exist — model the filing calendar (monthly vs quarterly) per tenant.
+- Produce the official **ELSTER-compatible export** (UStVA XML/ERiC datamodel) so numbers can be re-validated; do not invent your own format. (Direct ERiC transmission is explicitly out of scope per PROJECT.md — calc + export only.)
 
 **Warning signs:**
-`ORDER BY id DESC LIMIT 1` to pick the next number. One sequence for all tenants. Duplicate-number bug reports under concurrency. Effort spent guaranteeing zero gaps.
+A Kleinunternehmer (§19) tenant shows a Zahllast; an Ist-Versteuerung tenant's USt-VA moves when an invoice is issued rather than paid; Kennziffer sums don't reconcile to the booking journal.
 
-**Phase to address:** Invoicing core (v1), same phase as the finalization state machine.
+**Phase to address:** B3 Auswertungen (USt-VA), but Ist/Soll must be a tenant setting from B1 and consumed by BK2 Zahlungsabgleich.
 
 ---
 
-### Pitfall 6: VAT edge cases that produce legally wrong invoices
+### Pitfall 6: EÜR vs GuV vs Bilanz confusion — building the wrong report for the tenant type
 
 **What goes wrong:**
-The happy path (19% domestic) works; the tax-special-cases are wrong. Each of these has a *mandatory legal text/marking* on the invoice and specific EN 16931 encoding:
-- **§13b reverse charge** (*Steuerschuldnerschaft des Leistungsempfängers*): 0% shown, VAT category code `AE`, mandatory note. Getting this wrong shifts tax liability incorrectly.
-- **Innergemeinschaftliche Lieferung** (intra-EU supply): exempt, category `K`, requires valid VAT-ID of recipient + note.
-- **Kleinunternehmer §19**: no VAT shown, category `E`, mandatory note ("*Kein Ausweis von Umsatzsteuer wegen Anwendung der Kleinunternehmerregelung nach §19 UStG*"). Showing VAT here is illegal.
-- **7% vs 19%** mixed carts; reduced-rate eligibility.
+The system offers a GuV/Bilanz to a Freiberufler who files **EÜR (§4(3) EStG cash-basis)**, or an EÜR to a GmbH that is legally required to keep **doppelte Buchführung + Bilanz**. Users get a legally inappropriate report and mis-file; the double-entry engine and the cash-basis EÜR have fundamentally different revenue-recognition timing (accrual vs cash).
 
 **Why it happens:**
-Teams model VAT as a single rate field, not as EN 16931 **VAT category codes** (S/AE/K/E/Z/G/O) each with their own rules and required notes. The special cases only surface with real customers.
+The three are conflated as "the P&L". In reality: EÜR = Einnahmen-Überschuss-Rechnung (cash in/out, for Freiberufler/small businesses under thresholds), GuV = accrual P&L (part of double-entry), Bilanz = balance sheet (mandatory for GmbH/UG/Kaufleute). Bilanzierungspflicht depends on legal form and §141 AO revenue/profit thresholds.
 
 **How to avoid:**
-- Model VAT as **(category code + rate + exemption reason)**, not a bare percentage. Map each business scenario to its EN 16931 category and required BT-fields (BT-120 exemption reason, etc.).
-- Kleinunternehmer is a first-class tenant configuration, not an afterthought — it changes issuing obligations, invoice text, and whether VAT appears at all.
-- Have a tax advisor / *Steuerberater* review the mapping table. This is cheap insurance against a class of legal defects.
+- Store **Gewinnermittlungsart** per tenant (EÜR vs Betriebsvermögensvergleich/Bilanzierung), driven by legal form (Freiberufler/Einzelunternehmen vs GmbH/UG) and thresholds. Gate report availability on it.
+- Even with a single double-entry engine underneath, EÜR needs cash-basis timing and its own official form (Anlage EÜR); GuV/Bilanz need accrual. Don't ship "a P&L" — ship the *right* Gewinnermittlung per tenant.
+- v2.0 target is EÜR/GuV/BWA + USt-VA; a full Bilanz for GmbH/UG is a heavier follow-on — scope explicitly and don't half-build a Bilanz.
 
 **Warning signs:**
-A single `vat_rate` column with no category. No reverse-charge or intra-EU handling. Kleinunternehmer invoices that show a VAT line.
+A GmbH tenant has no balance sheet; a Freiberufler is asked for opening balances (Eröffnungsbilanz) they don't need; BWA numbers don't tie to the chosen Gewinnermittlungsart.
 
-**Phase to address:** Invoicing core (v1) for the common cases; §13b / intra-EU can be a fast-follow but must be scoped explicitly, not "assumed handled."
+**Phase to address:** B3 Auswertungen; tenant `Gewinnermittlungsart`/`Rechtsform` captured in B1.
 
 ---
 
-### Pitfall 7: Claiming "GoBD-zertifiziert" (there is no such certification)
+### Pitfall 7: Non-idempotent bank transaction import → duplicate Umsätze
 
 **What goes wrong:**
-Marketing writes "GoBD-zertifiziert" / "GoBD-certified." **No such certification exists.** GoBD is a set of principles (*Grundsätze*) enforced through proper process and documentation, not by any issuing body. The claim is misleading advertising (*wettbewerbswidrig*, abmahnfähig under UWG) and erodes credibility with informed buyers and accountants.
+The same bank transaction is imported twice (finAPI re-fetch, webhook retry, overlapping date windows, user manual re-sync) and appears as two Umsätze. Reconciliation then double-matches open items, or the Kassenbuch/bank balance doubles. In accounting, duplicated money is a correctness catastrophe.
 
 **Why it happens:**
-Competitors use fuzzy language; teams copy it. "Certified" sounds reassuring.
+Bank transactions often lack a stable unique ID across fetches; teams key on `(date, amount, purpose)` which collides for legitimately identical transactions (e.g. two €9.99 charges same day). finAPI delta imports and webhook re-delivery are assumed to be exactly-once.
 
 **How to avoid:**
-- Use accurate claims: "**GoBD-konform**" / "supports GoBD-compliant bookkeeping" / "we provide a *Verfahrensdokumentation* template." Never "zertifiziert."
-- What actually helps customers: ship a **Verfahrensdokumentation** describing how your system stores/immutabilizes/archives data, since GoBD compliance is the *customer's* obligation and your software is the tool. This is a genuine differentiator done honestly.
+- Persist finAPI's transaction id and store an **idempotency key** per imported transaction; upsert on it. Where the provider id is unstable, build a composite fingerprint but retain a per-import dedup window and mark suspected duplicates for review rather than auto-hiding real duplicates.
+- Make the import job idempotent end-to-end (safe to re-run any window). Track a last-synced cursor per bank connection per tenant.
+- Never let import auto-create bookings; import creates *Umsatz records*, reconciliation proposes bookings, a human/rule confirms.
 
 **Warning signs:**
-The word "zertifiziert"/"certified" next to GoBD anywhere in copy. No Verfahrensdokumentation artifact for customers.
+Bank balance in Numera drifts from the real bank balance; two Umsätze with identical provider id; an open item matched twice.
 
-**Phase to address:** Any phase touching marketing/legal copy; the Verfahrensdokumentation artifact belongs with the GoBD-archive phase.
+**Phase to address:** BK1 Banking-Anbindung (import idempotency); BK2 for match idempotency.
 
 ---
 
-### Pitfall 8: DSGVO / hosting / AVV foundations bolted on late
+### Pitfall 8: Reconciliation mis-matches — partial payments, over/underpayment, one-to-many
 
 **What goes wrong:**
-Processing German businesses' financial + personal data without: an **AVV (Auftragsverarbeitungsvertrag)** offered to every customer (you are their processor — Art. 28 GDPR), an EU/Germany hosting posture, a data-export/portability path, and deletion/retention logic that respects the **10-year GoBD retention** (which *overrides* GDPR erasure for tax-relevant records — you cannot simply delete an ex-customer's invoices).
+Auto-reconciliation matches a €500 incoming payment to a €500 open item that was actually paid in two €250 tranches, or matches a bulk payment covering five invoices to just one, or auto-clears an open item on a fuzzy purpose-text match that is wrong. This corrupts the v1 Offene-Posten/Zahlungserfassung ledger.
 
 **Why it happens:**
-Compliance is treated as a launch-blocker checklist item, discovered late, then it forces schema/hosting changes.
+Reconciliation is modelled as 1 payment ↔ 1 invoice with a similarity score, ignoring that real payments are many-to-many (Sammelüberweisung, Teilzahlung, Skonto deduction, bank fees, overpayment/Guthaben). Teams auto-clear on weak confidence to look "smart".
 
 **How to avoid:**
-- Decide **hosting in the EU (ideally Germany)** up front; make it a stated selling point.
-- Have an **AVV ready** as a self-serve document; you are contractually a processor for every tenant.
-- Design retention as **10-year immutable archive** for tax-relevant data (invoices, bookings), with GDPR-erasure applying only to non-tax personal data. Model "deletion" as "anonymize what you may, retain what the tax law requires."
-- Build **data export** (customer's right to their data + reduces lock-in fear) early.
+- Model matching as **N Umsätze ↔ M Offene Posten** with allocation amounts (reuse v1's Teilzahlung support). Support Skonto, rounding differences, and bank charges as explicit allocation lines.
+- **Confidence tiers:** auto-match only on strong signals (exact amount + Verwendungszweck contains invoice number/Kundennummer); everything else is a *proposal* the user confirms. Never auto-clear a partial/ambiguous match.
+- Matching must be idempotent and reversible: un-matching restores the open item exactly (important once a booking may already be festgeschrieben — then un-match = reversal, not delete).
 
 **Warning signs:**
-US-region default hosting. No AVV. A hard-delete that would wipe tax records. Retention conflated with "delete after account closes."
+Open items disappear without full payment; Skonto/fees create phantom residuals; users complain the auto-match "guessed wrong".
 
-**Phase to address:** Foundational phase (hosting, tenancy) + a dedicated compliance pass before public launch; retention design lands with the GoBD-archive phase.
+**Phase to address:** BK2 Zahlungsabgleich (integrates tightly with v1 Offene Posten).
+
+---
+
+### Pitfall 9: PSD2 consent expiry and finAPI sandbox-vs-prod surprises
+
+**What goes wrong:**
+Bank connections silently stop syncing because the PSD2 access consent expired and needs re-authentication (SCA) by the user — but the product has no re-consent UX, so data goes stale and reconciliation quietly rots. Separately: everything works in finAPI sandbox (mock banks) and breaks in production (real bank quirks, TPP licence, webhooks, rate limits).
+
+**Why it happens:**
+PSD2/RTS requires periodic SCA renewal for AIS access. Originally 90 days; the **EBA RTS amendment (final report 2022) extended the renewal from 90 to 180 days** and introduced a mandatory AISP exemption — but banks implement differently and consent still expires and must be renewed by the user. Teams assume a one-time connect. Sandbox hides licensing, real-bank field variance, and the consent lifecycle.
+
+**How to avoid:**
+- Track consent/validity per bank connection; proactively notify the user before expiry and provide a first-class **re-consent (SCA) flow**. Show connection health ("letzter erfolgreicher Abruf", "Zustimmung läuft ab am").
+- Decide the TPP model early: Numera acting under **finAPI's licence** (finAPI/SCHUFA as regulated AISP/PISP) vs needing own BaFin registration. Using finAPI as the licensed provider avoids an own PSD2 licence — confirm contractually before building.
+- Test against finAPI **XS2A test banks in sandbox AND run a real bank in a staging tenant** before GA. Handle provider webhooks/notifications and rate limits.
+
+**Warning signs:**
+Sync last-success timestamps aging; support tickets "meine Bank aktualisiert nicht"; a code path only ever exercised against sandbox mock banks.
+
+**Phase to address:** BK1 Banking-Anbindung (consent lifecycle + connection health as a first-class feature, not an afterthought).
+
+---
+
+### Pitfall 10: SEPA transfers (PIS) without correct SCA / confirmation / idempotency → double or wrong payments
+
+**What goes wrong:**
+A SEPA-Überweisung is initiated twice (retry/double-click), or executed without proper strong customer authentication, or with a rounding/IBAN error. Unlike read-only AIS, this **moves real money** — the blast radius is a wrong or duplicated outgoing payment.
+
+**Why it happens:**
+PIS (Payment Initiation) is treated like another API call. But each payment needs per-payment SCA, and network retries without an idempotency key can submit twice. Amount handling and IBAN/BIC validation are underspecified.
+
+**How to avoid:**
+- Per-payment **idempotency key**; the initiation endpoint must be safe to retry. Persist a payment-initiation state machine (created → SCA pending → submitted → executed/failed) and never resubmit an already-submitted key.
+- Require explicit user confirmation + provider SCA per transfer; surface the exact amount, IBAN, and Verwendungszweck. Validate IBAN (checksum) before submit.
+- Reconcile the outgoing payment back against the bank statement to confirm execution; don't assume "API returned 200" = money moved.
+
+**Warning signs:**
+Two identical outgoing transfers; a transfer in "submitted" state with no matching bank Umsatz; missing SCA step in the flow.
+
+**Phase to address:** BK3 SEPA-Überweisung (PIS). Ship AIS/reconciliation first; PIS is a separate, higher-risk phase.
+
+---
+
+### Pitfall 11: OCR auto-posting without human review (accuracy + liability)
+
+**What goes wrong:**
+OCR reads a Beleg (amount, VAT, date, supplier) and the system **auto-creates a booking** from it. OCR misreads 1.799,00 as 1.799,90 or 7% as 19%, and a wrong VAT booking flows into the USt-VA. Because it's festgeschrieben, fixing it needs a reversal — and the tenant may have already filed.
+
+**Why it happens:**
+OCR demos look magical; teams wire "scan → booking" to impress. But OCR is probabilistic and the responsible taxpayer (and their Steuerberater) is liable for the numbers. GoBD requires the booking to be verifiable against the original Beleg.
+
+**How to avoid:**
+- OCR **proposes** field values with confidence; a human **reviews and confirms** before any booking is created/festgeschrieben. Never auto-festschreiben from OCR. Low-confidence fields flagged.
+- Always link the booking to the **immutable original Beleg** (image/PDF) so it's verifiable. Extraction is a convenience layer; the scanned original is the legal document.
+- Learn per-supplier mappings (this supplier → this Aufwandskonto + Steuerschlüssel) to raise confidence over time, but keep confirmation in the loop.
+
+**Warning signs:**
+Bookings exist that no human ever confirmed; VAT rate on booking ≠ VAT on the pictured receipt; "how did this posting appear?" support tickets.
+
+**Phase to address:** BE1 Belegscan/OCR (review-before-post is a hard product rule).
+
+---
+
+### Pitfall 12: Beleg originals not stored immutably for GoBD (revisionssicher, 10 years)
+
+**What goes wrong:**
+Scanned/received Belege are stored in mutable, deletable object storage with no versioning, no retention lock, no documented process. GoBD requires **revisionssichere** archiving of originals for typically **10 years** (§147 AO), unveränderbar and reproducible. A tenant deletes a bucket, or a file is silently overwritten → the audit trail is gone.
+
+**Why it happens:**
+"It's just file upload." The revisionssicher requirement (immutability, retention, index, ability to reproduce the original + metadata + who/when) is unknown to web devs. Also: the *first* received form is the original that must be kept (e.g. a PDF received by email must be archived as received, not re-rendered).
+
+**How to avoid:**
+- Store originals **write-once**: object-lock / immutability / retention (WORM-style), content hash on ingest, versioning on, hard-delete disabled for the retention window. Keep the file exactly as received (no re-encoding of the original).
+- Maintain an index/metadata record (who uploaded/received, when, hash, source) and link every booking to its Beleg. Extend v1's GoBD Verfahrensdokumentation to cover the new Beleg pipeline.
+- Retention: default 10 years; block deletion (including tenant-initiated and DSGVO-erasure) inside retention — GoBD retention overrides DSGVO erasure for tax-relevant docs (document this tension explicitly).
+
+**Warning signs:**
+Belege can be deleted/overwritten; no content hash; no retention config; a DSGVO "delete my data" would wipe tax originals.
+
+**Phase to address:** BE3 GoBD-Archiv (design storage immutability before BE1 lets users scan into it).
+
+---
+
+### Pitfall 13: Per-tenant email intake — spoofing, spam, and mis-routing to the wrong tenant
+
+**What goes wrong:**
+Each tenant gets an inbound address (e.g. belege-<token>@intake.numera.de). Attackers spoof the sender, flood it with spam/malware attachments, or a guessable address lets one tenant's Belege land in another's archive. A spoofed "invoice" gets auto-archived as a genuine Beleg.
+
+**Why it happens:**
+Inbound email is treated as trusted. Addresses are guessable (belege-<firmenname>@), no SPF/DKIM/DMARC checks, attachments processed without scanning, no rate limiting, no cross-tenant isolation on the intake path.
+
+**How to avoid:**
+- **Unguessable** per-tenant address (high-entropy token), rotatable. Optionally allow-list sender domains per tenant.
+- Verify **SPF/DKIM/DMARC**; quarantine failures for manual review rather than auto-archiving. **Virus/malware-scan** every attachment; size/type limits; rate-limit per address.
+- Map intake strictly to one tenant_id and run the whole pipeline under that tenant's RLS context. Everything received is a *proposal* pending human review — never auto-post.
+- Store the raw email (headers included) as the received original for GoBD.
+
+**Warning signs:**
+Belege appear from unknown senders; attachments not scanned; intake address guessable; any code path where an inbound message could resolve to more than one tenant.
+
+**Phase to address:** BE2 E-Mail-Intake.
+
+---
+
+### Pitfall 14: Stripe webhooks without signature verification or idempotency
+
+**What goes wrong:**
+The billing webhook endpoint doesn't verify the Stripe signature (so anyone can POST a fake `invoice.paid` and unlock a paid plan), or processes the same event twice (Stripe retries on any non-2xx or timeout) — double-provisioning, double emails, or flipping entitlements twice.
+
+**Why it happens:**
+Webhooks look like a normal POST. Teams skip `Stripe-Signature` verification and assume exactly-once delivery. Events also arrive **out of order**.
+
+**How to avoid:**
+- **Verify the webhook signature** against the endpoint's signing secret on every request; reject unverified.
+- **Idempotency:** persist processed `event.id`; ignore duplicates. Make handlers idempotent (converge to state, don't increment).
+- Don't rely on event ordering — always reconcile against the current subscription object (retrieve/expand) rather than trusting the event payload alone. Return 2xx fast; do work async (fits the existing Hangfire worker).
+- Separate **test vs live** keys/secrets/webhook endpoints; never let a test event touch a live tenant.
+
+**Warning signs:**
+Endpoint accepts unsigned payloads; no `stripe_event` dedup table; entitlement toggled twice; a test webhook hitting prod.
+
+**Phase to address:** M1 Stripe-Abrechnung.
+
+---
+
+### Pitfall 15: tenant.plan gate drifts from Stripe subscription state (source-of-truth confusion)
+
+**What goes wrong:**
+The v1 server-authoritative S/M/L/XL feature gate (`tenant.plan`) is set on checkout but then diverges from Stripe: a payment fails and enters dunning, the customer cancels, a card expires, a downgrade takes effect at period end — and Numera still grants the old plan (or revokes too early). Users get features they didn't pay for, or lose features they did.
+
+**Why it happens:**
+`tenant.plan` is set once at checkout and treated as the source of truth. But the real source of truth is the **Stripe subscription** (status: active/trialing/past_due/canceled, current_period_end, cancel_at_period_end, the priced items). Plan changes, proration, trials and dunning all mutate Stripe state asynchronously.
+
+**How to avoid:**
+- **Stripe subscription = source of truth; `tenant.plan` = a cached projection** rebuilt from webhook events (`customer.subscription.updated/deleted`, `invoice.payment_failed`, etc.) and reconciled on read via a periodic sync job.
+- Map subscription status → entitlement explicitly: `trialing/active` = full plan; `past_due` = grace period then restrict; `canceled` = downgrade at period end (respect `cancel_at_period_end` and `current_period_end`, don't cut mid-period). Handle **downgrade = keep until period end; upgrade = immediate with proration**.
+- Define what happens to data above a downgraded plan's limits (read-only, not deleted). Reuse v1's "Upgrade-Hinweis statt Fehler" UX for degraded states.
+
+**Warning signs:**
+A canceled/past_due Stripe sub with an active plan in Numera; entitlement changes that no webhook explains; a downgrade cutting access mid-paid-period.
+
+**Phase to address:** M1 Stripe-Abrechnung (entitlement projection + reconciliation job).
+
+---
+
+### Pitfall 16: New v2 tables shipped without RLS (or with weak/mis-scoped RLS)
+
+**What goes wrong:**
+The many new tables (chart of accounts, bookings, journal lines, bank connections, Umsätze, Belege, OCR results, email-intake, Stripe subscriptions/events) are created without the per-table hand-written RLS the v1 system relies on — or with RLS that misses a tenant_id, or a background job (Hangfire, finAPI import, Stripe webhook) runs *without* a tenant context and bypasses RLS. One tenant sees another's bank data or Belege — a catastrophic breach in accounting/DSGVO.
+
+**Why it happens:**
+v1 proved RLS via a Cross-Tenant test suite, but that suite doesn't cover tables that don't exist yet. Background/system contexts (webhooks, email intake, bank import) legitimately run outside a user request and are exactly where tenant scoping is forgotten.
+
+**How to avoid:**
+- Every new table gets tenant_id + hand-written RLS following the v1 pattern, and is **added to the Cross-Tenant test suite** in the same phase it's created (make it a phase success criterion).
+- For system contexts (Hangfire jobs, Stripe webhook, email intake, finAPI callbacks): resolve tenant_id from the payload and **explicitly set the RLS tenant context** for the unit of work; never run these with an admin/bypass role by default. Stripe events map to tenant via the stored customer→tenant link.
+- Bank data and Belege are especially sensitive — add targeted cross-tenant tests (tenant A cannot read tenant B's Umsätze/Belege/OCR text).
+
+**Warning signs:**
+A new table with no policy in the migration; a job connecting with a superuser/bypass role; the cross-tenant suite not growing with the schema.
+
+**Phase to address:** Every v2 phase that adds tables (make "new tables have RLS + cross-tenant test" a standing Definition of Done).
+
+---
+
+### Pitfall 17: Money precision & rounding in the booking/tax engine
+
+**What goes wrong:**
+Amounts hit float somewhere (an OCR parse, a finAPI amount as double, a Stripe amount, a report aggregation), or per-line rounding accumulates, and the books are off by cents that never balance. In double-entry a single cent means Soll≠Haben.
+
+**Why it happens:**
+External inputs arrive in different shapes: **Stripe uses integer minor units (cents)**, finAPI returns decimal strings, OCR yields free text. Careless conversion introduces float; aggregation across thousands of lines compounds it.
+
+**How to avoid:**
+- Keep the v1 `decimal` money type end-to-end; parse all external amounts into decimal at the boundary (Stripe cents → decimal explicitly; never through double). Reuse v1's EN-16931 rounding rule and Golden-file discipline for the booking/VAT engine.
+- One documented rounding policy; place remainders on a defined line/account; test split bookings and VAT rounding to the cent.
+- Store currency per amount; the booking engine is EUR but bank/Stripe/foreign-currency inputs must be converted explicitly (v1 already handles Fremdwährung invoices — reuse).
+
+**Warning signs:**
+Any `double`/`float` on a money path; report totals that differ by cents from the journal; VAT that doesn't tie to net×rate.
+
+**Phase to address:** B1 Buchhaltungs-Fundament; enforce at each external boundary (BK1, BE1, M1).
 
 ---
 
@@ -184,152 +358,124 @@ US-region default hosting. No AVV. A hard-delete that would wipe tax records. Re
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| `float` for money | Fast to write | EN 16931 rejections, cent drift, full-schema migration to fix | **Never** |
-| App-code tenant filtering only (no RLS) | Ship faster | One forgotten `WHERE` = DSGVO breach; painful RLS retrofit | Never for a real multi-tenant launch; a solo-prototype spike only |
-| Editable finalized invoices | Simpler CRUD | GoBD non-conformity for every customer; rework of the whole write path | Never once real invoices are issued |
-| Build XML from rendered PDF | Reuse existing PDF | PDF/XML mismatch, audit red flags, brittle | Never |
-| Skip KoSIT validation in pipeline | Fewer moving parts | Recipients reject invoices in production; you find out from angry customers | Never for issued invoices; OK to defer only for internal drafts |
-| Gapless-numbering guarantee logic | "Feels compliant" | Complexity chasing a non-requirement; risks number reuse (which *is* illegal) | Never — uniqueness+traceability is the real rule |
-| Single global invoice sequence | One counter | Cross-tenant volume leak + collisions | Never for multi-tenant |
-| Defer AVV / EU hosting | Faster launch | Blocks B2B sales; forces migration; DSGVO exposure | Never for German B2B |
+| Booking as flat 2-account row (no split lines) | Faster first CRUD | Can't do split VAT / multi-open-item payments; full engine rewrite | Never — model header+lines from day 1 |
+| Festschreibung as a boolean, no period lock | Ship reports sooner | Late bookings corrupt filed USt-VA; GoBD gap | Only pre-first-real-tenant; add period lock before B3 ships |
+| Only SKR03 (or only SKR04) at launch | Half the seed data | Migrating a tenant's chart later is painful; loses market segment | Acceptable to *sequence* (one first) only if the model supports both from the start |
+| OCR auto-post to look smart | Demo wow | Wrong VAT in filings, liability, reversals | Never |
+| Belege in plain object storage without object-lock | Quick storage | Non-revisionssicher → GoBD fails; can't retrofit past docs | Never for originals |
+| `tenant.plan` set at checkout, no webhook sync | Billing "works" in demo | Entitlement drift on dunning/cancel/downgrade | Never for live billing; ok in Stripe *test* only |
+| Import bank tx keyed on (date,amount,text) | No provider-id plumbing | Duplicate/merged Umsätze corrupt books | Never — use provider id + idempotency key |
+| New table without RLS "we'll add it later" | Faster migration | Cross-tenant data leak (bank/Belege = worst case) | Never |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| KoSIT validator | Only validating in dev, or not at all | Validate every issued invoice in the pipeline; treat failure as a hard block on finalization |
-| ZUGFeRD/Factur-X (PDF/A-3) | Non-conformant PDF/A-3 (embedded fonts missing, JavaScript present, wrong XMP metadata), or XML attached to a normal PDF | Generate true PDF/A-3 (ISO 19005-3): embedded fonts, ICC profile, no JS, correct XMP declaring the embedded XML; target ZUGFeRD 2.3 / Factur-X 1.0.07, EN 16931 (COMFORT) profile |
-| ZUGFeRD profiles | Picking MINIMUM/BASIC-WL (no line items) and assuming it's a full B2B e-invoice | Use the **EN 16931 (COMFORT)** profile as the baseline for German B2B; MINIMUM/BASIC-WL are not fully EN 16931-compliant for all cases |
-| Leitweg-ID (B2G) | Omitting it, or requiring it for B2B | Leitweg-ID (BT-10 buyer reference) is **mandatory for public-sector (B2G) XRechnung**; for B2B it's typically not required. Don't hard-require it for all invoices |
-| Bank APIs (PSD2 / AIS) | Assuming a **90-day** re-auth window | The EU AIS re-authentication window is **180 days** since 25 Jul 2023 (EBA RTS amendment) — 90 days is UK/stale. Still design for periodic re-consent and graceful feed-break recovery |
-| Bank multibanking aggregators (finAPI, FinTS, GoCardless/Yapily/Klarna Kosma) | Provider lock-in + surprise per-connection pricing | Abstract the aggregator behind your own interface; model per-connection cost; expect coverage gaps and per-bank quirks |
-| DATEV export | Assuming "CSV export" = DATEV | DATEV expects specific formats (DATEV-Format / EXTF, SKR03/SKR04 account mapping); validate against DATEV's spec, wrong account mapping corrupts the *Steuerberater*'s import |
+| finAPI (AIS) | Treat connect as one-time; only test sandbox mock banks | Track/renew PSD2 consent (SCA renewal ~180d post-2022 RTS, bank-dependent); test a real bank in staging; operate under finAPI's TPP licence |
+| finAPI (PIS/SEPA) | Fire-and-forget transfer, no idempotency/SCA | Per-payment idempotency key + SCA + state machine + reconcile execution against statement |
+| finAPI import | Assume exactly-once, key on natural fields | Provider transaction id + idempotency upsert + per-connection cursor |
+| Stripe webhooks | No signature check / no dedup / trust ordering | Verify signature, dedup on event.id, reconcile against live subscription object, async via Hangfire |
+| Stripe amounts | Read cents as float / mix test+live keys | Parse minor-units → decimal explicitly; strict test/live key + webhook separation |
+| Stripe as billing SoT | `tenant.plan` set once at checkout | Subscription is SoT; plan = projection rebuilt from events + periodic reconcile |
+| Cloud OCR provider | Send Belege to a non-EU OCR without AVV/DPA | EU-region OCR (or self-host) with AVV/DPA; DSGVO Art. 28 processor contract; data-flow documented |
+| Inbound email (intake) | Trust sender, no SPF/DKIM/DMARC, guessable address | Verify SPF/DKIM/DMARC, unguessable token address, virus-scan, per-tenant RLS routing, human review |
+| ELSTER/USt-VA | Invent own export format / hardcode one year's Kennziffern | Use the official UStVA datamodel; version Kennziffern by year; calc+export only (ERiC out of scope) |
+| DATEV expectation | Ignore Automatikkonten & Steuerschlüssel semantics | Model Automatikkonten + Steuerschlüssel so Steuerberater/DATEV-literate users trust the output |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| `MAX(number)+1` for invoice numbering | Duplicate numbers, deadlocks under load | Atomic per-tenant counter with row lock / upsert | Concurrent finalizations — even at low tenant scale |
-| Synchronous KoSIT validation + PDF/A-3 render on the request thread | Slow finalize, timeouts | Do validation/render async or in a job with a status; keep the atomic number+immutability commit fast | Bulk invoicing / month-end spikes |
-| Connection-pool session reuse with stale `SET app.current_tenant` | Intermittent cross-tenant reads (worst-case) | Reset tenant GUC on every pool checkout; test it | Under pooling + concurrency, low user count |
-| Storing 10-year archive in hot primary DB | Ballooning DB, slow backups | Tiered/object storage for the immutable archive; keep working set lean | As invoice history accumulates over years |
-| Per-request full re-computation of reports (USt-VA, sums) across all history | Slow dashboards | Incremental aggregates / materialized views scoped per tenant | Once a tenant has thousands of documents |
+| Recompute GuV/BWA/USt-VA by scanning all journal lines every view | Reports slow as history grows | Pre-aggregate per period/account (Salden), incremental update on Festschreibung | Tenants with multi-year history / many bookings |
+| Reconciliation compares every Umsatz against every open item (N×M) | Sync gets slow, UI stalls | Index by amount/date/invoice-number; candidate-filter before scoring | Tenants with thousands of open items/Umsätze |
+| OCR done synchronously in the request | Upload times out on large PDFs | Offload to Hangfire worker; async status; thumbnails | Multi-page PDFs / bulk email intake bursts |
+| Storing full Beleg images in Postgres | DB bloat, slow backups | Object storage (with object-lock) + metadata in DB | Once Belege volume grows |
+| Per-tenant bank sync all at once on a timer | Thundering herd, finAPI rate limits | Stagger/queue syncs, respect rate limits, backoff | Many connected tenants |
 
 ## Security Mistakes
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Tenant scoping in app code only | Cross-tenant data leak = DSGVO Art. 33 breach | Postgres RLS as primary control + cross-tenant tests |
-| Sequential/guessable resource IDs in URLs | IDOR enumeration across tenants | RLS makes IDs safe even if guessed; still prefer opaque IDs |
-| Bank credentials / PSD2 tokens stored plaintext | Catastrophic financial-data breach | Encrypt at rest (KMS); never store bank login creds — use the aggregator's token model |
-| Storing full IBANs / financial PII without field-level care | Elevated breach impact | Encrypt sensitive columns; minimize; access-log |
-| Immutability enforced only in app layer | Auditor/attacker bypass, GoBD failure | DB-level append-only / trigger enforcement |
-| No audit trail on financial state changes | Can't prove GoBD *Nachvollziehbarkeit* | Append-only audit log of every finalize/cancel/void with actor + timestamp |
+| New v2 tables without RLS or jobs bypassing tenant context | Cross-tenant leak of bank data/Belege — worst-case breach | Per-table RLS + explicit tenant context in every job/webhook/intake; grow cross-tenant test suite |
+| Storing raw bank credentials/tokens insecurely | PSD2/DSGVO breach, financial theft | Never store bank login; rely on finAPI OAuth/consent tokens; encrypt at rest; least-privilege |
+| Unsigned Stripe/finAPI webhooks | Forged events unlock plans / inject data | Verify signatures; allow-list source; reject unverified |
+| Guessable email-intake address, no attachment scan | Spoofed/malicious Belege injected | High-entropy address, SPF/DKIM/DMARC, malware scan, human review |
+| Sending Belege/bank data to non-EU processors without AVV | DSGVO Art. 28/44 violation, fines | EU-region processors with DPA/AVV; document sub-processors; TOMs |
+| GoBD retention vs DSGVO erasure conflict handled ad-hoc | Either lose tax originals or fail erasure requests | Retention lock overrides erasure for tax-relevant docs; document the rule; erase only non-tax PII |
+| PII in logs (bank tx text, OCR content, emails) | Leak via logs | Redact financial/PII fields from logs |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Exposing raw XRechnung/EN 16931 jargon (BT-codes, profiles) to end users | Overwhelm; feels enterprise-hostile | Hide the standard behind plain-language UI; "send as e-invoice" just works |
-| No human-readable rendering of received structured invoices | Users can't *read* incoming XRechnung XML | Always render a visual view of structured invoices you receive |
-| Blocking on validation errors with cryptic KoSIT messages | User stuck, can't self-serve | Translate BR-* errors into actionable German-language guidance |
-| Forcing users to understand Kleinunternehmer/reverse-charge to invoice | Wrong invoices or abandonment | Ask about their tax status once (onboarding), then apply rules automatically |
-| PWA that silently fails offline / loses a draft | Data loss, distrust with financial data | Be explicit about offline limits; don't over-promise offline for financial writes (see below) |
-
-## PWA / Platform Traps
-
-| Trap | Reality | Mitigation |
-|------|---------|------------|
-| Assuming iOS Safari PWA push/camera/storage parity | iOS PWA support historically lags: push only via installed (Add-to-Home-Screen) PWA and only on recent iOS; storage can be evicted; camera/file access constrained | Don't make core flows depend on iOS push or persistent offline storage; test on real iOS; treat mobile as responsive-web-first |
-| Promising rich **offline** invoicing | Offline financial writes create sync/conflict + numbering-race problems; users expect correctness, not eventual consistency, for invoices | Keep invoice **finalization online-only** (numbering + immutability need a source of truth). Allow offline *drafting* at most |
-| iOS storage eviction wiping "saved" data | Silent data loss | Never treat client storage as durable for financial data; server is source of truth |
+| Auto-posting bank matches / OCR without confirmation | Users lose trust after one wrong booking; hidden errors | Propose → confirm; show confidence; make reversal easy |
+| No re-consent UX when PSD2 consent expires | Silent stale data, wrong reconciliation | Proactive expiry warning + one-click re-consent; connection health widget |
+| Hard errors on locked periods / plan limits | Confusion, support load | Reuse v1 "Upgrade-Hinweis statt Fehler"; explain "Periode gesperrt, buchen in Folgeperiode?" |
+| Exposing raw Kennziffern/Steuerschlüssel to non-accountants | Freelancers overwhelmed | Smart defaults per account; hide advanced tax keys behind expert mode; richer Steuerberater view |
+| Downgrade deletes data over the new limit | Data loss, churn | Read-only above limit, never delete; clear restore-on-upgrade path |
+| EÜR vs GuV/Bilanz shown regardless of legal form | Users file the wrong report | Gate reports on Gewinnermittlungsart/Rechtsform |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **E-invoice generation:** Often missing — passes *your* renderer but **fails the official KoSIT validator**. Verify: every issued invoice validated against KoSIT, all BR-CO / BR-S rules green.
-- [ ] **ZUGFeRD hybrid:** Often missing — the PDF's visible total ≠ the embedded XML total. Verify: PDF and XML figures byte-for-byte consistent; PDF/A-3 conformance (fonts/ICC/no-JS/XMP) checked.
-- [ ] **Invoice immutability:** Often missing — enforced in app code but an `UPDATE` path still exists. Verify: DB-level immutability after finalization; corrections create new documents.
-- [ ] **Multi-tenancy:** Often missing — one report query or background job lacks tenant scope. Verify: RLS on *every* tenant table + green cross-tenant test suite.
-- [ ] **VAT cases:** Often missing — reverse-charge (§13b), intra-EU, Kleinunternehmer notes and category codes. Verify: each scenario produces the mandated invoice text + correct EN 16931 category.
-- [ ] **Numbering:** Often missing — race-safe + per-tenant. Verify: concurrent finalization test yields no duplicates; sequence is per-tenant.
-- [ ] **Retention/DSGVO:** Often missing — "delete account" would wipe tax-relevant records. Verify: 10-year archive survives account deletion; only non-tax PII is erased.
-- [ ] **Marketing copy:** Often missing — "GoBD-zertifiziert" slips in. Verify: only "GoBD-konform"; Verfahrensdokumentation exists.
-- [ ] **Bank re-consent:** Often missing — assumes 90 days. Verify: 180-day AIS window handled + feed-break re-consent UX.
+- [ ] **Booking engine:** balances to the cent on split VAT / multi-open-item payments — verify with golden-file tests, not just the happy path
+- [ ] **Festschreibung:** posted bookings truly cannot be UPDATE/DELETE'd at the DB level (not just UI-hidden) — verify with a direct SQL attempt in a test
+- [ ] **Period lock:** a booking dated into a submitted USt-VA period is rejected/redirected — verify
+- [ ] **USt-VA:** correct for §19 Kleinunternehmer, §13b reverse-charge, i.g., AND for an Ist-Versteuerung tenant (period follows payment) — verify each
+- [ ] **Bank import:** re-running the same window creates zero duplicates — verify idempotency
+- [ ] **Reconciliation:** un-matching restores the open item exactly; partial/Skonto handled — verify
+- [ ] **PSD2 consent:** expiry produces a re-consent prompt, not silent failure — verify
+- [ ] **OCR:** no booking exists that a human didn't confirm; booking links to the immutable original — verify
+- [ ] **Beleg archive:** originals are genuinely write-once / retention-locked for 10y — verify deletion is blocked
+- [ ] **Email intake:** SPF/DKIM/DMARC-failing and malware attachments are quarantined, not archived — verify
+- [ ] **Stripe:** unsigned webhook rejected; duplicate event.id ignored; past_due/canceled/downgrade reflected in `tenant.plan` — verify each transition
+- [ ] **RLS:** every new v2 table is in the cross-tenant test suite; every job/webhook sets tenant context — verify the suite grew with the schema
+- [ ] **Money:** no float on any money path (Stripe cents, finAPI, OCR) — verify at each boundary
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| `float` money in schema | HIGH | Migrate columns to `numeric`/integer-cents; backfill; re-verify all historical totals against EN 16931 rules; add regression tests |
-| No RLS (app-only scoping) | HIGH | Add `tenant_id` where missing, write RLS policies for every table, set session GUC per request, add cross-tenant tests; audit for any leak that already occurred (breach-notification obligation) |
-| Mutable finalized invoices already shipped | HIGH | Introduce state machine + DB immutability; reconcile/lock existing issued records; implement cancellation-invoice flow; document remediation in Verfahrensdokumentation |
-| Duplicate invoice numbers issued | MEDIUM–HIGH | Cannot silently renumber issued invoices; issue corrections/cancellations per tax rules with advisor; fix generator to atomic per-tenant counter |
-| "GoBD-zertifiziert" published | LOW | Remove claim, replace with "GoBD-konform," publish Verfahrensdokumentation |
-| Assumed 90-day bank re-auth | LOW | Update to 180-day window + re-consent handling; no data migration needed |
+| Unbalanced bookings in production | HIGH | Freeze; reconcile journal vs Salden; reversal bookings for bad entries; add the missing balance invariant; re-run golden files |
+| Editing posted bookings happened (GoBD breach) | HIGH | Reconstruct history from audit log; switch to reversal-only; document remediation in Verfahrensdokumentation; likely tax-advisor consultation |
+| Wrong USt-VA already filed | MEDIUM | File berichtigte Voranmeldung for affected periods; add period lock to prevent recurrence |
+| Duplicate bank transactions | MEDIUM | Dedup by provider id; reverse duplicate-derived bookings; add idempotency key |
+| OCR auto-posted wrong VAT | MEDIUM | Reversal bookings; switch to review-before-post; per-supplier learning |
+| Beleg stored non-revisionssicher | HIGH | Migrate existing originals into WORM storage with hashes where still possible; document the gap; enforce object-lock going forward |
+| tenant.plan drifted from Stripe | LOW | Run the reconciliation job to rebuild the projection from Stripe; add webhook handlers for missed events |
+| Cross-tenant leak via missing RLS | HIGH | Incident response + DSGVO breach assessment/notification; add RLS + tests; audit access logs for actual exposure |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Float / rounding money bugs | Phase 1 (foundational data model) | Golden-file tests vs KoSIT-valid reference XML; no `float` in schema |
-| Multi-tenant leakage | Phase 1 (tenancy/auth) | RLS on every tenant table; cross-tenant test suite green |
-| Numbering races / per-tenant sequences | Invoicing core (v1) | Concurrent-finalize test → zero duplicates; per-tenant series |
-| Editing finalized invoices (immutability) | Invoicing core (v1) | DB-level immutability; corrections = new documents |
-| PDF-as-e-invoice / XML-from-PDF | E-invoicing phase (v1) | KoSIT-validated structured XML from a data-first model |
-| PDF/A-3 + hybrid mismatch | E-invoicing phase (v1) | PDF/A-3 conformance check; PDF↔XML figure equality |
-| VAT category edge cases | Invoicing core (v1) + tax fast-follow | Scenario tests: §13b, intra-EU, Kleinunternehmer texts + codes |
-| DSGVO/AVV/EU hosting | Phase 1 + pre-launch compliance pass | EU hosting confirmed; AVV available; export path works |
-| 10-year retention vs erasure | GoBD-archive phase | Account deletion retains tax records; erases only non-tax PII |
-| "GoBD-zertifiziert" claim | Any marketing/legal-copy phase | Copy audit; Verfahrensdokumentation shipped |
-| Bank API 180-day re-auth / lock-in | Multibanking phase | 180-day handling; aggregator abstracted; cost modeled |
-| DATEV export format | Bookkeeping/DATEV phase | Validated against DATEV spec; SKR03/04 mapping correct |
-| Scope creep (see below) | Every planning cycle | v1 ships invoicing+e-invoicing only; bookkeeping deferred |
-
-## Cross-cutting product pitfall: scope creep kills these projects
-
-**What goes wrong:** The domain is enormous (invoicing → e-invoicing → bookkeeping → USt-VA → GoBD archive → multibanking → DATEV). Teams try to match Lexware/sevDesk's *full* feature surface before shipping, run out of runway, and never launch — or launch a shallow version of everything that's compliant at nothing.
-
-**Why it happens:** Every feature looks mandatory because competitors have it; German accounting genuinely *is* interconnected (an invoice feeds bookkeeping feeds USt-VA).
-
-**How to avoid:** Ship **v1 = invoicing + e-invoicing done correctly and compliantly** (the one thing that's newly legally mandated and where correctness is non-negotiable). Get the data model right so bookkeeping/DATEV/USt-VA can layer on later without rework. Defer bookkeeping, multibanking, and DATEV explicitly — they are separate phases, not v1. A compliant, trustworthy invoicing product beats a broad-but-shaky suite in this market where trust is the product.
-
-**Warning signs:** v1 backlog includes bookkeeping or DATEV. "We need multibanking to launch." No clear line between v1 and later.
-
----
+| 1 Unbalanced postings | B1 Buchhaltungs-Fundament | Golden-file balance tests incl. split VAT/multi-OP |
+| 2 Editing posted bookings | B1 | Direct-SQL update on a festgeschrieben row is blocked |
+| 3 Period locks | B1 + B3 | Booking into a submitted USt-VA period rejected |
+| 4 SKR/Steuerschlüssel mapping | B1 | Automatikkonto double-tax rejected; both SKR seeded |
+| 5 USt-VA Kennziffern / Ist-Soll | B3 (setting in B1) | Worked-example tests incl. §13b/§19/Ist tenant |
+| 6 EÜR/GuV/Bilanz | B3 | Report availability gated on Gewinnermittlungsart |
+| 7 Import idempotency | BK1 | Re-run window = 0 duplicates |
+| 8 Reconciliation mis-match | BK2 | Partial/Skonto/un-match tests |
+| 9 PSD2 consent / sandbox | BK1 | Re-consent flow + real-bank staging test |
+| 10 SEPA/PIS safety | BK3 | Idempotency + SCA + execution-reconcile tests |
+| 11 OCR auto-post | BE1 | No unconfirmed booking; booking↔original link |
+| 12 Beleg immutability | BE3 | Deletion blocked within retention; hash on ingest |
+| 13 Email intake abuse | BE2 | SPF/DKIM/DMARC + malware quarantine tests |
+| 14 Stripe webhook safety | M1 | Unsigned rejected; duplicate event.id ignored |
+| 15 Plan/Stripe drift | M1 | Each sub status transition reflected in entitlement |
+| 16 RLS on new tables | Every table-adding phase | Cross-tenant suite covers all new tables + jobs |
+| 17 Money precision | B1 + all boundaries | No float on money paths; boundary parse tests |
 
 ## Sources
 
-**E-invoicing mandate & timeline (HIGH):**
-- [eInvoicing in Germany — European Commission](https://ec.europa.eu/digital-building-blocks/sites/spaces/DIGITAL/pages/467108886/eInvoicing+in+Germany)
-- [BMF FAQ zur obligatorischen E-Rechnung ab 1.1.2025 — Bundesfinanzministerium](https://www.bundesfinanzministerium.de/Content/DE/FAQ/e-rechnung.html)
-- [Germany E-Invoicing Timeline 2025–2028 — Flick](https://www.flick.network/en-de/germany-e-invoicing-timeline)
-- [IHK Hannover — Elektronische Rechnungen Pflicht ab 2025](https://www.ihk.de/hannover/hauptnavigation/recht/steuerrecht/umsatzsteuer/elektronische-rechnungen-pflicht-ab-2025-6168870)
-
-**EN 16931 validation & rounding (HIGH/MEDIUM):**
-- [EN16931 Validation Rule Map — Invoice Navigator](https://www.invoicenavigator.eu/blog/en16931-validation-rules-complete-guide)
-- [Peppol / EN16931 error code lookup (BR-CO-10, BR-CO-15, BR-S-*)](https://peppolvalidator.com/peppol-validation-errors)
-- [ConnectingEurope/eInvoicing-EN16931 Schematron model (official rules)](https://github.com/ConnectingEurope/eInvoicing-EN16931/blob/master/ubl/schematron/abstract/EN16931-model.sch)
-- [Rounding on invoice lines / BR-CO-17 discussion — GitHub issue #143](https://github.com/ConnectingEurope/eInvoicing-EN16931/issues/143)
-
-**ZUGFeRD / PDF/A-3 / profiles (MEDIUM):**
-- [ZUGFeRD 2.3 Profiles, Validation & 2026 Mandate — Invoice Navigator](https://www.invoicenavigator.eu/learn/zugferd)
-- [ZUGFeRD e-Invoices: PDF/A-3, CII XML, XMP metadata — Docentric](https://ax.docentric.com/zugferd-e-invoices-compliance-explained/)
-- [ZUGFeRD Validator (PDF/A-3 + XML) — kostenlose-erechnung.de](https://kostenlose-erechnung.de/zugferd-validator/)
-
-**GoBD / numbering / certification myth (HIGH/MEDIUM):**
-- [Keine Pflicht zu lückenlos fortlaufenden Rechnungsnummern — GGD Steuerberater](https://www.ggd-steuer.de/keine-pflicht-zu-lueckenlos-fortlaufenden-rechnungsnummern/)
-- [Fortlaufende Nummerierung von Rechnungen: Ausnahmen — Haufe](https://www.haufe.de/finance/buchfuehrung-kontierung/fortlaufende-nummerierung-von-rechnungen-ausnahmen_186_387400.html)
-- [Rechnungsnummer GoBD-konform vergeben — kostenlose-erechnung.de](https://kostenlose-erechnung.de/ratgeber/rechnungsnummer-system-pflichten/)
-
-**Kleinunternehmer / exemptions (HIGH):**
-- [E-Rechnung Ausnahmen 2025 — Qonto](https://qonto.com/de/blog/kmu/management-buchhaltung/e-rechnung-ausnahmen)
-- [E-Rechnung Pflicht für Kleinunternehmer — sevdesk](https://sevdesk.de/ratgeber/buchhaltung-finanzen/rechnungen/e-rechnung/kleinunternehmer-pflicht/)
-
-**PSD2 / bank API 180-day re-auth (HIGH):**
-- [90 Becomes 180: EBA Makes Key SCA Change — Vixio](https://www.vixio.com/insights/pc-90-becomes-180-eba-makes-key-sca-change)
-- [180 days of secure connectivity in Europe — Plaid](https://plaid.com/blog/eu-reauth-update/)
-- [EBA RTS on SCA & CSC amendment](https://www.eba.europa.eu/eba-response/29146)
+- German tax/accounting law & GoBD: §146/§147 AO (Aufbewahrung, Unveränderbarkeit, 10 Jahre), §14 UStG, §20 UStG (Ist-Versteuerung), §4(3) EStG (EÜR), §141 AO (Bilanzierungsschwellen), §13b UStG (reverse charge); BMF GoBD-Schreiben (Unveränderbarkeit, Festschreibung, Verfahrensdokumentation) — HIGH (established law)
+- SKR03/SKR04 & Steuerschlüssel/Automatikkonten (DATEV conventions), USt-VA Kennziffern (ELSTER UStVA form) — HIGH (established, year-versioned; re-verify current form during B3)
+- PSD2 SCA renewal 90→180 days: EBA final report amending the RTS on SCA&CSC (2022) — verified via web search: [EBA press release](https://www.eba.europa.eu/publications-and-media/press-releases/eba-publishes-final-report-amendment-its-technical-standards), [PayTechLaw RTS overview](https://paytechlaw.com/en/regulatory-technical-standards-rts-sca-csc/), [LUXHUB summary](https://luxhub.com/strong-customer-authentication-eba-shares-its-latest-proposed-amendment-of-the-psd2-rts/) — MEDIUM (banks implement variably; confirm per finAPI/bank in BK1)
+- finAPI (SCHUFA) AIS/PIS, XS2A sandbox vs prod, TPP licensing model — MEDIUM (verify current finAPI docs/contract in BK1)
+- Stripe billing: webhook signature verification, event idempotency, subscription as source of truth, proration on plan change, minor-unit amounts, test/live separation — HIGH (long-standing Stripe guidance; confirm current API version in M1)
+- DSGVO: Art. 28 (Auftragsverarbeitung/AVV), Art. 44+ (Drittlandtransfer for cloud OCR), retention-vs-erasure tension — HIGH
+- Existing Numera v1: PROJECT.md, prior .planning/research (RLS proven via Cross-Tenant suite, decimal money + EN-16931 rounding, GoBD-Unveränderbarkeit on Belegkette, race-safe numbering, Hangfire worker, server-authoritative Tarif-Gates) — HIGH (in-repo)
 
 ---
-*Pitfalls research for: Multi-tenant German accounting & e-invoicing SaaS*
-*Researched: 2026-07-09*
+*Pitfalls research for: German accounting SaaS v2.0 (Buchhaltung, Banking, Belege/OCR, Monetarisierung)*
+*Researched: 2026-08-02*
