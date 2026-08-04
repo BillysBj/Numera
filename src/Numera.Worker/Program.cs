@@ -5,6 +5,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+
+using Numera.Api.Jobs;
+using Numera.Api.Services;
 
 using Numera.Platform.Db;
 using Numera.Platform.Tenancy;
@@ -28,6 +32,9 @@ var hangfireConnectionString = builder.Configuration.GetConnectionString("Hangfi
 builder.Services.AddScoped<ICurrentTenant, TenantContext>();
 builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(connectionString));
 
+// Shared capture closure only: scanner + audit + enqueue; no extractor or ledger services.
+builder.Services.AddBelegeMailboxWorker(builder.Configuration);
+
 builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
@@ -39,5 +46,12 @@ builder.Services.AddHangfire(config => config
 builder.Services.AddHangfireServer(options => options.Queues = ["worker"]);
 
 var host = builder.Build();
+
+var mailbox = host.Services.GetRequiredService<IOptions<BelegeMailboxOptions>>().Value;
+var recurringJobs = host.Services.GetRequiredService<IRecurringJobManager>();
+recurringJobs.AddOrUpdate<PollBelegMailboxJob>(
+    "belege-mailbox:poll",
+    job => job.RunAsync(CancellationToken.None),
+    string.IsNullOrWhiteSpace(mailbox.PollCron) ? "*/5 * * * *" : mailbox.PollCron);
 
 host.Run();

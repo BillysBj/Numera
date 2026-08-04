@@ -92,6 +92,8 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueuePdfOnFi
 // locally). SendDocumentEmailJob re-establishes tenant context, renders-if-absent and sends
 // the PDF; POST /api/documents/{id}/send enqueues it after recording a Queued document_email.
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.Configure<BelegeMailboxOptions>(
+    builder.Configuration.GetSection(BelegeMailboxOptions.SectionName));
 builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 builder.Services.AddTransient<SendDocumentEmailJob>();
 // --- E-invoice validation (plan 05-02, EINV-03) ----------------------------
@@ -226,6 +228,7 @@ app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
 app.MapReceiptEndpoints();
+app.MapMailboxEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
 app.MapDunningEndpoints();

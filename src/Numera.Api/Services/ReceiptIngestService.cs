@@ -81,7 +81,7 @@ public sealed class ReceiptIngestService
         if (storedContentType is null)
         {
             throw new ArgumentException(
-                "Es werden nur PDF-, JPEG-, PNG-, TIFF- oder HEIF-Dateien akzeptiert.",
+                "Es werden nur PDF-, Bild- oder XML-Dateien akzeptiert.",
                 nameof(contentType));
         }
 
@@ -182,7 +182,8 @@ public sealed class ReceiptIngestService
     internal static string? ResolveContentType(string? contentType, string fileName)
     {
         var mime = contentType?.Split(';', 2)[0].Trim().ToLowerInvariant();
-        if (mime is "application/pdf" or "image/jpeg" or "image/png" or "image/tiff"
+        if (mime is "application/pdf" or "application/xml" or "text/xml"
+            or "image/jpeg" or "image/png" or "image/tiff"
             or "image/heif" or "image/heic" or "image/heif-sequence" or "image/heic-sequence")
         {
             return mime;
@@ -191,6 +192,7 @@ public sealed class ReceiptIngestService
         return Path.GetExtension(fileName).ToLowerInvariant() switch
         {
             ".pdf" => "application/pdf",
+            ".xml" => "application/xml",
             ".jpg" or ".jpeg" => "image/jpeg",
             ".png" => "image/png",
             ".tif" or ".tiff" => "image/tiff",
