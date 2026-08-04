@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "group": "Berichte",
+    "ustva": "USt-Voranmeldung",
+    "euer": "EÜR"
+  },
+  "loading": "Bericht wird geladen …",
+  "filters": {
+    "year": "Jahr",
+    "period": "Zeitraum",
+    "from": "Von",
+    "to": "Bis"
+  },
+  "periods": {
+    "01": "Januar",
+    "02": "Februar",
+    "03": "März",
+    "04": "April",
+    "05": "Mai",
+    "06": "Juni",
+    "07": "Juli",
+    "08": "August",
+    "09": "September",
+    "10": "Oktober",
+    "11": "November",
+    "12": "Dezember",
+    "41": "1. Quartal",
+    "42": "2. Quartal",
+    "43": "3. Quartal",
+    "44": "4. Quartal"
+  },
+  "actions": {
+    "xml": "ELSTER XML",
+    "ustvaPdf": "USt-VA PDF",
+    "euerPdf": "EÜR PDF",
+    "downloading": "Wird heruntergeladen …"
+  },
+  "errors": {
+    "load": "Der Bericht konnte nicht geladen werden.",
+    "drillDown": "Die zugehörigen Buchungen konnten nicht geladen werden.",
+    "download": "Der Export konnte nicht heruntergeladen werden.",
+    "invalidRange": "Das Von-Datum muss vor oder am Bis-Datum liegen."
+  },
+  "ustva": {
+    "title": "USt-VA Prüfansicht",
+    "subtitle": "Umsatzsteuer-Voranmeldung prüfen und exportieren",
+    "taxationType": "Besteuerungsart",
+    "taxationTypes": {
+      "0": "Soll-Versteuerung",
+      "1": "Ist-Versteuerung"
+    },
+    "provisional": "vorläufig",
+    "inputVatNote": "Ohne Vorsteuerabzug (Belegerfassung ab Phase 12).",
+    "columns": {
+      "kz": "Kz",
+      "description": "Bezeichnung",
+      "taxBase": "Bemessungsgrundlage",
+      "tax": "Steuer"
+    },
+    "kleinunternehmer": {
+      "title": "Keine USt-Voranmeldung (§19 Kleinunternehmer)",
+      "description": "Als Kleinunternehmer geben Sie keine Umsatzsteuer-Voranmeldung ab. Die EÜR steht weiterhin unter Berichte zur Verfügung."
+    },
+    "recognitionBasis": {
+      "journalEntryDate": "Soll-Versteuerung · Buchungen nach Belegdatum",
+      "paymentValueDate": "Ist-Versteuerung · Rechnungen nach Zahlungsdatum",
+      "gated": "Keine USt-Voranmeldung"
+    },
+    "drillDown": {
+      "empty": "Für diese Kennziffer gibt es im gewählten Zeitraum keine Buchungen.",
+      "date": "Buchungsdatum",
+      "journal": "Journal",
+      "source": "Quelle",
+      "description": "Beschreibung",
+      "paymentDate": "Zahlungsdatum",
+      "document": "Rechnung",
+      "invoiceDate": "Rechnungsdatum",
+      "reference": "Zahlungsreferenz",
+      "net": "Netto",
+      "vat": "USt"
+    }
+  },
+  "euer": {
+    "title": "Einnahmenüberschussrechnung",
+    "subtitle": "Auswertung nach dem Zufluss- und Abflussprinzip",
+    "income": "Betriebseinnahmen",
+    "expenses": "Betriebsausgaben",
+    "totalIncome": "Summe Betriebseinnahmen",
+    "totalExpenses": "Summe Betriebsausgaben",
+    "result": "Ergebnis",
+    "profit": "Gewinn",
+    "incompleteTitle": "Betriebsausgaben unvollständig",
+    "incompleteFallback": "Betriebsausgaben unvollständig — Belegerfassung ab Phase 12.",
+    "columns": {
+      "line": "Zeile",
+      "description": "Bezeichnung",
+      "amount": "Betrag"
+    }
+  }
+}

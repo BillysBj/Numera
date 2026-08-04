@@ -41,6 +41,8 @@ import DunningConfigSettingsPage from './features/dunning/DunningConfigSettingsP
 import RecurringTemplateListPage from './features/recurring/RecurringTemplateListPage'
 import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFormPage'
 import TeamPage from './features/team/TeamPage'
+import UstVaPruefansichtPage from './features/reports/UstVaPruefansichtPage'
+import EuerReportPage from './features/reports/EuerReportPage'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
 interface NavItem {
@@ -64,6 +66,7 @@ function useNavGroups(): NavGroup[] {
   const { t: tdu } = useTranslation('dunning')
   const { t: tr } = useTranslation('recurring')
   const { t: tt } = useTranslation('team')
+  const { t: trep } = useTranslation('reports')
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -75,6 +78,13 @@ function useNavGroups(): NavGroup[] {
         { to: '/settings/dunning', label: tdu('nav'), icon: IconDunning },
         { to: '/recurring', label: tr('nav'), icon: IconRecurring },
         { to: '/inbound', label: ti('nav'), icon: IconInbound },
+      ],
+    },
+    {
+      label: trep('nav.group'),
+      items: [
+        { to: '/reports/ustva', label: trep('nav.ustva'), icon: IconDocuments },
+        { to: '/reports/euer', label: trep('nav.euer'), icon: IconDashboard },
       ],
     },
     {
@@ -323,6 +333,8 @@ function AppShell() {
             <Route path="/recurring/new" element={<RecurringTemplateFormPage />} />
             <Route path="/recurring/:id/edit" element={<RecurringTemplateFormPage />} />
             <Route path="/team" element={<TeamPage />} />
+            <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
+            <Route path="/reports/euer" element={<EuerReportPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

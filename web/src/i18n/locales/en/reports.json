@@ -1,0 +1,100 @@
+{
+  "nav": {
+    "group": "Reports",
+    "ustva": "VAT return",
+    "euer": "Cash-basis statement"
+  },
+  "loading": "Loading report …",
+  "filters": {
+    "year": "Year",
+    "period": "Period",
+    "from": "From",
+    "to": "To"
+  },
+  "periods": {
+    "01": "January",
+    "02": "February",
+    "03": "March",
+    "04": "April",
+    "05": "May",
+    "06": "June",
+    "07": "July",
+    "08": "August",
+    "09": "September",
+    "10": "October",
+    "11": "November",
+    "12": "December",
+    "41": "1st quarter",
+    "42": "2nd quarter",
+    "43": "3rd quarter",
+    "44": "4th quarter"
+  },
+  "actions": {
+    "xml": "ELSTER XML",
+    "ustvaPdf": "VAT return PDF",
+    "euerPdf": "EÜR PDF",
+    "downloading": "Downloading …"
+  },
+  "errors": {
+    "load": "The report could not be loaded.",
+    "drillDown": "The contributing entries could not be loaded.",
+    "download": "The export could not be downloaded.",
+    "invalidRange": "The from date must be on or before the to date."
+  },
+  "ustva": {
+    "title": "VAT return review",
+    "subtitle": "Review and export the advance VAT return",
+    "taxationType": "Taxation method",
+    "taxationTypes": {
+      "0": "Accrual taxation",
+      "1": "Cash taxation"
+    },
+    "provisional": "provisional",
+    "inputVatNote": "Without input VAT deduction (receipt entry from phase 12).",
+    "columns": {
+      "kz": "Code",
+      "description": "Description",
+      "taxBase": "Tax base",
+      "tax": "Tax"
+    },
+    "kleinunternehmer": {
+      "title": "No VAT return (§19 small-business scheme)",
+      "description": "Small businesses do not submit an advance VAT return. The cash-basis statement remains available under Reports."
+    },
+    "recognitionBasis": {
+      "journalEntryDate": "Accrual taxation · entries by document date",
+      "paymentValueDate": "Cash taxation · invoices by payment date",
+      "gated": "No VAT return"
+    },
+    "drillDown": {
+      "empty": "There are no entries for this code in the selected period.",
+      "date": "Entry date",
+      "journal": "Journal",
+      "source": "Source",
+      "description": "Description",
+      "paymentDate": "Payment date",
+      "document": "Invoice",
+      "invoiceDate": "Invoice date",
+      "reference": "Payment reference",
+      "net": "Net",
+      "vat": "VAT"
+    }
+  },
+  "euer": {
+    "title": "Cash-basis income statement",
+    "subtitle": "Evaluation based on cash received and paid",
+    "income": "Operating income",
+    "expenses": "Operating expenses",
+    "totalIncome": "Total operating income",
+    "totalExpenses": "Total operating expenses",
+    "result": "Result",
+    "profit": "Profit",
+    "incompleteTitle": "Operating expenses incomplete",
+    "incompleteFallback": "Operating expenses incomplete — receipt entry from phase 12.",
+    "columns": {
+      "line": "Line",
+      "description": "Description",
+      "amount": "Amount"
+    }
+  }
+}
