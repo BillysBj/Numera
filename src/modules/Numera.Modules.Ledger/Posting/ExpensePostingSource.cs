@@ -1,13 +1,31 @@
 namespace Numera.Modules.Ledger;
 
+/// <summary>A frozen per-rate expense VAT breakdown used for posting.</summary>
+public sealed record ExpensePostingBreakdown(decimal RatePercent, decimal Net, decimal Tax);
+
 /// <summary>Immutable supplier-expense facts required to build its Buchungssatz.</summary>
 public sealed record ExpensePostingInput(
     string? ExpenseAccount,
     string? CreditorAccount,
-    decimal RatePercent,
-    decimal Net,
-    decimal Tax,
-    DateOnly EntryDate);
+    IReadOnlyList<ExpensePostingBreakdown> Breakdowns,
+    DateOnly EntryDate)
+{
+    /// <summary>Creates a single-rate expense posting input.</summary>
+    public ExpensePostingInput(
+        string? ExpenseAccount,
+        string? CreditorAccount,
+        decimal RatePercent,
+        decimal Net,
+        decimal Tax,
+        DateOnly EntryDate)
+        : this(
+            ExpenseAccount,
+            CreditorAccount,
+            [new ExpensePostingBreakdown(RatePercent, Net, Tax)],
+            EntryDate)
+    {
+    }
+}
 
 /// <summary>Builds Aufwand / Vorsteuer / Verbindlichkeiten posting legs.</summary>
 public sealed class ExpensePostingSource(
@@ -19,38 +37,48 @@ public sealed class ExpensePostingSource(
     /// <inheritdoc />
     public IReadOnlyList<Posting> BuildPostings()
     {
-        EnsureNonNegative(input.Net, nameof(input.Net));
-        EnsureNonNegative(input.Tax, nameof(input.Tax));
+        if (input.Breakdowns.Count == 0)
+        {
+            throw new ArgumentException("An expense posting requires at least one frozen tax breakdown.", nameof(input));
+        }
 
-        var expense = accounts.ResolveExpense(chartVariant, input.RatePercent, input.ExpenseAccount);
         var creditor = accounts.ResolveStandard(
             chartVariant,
             Seed.StandardAccountKind.Creditor,
             input.CreditorAccount);
-        var postings = new List<Posting>(3)
+        var postings = new List<Posting>(1 + (input.Breakdowns.Count * 2));
+
+        foreach (var breakdown in input.Breakdowns)
         {
-            CreatePosting(
+            EnsureNonNegative(breakdown.Net, nameof(breakdown.Net));
+            EnsureNonNegative(breakdown.Tax, nameof(breakdown.Tax));
+
+            var expense = accounts.ResolveExpense(
+                chartVariant,
+                breakdown.RatePercent,
+                input.ExpenseAccount);
+            postings.Add(CreatePosting(
                 expense.AccountId,
-                input.Net,
+                breakdown.Net,
                 PostingDirection.Debit,
                 expense.Key,
-                input.RatePercent),
-        };
+                breakdown.RatePercent));
 
-        if (input.Tax > 0m)
-        {
-            var inputTax = accounts.ResolveInputTax(chartVariant, input.RatePercent);
-            postings.Add(CreatePosting(
-                inputTax.AccountId,
-                input.Tax,
-                PostingDirection.Debit,
-                inputTax.Key,
-                input.RatePercent));
+            if (breakdown.Tax > 0m)
+            {
+                var inputTax = accounts.ResolveInputTax(chartVariant, breakdown.RatePercent);
+                postings.Add(CreatePosting(
+                    inputTax.AccountId,
+                    breakdown.Tax,
+                    PostingDirection.Debit,
+                    inputTax.Key,
+                    breakdown.RatePercent));
+            }
         }
 
         postings.Add(CreatePosting(
             creditor.AccountId,
-            input.Net + input.Tax,
+            input.Breakdowns.Sum(breakdown => breakdown.Net + breakdown.Tax),
             PostingDirection.Credit));
         return postings;
     }

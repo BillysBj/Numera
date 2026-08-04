@@ -178,6 +178,76 @@ public sealed class LedgerPostingEngineTests(PostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Expense_0_percent_debits_expense_without_input_tax_against_creditor()
+    {
+        var tenant = Guid.CreateVersion7();
+        await using var db = await CreateSeededContextAsync(tenant);
+        var source = new ExpensePostingSource(
+            tenant,
+            ChartVariant.Skr03,
+            new ExpensePostingInput(null, null, 0m, 100m, 0m, EntryDate),
+            new AccountResolver(db));
+
+        var entry = await new PostingEngine(db).PostAsync(
+            source,
+            ExpenseHeader(tenant, "expense-zero-rate"),
+            CancellationToken.None);
+        var postings = entry.Postings;
+        var numbers = await AccountNumbersAsync(db);
+
+        AssertBalanced(postings);
+        Assert.Equal(2, postings.Count);
+        AssertLeg(postings, numbers, "4980", PostingDirection.Debit, 100m, Steuerschluessel.None);
+        AssertLeg(postings, numbers, "1600", PostingDirection.Credit, 100m, null);
+        Assert.DoesNotContain(postings, posting => numbers[posting.AccountId] is "1576" or "1571");
+    }
+
+    [Fact]
+    public async Task Multi_rate_expense_posts_one_balanced_journal_entry_with_one_creditor_leg()
+    {
+        var tenant = Guid.CreateVersion7();
+        await using var db = await CreateSeededContextAsync(tenant);
+        var source = new ExpensePostingSource(
+            tenant,
+            ChartVariant.Skr03,
+            new ExpensePostingInput(
+                null,
+                null,
+                [
+                    new ExpensePostingBreakdown(19m, 100m, 19m),
+                    new ExpensePostingBreakdown(7m, 200m, 14m),
+                ],
+                EntryDate),
+            new AccountResolver(db));
+
+        var entry = await new PostingEngine(db).PostAsync(
+            source,
+            ExpenseHeader(tenant, "expense-multi-rate"),
+            CancellationToken.None);
+        var postings = entry.Postings;
+        var numbers = await AccountNumbersAsync(db);
+
+        AssertBalanced(postings);
+        Assert.Equal(5, postings.Count);
+        AssertLeg(postings, numbers, "4980", PostingDirection.Debit, 100m, Steuerschluessel.Vst19);
+        AssertLeg(postings, numbers, "1576", PostingDirection.Debit, 19m, Steuerschluessel.Vst19);
+        AssertLeg(postings, numbers, "4980", PostingDirection.Debit, 200m, Steuerschluessel.Vst7);
+        AssertLeg(postings, numbers, "1571", PostingDirection.Debit, 14m, Steuerschluessel.Vst7);
+        AssertLeg(postings, numbers, "1600", PostingDirection.Credit, 333m, null);
+        Assert.Equal(
+            300m,
+            postings
+                .Where(posting => numbers[posting.AccountId] == "4980")
+                .Sum(posting => posting.Amount));
+        Assert.Equal(
+            33m,
+            postings
+                .Where(posting => numbers[posting.AccountId] is "1576" or "1571")
+                .Sum(posting => posting.Amount));
+        Assert.Equal(1, await db.Set<JournalEntry>().CountAsync());
+    }
+
+    [Fact]
     public async Task Invoice_storno_is_general_reversal_and_references_original_entry()
     {
         var tenant = Guid.CreateVersion7();
@@ -306,6 +376,17 @@ public sealed class LedgerPostingEngineTests(PostgresFixture fixture)
             Description = postingType == PostingType.Storno ? "Storno" : "Invoice",
             PostingType = postingType,
             ReversesEntryId = reversesEntryId,
+        };
+
+    private static JournalEntry ExpenseHeader(Guid tenant, string sourceRef) =>
+        new()
+        {
+            TenantId = tenant,
+            EntryDate = EntryDate,
+            SourceRef = sourceRef,
+            SourceType = LedgerSourceType.Expense,
+            Description = "Expense",
+            PostingType = PostingType.Normal,
         };
 
     private static async Task<IReadOnlyDictionary<Guid, string>> AccountNumbersAsync(NumeraDbContext db) =>

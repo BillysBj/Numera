@@ -56,7 +56,10 @@ public sealed class AccountResolver(NumeraDbContext db)
         decimal ratePercent)
     {
         var mapping = SkrMapping.ExpenseMapping(variant, ratePercent);
-        return ResolveAccount(mapping.VorsteuerAccount, variant, mapping.Key);
+        var inputTaxAccount = mapping.VorsteuerAccount
+            ?? throw new InvalidOperationException(
+                $"Expense VAT rate {ratePercent}% ({variant}) has no input-tax account.");
+        return ResolveAccount(inputTaxAccount, variant, mapping.Key);
     }
 
     /// <summary>Resolves a standard debtor, creditor, bank or cash account with an optional override.</summary>

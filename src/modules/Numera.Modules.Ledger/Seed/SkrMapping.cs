@@ -79,17 +79,19 @@ public static class SkrMapping
             : RevenueMapping(variant, taxCategory, ratePercent);
 
     /// <summary>Maps an expense VAT rate to its expense, input-tax and BU accounts.</summary>
-    public static (string ExpenseAccount, string VorsteuerAccount, Steuerschluessel Key) ExpenseMapping(
+    public static (string ExpenseAccount, string? VorsteuerAccount, Steuerschluessel Key) ExpenseMapping(
         ChartVariant variant,
         decimal ratePercent) =>
         (variant, ratePercent) switch
         {
+            (ChartVariant.Skr03, 0m) => ("4980", null, Steuerschluessel.None),
             (ChartVariant.Skr03, 19m) => ("4980", "1576", Steuerschluessel.Vst19),
             (ChartVariant.Skr03, 7m) => ("4980", "1571", Steuerschluessel.Vst7),
+            (ChartVariant.Skr04, 0m) => ("6300", null, Steuerschluessel.None),
             (ChartVariant.Skr04, 19m) => ("6300", "1406", Steuerschluessel.Vst19),
             (ChartVariant.Skr04, 7m) => ("6300", "1401", Steuerschluessel.Vst7),
             (ChartVariant.Skr03 or ChartVariant.Skr04, _) => throw new ArgumentOutOfRangeException(
-                nameof(ratePercent), ratePercent, "Expenses support 7% or 19% input VAT."),
+                nameof(ratePercent), ratePercent, "Expenses support 0%, 7% or 19% VAT."),
             _ => throw UnsupportedVariant(variant),
         };
 
