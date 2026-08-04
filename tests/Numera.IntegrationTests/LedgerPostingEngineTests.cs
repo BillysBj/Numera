@@ -242,11 +242,14 @@ public sealed class LedgerPostingEngineTests(PostgresFixture fixture)
         var tenant = Guid.CreateVersion7();
         await using var db = await CreateSeededContextAsync(tenant);
 
+        // The tenant seeded the SKR03 chart, so resolving an SKR04 revenue account
+        // (4400) has no matching row and must fail with a clear, named exception.
+        // (TaxCategory.K now resolves to the seeded 8125/4125 i.g.-Lieferung accounts.)
         var exception = Assert.Throws<LedgerAccountNotFoundException>(() =>
-            new AccountResolver(db).ResolveRevenue(ChartVariant.Skr03, TaxCategory.K, 0m));
+            new AccountResolver(db).ResolveRevenue(ChartVariant.Skr04, TaxCategory.S, 19m));
 
-        Assert.Contains("8125", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("Skr03", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("4400", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("Skr04", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
