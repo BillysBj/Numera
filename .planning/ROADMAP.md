@@ -28,7 +28,7 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 
 - [x] **Phase 10: Buchhaltungs-Fundament** — SKR03/04-Kontenrahmen, doppische unveränderbare Buchungs-Engine, Steuerschlüssel-Mapping, Auto-Buchung aus Rechnungen & Zahlungen, Journal/Konto-Sichten, Periodensperre — ✓ 2026-08-03
 - [x] **Phase 11: Berichte & USt-Voranmeldung** — EÜR + USt-Voranmeldung (Kennziffern-Berechnung + ELSTER-XML/Druck-Export, kein ERiC-Direktversand) — ✓ 2026-08-04
-- [ ] **Phase 12: Belege & Ausgaben** — Belegscan (Kamera/Upload) + OCR + Buchungsvorschlag, strukturierte E-Rechnungs-Lesung, GoBD-Langzeitarchiv, Lieferanten-Match, E-Mail-Eingang
+- [x] **Phase 12: Belege & Ausgaben** — Belegscan (Kamera/Upload) + OCR + Buchungsvorschlag, strukturierte E-Rechnungs-Lesung, GoBD-Langzeitarchiv, Lieferanten-Match, E-Mail-Eingang — ✓ 2026-08-04
 - [ ] **Phase 13: Banking & Zahlungsabgleich** — finAPI-Anbindung, Umsatz-Sync, automatischer Abgleich mit offenen Posten (+ Buchung), manuelle Zuordnung/Split, CSV/CAMT-Fallback
 - [ ] **Phase 14: Monetarisierung (Stripe)** — Stripe Checkout, Webhook-Berechtigung → `tenants.plan`-Gate, Customer-Portal-Self-Service, Trial, Abo-Mahnwesen/Degradation, USt-korrekte Eigen-Abrechnung
 
@@ -80,15 +80,14 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 3. Das Originaldokument liegt unveränderbar (WORM) im GoBD-Archiv, indiziert, mit der Buchung verknüpft, 10 Jahre aufbewahrt.
 4. An die mandanteneigene E-Mail-Eingangsadresse weitergeleitete Belege werden automatisch erfasst; der Lieferant wird zugeordnet (v1-CRM), Dubletten werden erkannt.
 
-**Plans:** 7 plans (4 waves)
-Plans:
-- [ ] 12-01-PLAN.md — Ledger 0%/steuerfrei expense extension (unblocks zero-rated Ausgaben)
-- [ ] 12-02-PLAN.md — Beleg (receipt) aggregate + GoBD WORM archive migration + dedup + booking-proposal mapping
-- [ ] 12-03-PLAN.md — IReceiptExtractor port (stub default + Azure adapter) + IAttachmentScanner (ClamAV + test double) + DI
-- [ ] 12-04-PLAN.md — Capture pipeline: scan → WORM archive → Receipt → async OCR job + Tier-A e-invoice→Beleg + endpoints
-- [ ] 12-05-PLAN.md — Review + confirm→book (human-gated, idempotent, multi-leg) feeding USt-VA Kz 66 + EÜR
-- [ ] 12-06-PLAN.md — Per-tenant email intake: IMAP polling job + address provisioning + GreenMail test (BELEG-07)
-- [ ] 12-07-PLAN.md — belege frontend feature (capture/queue/review-and-book/mailbox) + end-to-end human-verify
+**Plans:** 7 plans (4 waves) — ✓ all complete 2026-08-04. LOCKED decisions D1–D4 (siehe 12-CONTEXT.md): OCR-Stub-Default hinter IReceiptExtractor-Port (+ Azure-Adapter config-opt-in), NIE Auto-Buchung (Human-Confirm); E-Mail-Eingang in-scope (IMAP/GreenMail); Ausgaben-USt 19/7 + 0% (Reverse-Charge OUT); ClamAV-Scan vor Archivierung. USER-DECISION: USt-VA Vorsteuer Kz 66 jetzt erschlossen; EÜR-Betriebsausgaben bleibt cash-korrekt (fließt erst bei Zahlung — spätere Banking-Phase).
+- [x] 12-01-PLAN.md — Ledger 0%/steuerfrei + Multi-Rate expense extension [BELEG-05-Fundament]
+- [x] 12-02-PLAN.md — Beleg (receipt) aggregate + GoBD WORM archive migration + dedup + booking-proposal mapping [BELEG-04/06]
+- [x] 12-03-PLAN.md — IReceiptExtractor port (stub default + Azure adapter) + IAttachmentScanner (ClamAV + test double) + DI [BELEG-01/02]
+- [x] 12-04-PLAN.md — Capture pipeline: scan → WORM archive → Receipt → async OCR job + Tier-A e-invoice→Beleg + endpoints [BELEG-01/02/03/04]
+- [x] 12-05-PLAN.md — Review + confirm→book (human-gated, idempotent, multi-leg) feeding USt-VA Kz 66 [BELEG-05]
+- [x] 12-06-PLAN.md — Per-tenant email intake: IMAP polling job + address provisioning + GreenMail test [BELEG-07]
+- [x] 12-07-PLAN.md — belege frontend feature (capture/queue/review-and-book/mailbox) + end-to-end human-verify (approved) [BELEG-01..07]
 
 ### Phase 13: Banking & Zahlungsabgleich
 **Goal**: Numera trifft die Realität — echte Kontoumsätze über finAPI, automatisch abgeglichen mit den offenen Posten und ins Journal gebucht.
@@ -119,6 +118,6 @@ Plans:
 | 1.–9. (v1.0) | v1.0 | 61/61 | ✓ Complete | 2026-08-02 |
 | 10. Buchhaltungs-Fundament | v2.0 | 6/6 | ✓ Complete | 2026-08-03 |
 | 11. Berichte & USt-Voranmeldung | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
-| 12. Belege & Ausgaben | v2.0 | 0/7 | Planned | - |
-| 13. Banking & Zahlungsabgleich | v2.0 | 0/? | Pending | - |
+| 12. Belege & Ausgaben | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
+| 13. Banking & Zahlungsabgleich | v2.0 | 0/? | Next | - |
 | 14. Monetarisierung (Stripe) | v2.0 | 0/? | Pending | - |

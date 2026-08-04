@@ -33,13 +33,13 @@ Committed scope for this milestone. Each maps to a roadmap phase (numbering cont
 
 ### Belege & Ausgaben (BELEG)
 
-- [ ] **BELEG-01**: Nutzer erfasst Belege per Kamera und Datei-Upload (PDF/Bild)
-- [ ] **BELEG-02**: OCR extrahiert strukturierte Felder (Lieferant, Datum, Beträge, USt, Rechnungsnummer) mit Konfidenz + Prüfung
-- [ ] **BELEG-03**: Bereits empfangene E-Rechnungen (XRechnung/ZUGFeRD) werden strukturiert gelesen (ohne OCR, wiederverwendet v1-Parser)
-- [ ] **BELEG-04**: GoBD-konformes revisionssicheres Langzeitarchiv (WORM, Originalformat, indiziert, 10 Jahre, mit der Buchung verknüpft)
-- [ ] **BELEG-05**: Numera erzeugt einen Buchungsvorschlag (Aufwandskonto + Vorsteuer-Steuerschlüssel); nach Bestätigung wird gebucht — nie ohne Prüfung
-- [ ] **BELEG-06**: Beleg wird einem Lieferanten zugeordnet (v1-CRM) und Dubletten werden erkannt
-- [ ] **BELEG-07**: Pro Mandant eine eindeutige E-Mail-Eingangsadresse; weitergeleitete Belege/Anhänge werden automatisch erfasst (mandantengetrennt)
+- [x] **BELEG-01**: Nutzer erfasst Belege per Kamera und Datei-Upload (PDF/Bild)
+- [x] **BELEG-02**: OCR extrahiert strukturierte Felder (Lieferant, Datum, Beträge, USt, Rechnungsnummer) mit Konfidenz + Prüfung *(IReceiptExtractor-Port; Stub-Default, Azure-DI-Adapter config-opt-in)*
+- [x] **BELEG-03**: Bereits empfangene E-Rechnungen (XRechnung/ZUGFeRD) werden strukturiert gelesen (ohne OCR, wiederverwendet v1-Parser)
+- [x] **BELEG-04**: GoBD-konformes revisionssicheres Langzeitarchiv (WORM, Originalformat, indiziert, 10 Jahre, mit der Buchung verknüpft)
+- [x] **BELEG-05**: Numera erzeugt einen Buchungsvorschlag (Aufwandskonto + Vorsteuer-Steuerschlüssel); nach Bestätigung wird gebucht — nie ohne Prüfung *(19/7 + 0%; Reverse-Charge später; USt-VA Vorsteuer Kz 66 erschlossen, EÜR-Ausgaben cash-basis bei Zahlung)*
+- [x] **BELEG-06**: Beleg wird einem Lieferanten zugeordnet (v1-CRM) und Dubletten werden erkannt
+- [x] **BELEG-07**: Pro Mandant eine eindeutige E-Mail-Eingangsadresse; weitergeleitete Belege/Anhänge werden automatisch erfasst (mandantengetrennt)
 
 ### Monetarisierung (BILL) — Stripe-Abrechnung (unabhängiger Track)
 
@@ -109,7 +109,7 @@ Wird bei der Roadmap-Erstellung befüllt (jede Anforderung → genau eine Phase,
 |-------------|-------|--------|
 | ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-09 | Phase 10 — Buchhaltungs-Fundament | ✓ Done (2026-08-03) — ACCT-05 = posting rule + tests; runtime entry point in Phase 12 |
 | ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | ✓ Done (2026-08-04) — USt-VA Kz 81/86/83/41; übrige Kz (Vorsteuer/§13b/i.g.-Erwerb) in Phase 12 |
-| BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | Pending |
+| BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | ✓ Done (2026-08-04) |
 | BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | Pending |
 | BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07 | Phase 14 — Monetarisierung (Stripe) | Pending |
 
