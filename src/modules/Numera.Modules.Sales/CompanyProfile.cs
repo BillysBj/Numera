@@ -7,6 +7,27 @@ using Numera.Platform.Money;
 
 namespace Numera.Modules.Sales;
 
+/// <summary>German state used to normalize a local Steuernummer for ELSTER.</summary>
+public enum Bundesland
+{
+    BadenWuerttemberg = 1,
+    Bayern = 2,
+    Berlin = 3,
+    Brandenburg = 4,
+    Bremen = 5,
+    Hamburg = 6,
+    Hessen = 7,
+    MecklenburgVorpommern = 8,
+    Niedersachsen = 9,
+    NordrheinWestfalen = 10,
+    RheinlandPfalz = 11,
+    Saarland = 12,
+    Sachsen = 13,
+    SachsenAnhalt = 14,
+    SchleswigHolstein = 15,
+    Thueringen = 16,
+}
+
 /// <summary>
 /// The tenant's own §14 UStG <b>issuer</b> master data (Ausstellerstammdaten) — the one
 /// record carrying the legal name, address, tax identity and §19 status that every
@@ -56,6 +77,12 @@ public sealed class CompanyProfile : ITenantEntity
 
     /// <summary>National tax number (Steuernummer, BT-32). Exactly one of this or <see cref="VatId"/> is required.</summary>
     public string? TaxNumber { get; set; }
+
+    /// <summary>
+    /// German state whose Landes-format applies to <see cref="TaxNumber"/>. Required only
+    /// when the local Steuernummer is exported to a nationwide ELSTER format.
+    /// </summary>
+    public Bundesland? Bundesland { get; set; }
 
     /// <summary>
     /// §19 UStG small-business flag (Kleinunternehmer). When true, invoices carry no VAT
