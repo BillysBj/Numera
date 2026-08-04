@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Numera.Api.Reporting;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Dunning;
@@ -60,6 +61,7 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         await ReadIsolationAsync<CustomerFile>((t, ctx) => ctx.Add(NewCustomerFile(t)));
         await ReadIsolationAsync<EInvoiceArtifact>((t, ctx) => ctx.Add(NewEInvoiceArtifact(t)));
         await ReadIsolationAsync<InboundDocument>((t, ctx) => ctx.Add(NewInboundDocument(t)));
+        await ReadIsolationAsync<UstVaFiling>((t, ctx) => ctx.Add(NewUstVaFiling(t)));
     }
 
     // Seeds one row (+ any parents) as tenant A and one as tenant B, then proves — with the EF
@@ -97,6 +99,7 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewCustomerFile(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewEInvoiceArtifact(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewInboundDocument(b)));
+        await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewUstVaFiling(b)));
 
         // FK tables: seed the parent as tenant A (so the ONLY violation is the foreign child
         // TenantId), then attempt the cross-tenant child insert.
@@ -251,5 +254,17 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         OriginalContentType = "application/xml",
         ByteSize = 3,
         UploadedAt = DateTimeOffset.UtcNow,
+    };
+
+    private static UstVaFiling NewUstVaFiling(Guid t) => new()
+    {
+        TenantId = t,
+        Jahr = 2026,
+        Zeitraum = "06",
+        Besteuerungsart = Numera.Modules.Ledger.Besteuerungsart.Soll,
+        KzSnapshotJson = "[]",
+        Zahllast = 0m,
+        Status = UstVaFilingStatus.Draft,
+        CreatedAt = DateTimeOffset.UtcNow,
     };
 }

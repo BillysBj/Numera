@@ -12,6 +12,7 @@ using Numera.Api.Auth;
 using Numera.Api.Endpoints;
 using Numera.Api.Events;
 using Numera.Api.Jobs;
+using Numera.Api.Reporting;
 using Numera.Api.Services;
 using Numera.Modules.Ledger;
 using Numera.Modules.Ledger.Seed;
@@ -62,6 +63,13 @@ builder.Services.AddScoped<ChartSeeder>();
 builder.Services.AddScoped<AccountResolver>();
 builder.Services.AddScoped<PostingEngine>();
 builder.Services.AddScoped<FestschreibungService>();
+
+// --- Reporting (Phase 11 integration) --------------------------------------
+// Reporting DI is deliberately centralized here: the calculators share the same
+// request-scoped RLS DbContext and RecognitionReader.
+builder.Services.AddScoped<RecognitionReader>();
+builder.Services.AddScoped<UstVaCalculator>();
+builder.Services.AddScoped<EuerCalculator>();
 
 // --- Sales finalize services (plan 03-05) ----------------------------------
 // NumberingService claims the race-safe document number inside the finalize
@@ -180,6 +188,7 @@ app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapLedgerSetupEndpoints();
 app.MapLedgerEndpoints();
+app.MapReportEndpoints();
 app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
