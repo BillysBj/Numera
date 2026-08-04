@@ -1,6 +1,8 @@
 using System.Text.Json;
+using System.Security.Cryptography;
 
 using Numera.Api.Endpoints;
+using Numera.Modules.Sales.Belege;
 using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.EInvoice.Inbound;
 using Numera.Platform.Audit;
@@ -13,8 +15,8 @@ namespace Numera.Api.Services;
 /// Ingests a received (inbound) e-invoice as an Eingangsbeleg (Phase-5 EINV-04/EINV-05). The shared
 /// entrypoint the upload endpoint calls: parse (detect → extract → <c>InvoiceDescriptor.Load</c>)
 /// → validate against KoSIT → match the supplier by VAT id → store the IMMUTABLE original bytes +
-/// the human-readable read-model + the verdict + the matched partner in <c>inbound_document</c>
-/// (RLS), all in one <c>db.Add</c> + <c>SaveChanges</c>.
+/// the human-readable read-model + the verdict + the matched partner in <c>inbound_document</c>,
+/// plus a linked Tier-A <see cref="Receipt"/> proposal, all in one <c>SaveChanges</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -116,7 +118,29 @@ public sealed class InboundEInvoiceService
             UploadedAt = now,
         };
 
+        // Tier A uses the structurally parsed EN-16931 values directly. It deliberately has no
+        // receipt_archive row: inbound_document is already the immutable original-byte store.
+        var receipt = new Receipt
+        {
+            TenantId = document.TenantId,
+            Source = ReceiptSource.EInvoice,
+            Status = ReceiptStatus.Extracted,
+            InboundDocumentId = document.Id,
+            ContentHash = Convert.ToHexStringLower(SHA256.HashData(bytes)),
+            SupplierName = readModel.Seller.Name,
+            SupplierVatId = readModel.Seller.VatId,
+            InvoiceNumber = readModel.InvoiceNumber,
+            InvoiceDate = readModel.InvoiceDate,
+            NetAmount = readModel.TotalNet,
+            VatAmount = readModel.TotalTax,
+            GrossAmount = readModel.TotalGross,
+            Currency = readModel.Currency,
+            MatchedPartnerId = matchedPartnerId,
+            CreatedAt = now,
+        };
+
         _db.Add(document);
+        _db.Add(receipt);
         await _audit.RecordAsync(
             new InboundDocumentAuditEvent(
                 "inbound_document.ingested", document.Id, Before: null,
@@ -132,6 +156,7 @@ public sealed class InboundEInvoiceService
                     Json)),
             ct).ConfigureAwait(false);
 
+        // One atomic unit: no inbound_document can commit without its single linked receipt.
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
         return new IngestResult(document, null);
     }

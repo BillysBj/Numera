@@ -151,6 +151,10 @@ else
 {
     builder.Services.AddScoped<IAttachmentScanner, NoopAttachmentScanner>();
 }
+// Shared upload/e-mail capture pipeline and its RLS-safe asynchronous extractor.
+builder.Services.AddScoped<ReceiptDeduplicator>();
+builder.Services.AddScoped<ReceiptIngestService>();
+builder.Services.AddTransient<ExtractReceiptJob>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<DunningConfigService>();
 builder.Services.AddTransient<SendDunningNoticeJob>();
@@ -221,6 +225,7 @@ app.MapReportEndpoints();
 app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
+app.MapReceiptEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
 app.MapDunningEndpoints();
