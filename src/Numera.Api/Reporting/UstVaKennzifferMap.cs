@@ -17,7 +17,9 @@ public enum UstVaFigureKind
 public sealed record UstVaRecognitionSelector(
     TaxCategory TaxCategory,
     decimal TaxRatePercent,
-    PostingDirection NaturalSide);
+    PostingDirection NaturalSide,
+    AccountType? AccountType = null,
+    bool MatchTaxMetadata = true);
 
 /// <summary>One Kennziffer supported by a fiscal-year form version.</summary>
 public sealed record UstVaKennzifferDefinition(
@@ -33,9 +35,6 @@ public sealed record UstVaKennzifferDefinition(
 /// </summary>
 public static class UstVaKennzifferMap
 {
-    /// <summary>Notice attached to the output-VAT-only Zahllast in Phase 11.</summary>
-    public const string ZahllastHinweis = "Ohne Vorsteuerabzug (Belegerfassung ab Phase 12).";
-
     private static readonly IReadOnlyDictionary<int, IReadOnlyList<UstVaKennzifferDefinition>> Versions =
         new Dictionary<int, IReadOnlyList<UstVaKennzifferDefinition>>
         {
@@ -58,6 +57,17 @@ public static class UstVaKennzifferMap
                     "Innergemeinschaftliche Lieferungen (§4 Nr. 1b)",
                     UstVaFigureKind.Bemessungsgrundlage,
                     new UstVaRecognitionSelector(TaxCategory.K, 0m, PostingDirection.Credit),
+                    IsComputed: false),
+                new(
+                    "66",
+                    "VorsteuerbetrÃ¤ge aus Rechnungen von anderen Unternehmern",
+                    UstVaFigureKind.Steuer,
+                    new UstVaRecognitionSelector(
+                        TaxCategory.S,
+                        TaxRatePercent: 0m,
+                        PostingDirection.Debit,
+                        AccountType.Asset,
+                        MatchTaxMetadata: false),
                     IsComputed: false),
                 new(
                     "83",

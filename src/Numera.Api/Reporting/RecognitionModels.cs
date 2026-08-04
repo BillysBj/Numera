@@ -9,7 +9,11 @@ public record SollRecognitionRow(
     TaxCategory? TaxCategory,
     decimal? TaxRatePercent,
     PostingDirection Direction,
-    decimal Amount);
+    decimal Amount)
+{
+    /// <summary>The chart classification used to distinguish input-tax from expense accounts.</summary>
+    public AccountType AccountType { get; init; }
+}
 
 /// <summary>A frozen invoice tax bucket recognized pro rata on a payment value date.</summary>
 public record CashRecognitionRow(

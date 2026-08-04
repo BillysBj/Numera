@@ -4,8 +4,12 @@ using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Contracts;
 using Numera.Api.Services;
+using Numera.Modules.Crm;
+using Numera.Modules.Ledger;
+using Numera.Modules.Ledger.Seed;
 using Numera.Modules.Sales.Belege;
 using Numera.Modules.Sales.EInvoice.Inbound;
+using Numera.Platform.Audit;
 using Numera.Platform.Db;
 using Numera.Platform.Tenancy;
 
@@ -15,6 +19,7 @@ namespace Numera.Api.Endpoints;
 public static class ReceiptEndpoints
 {
     private const int MaxPageSize = 100;
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     /// <summary>Maps the authenticated <c>/api/receipts</c> surface.</summary>
     public static IEndpointRouteBuilder MapReceiptEndpoints(this IEndpointRouteBuilder app)
@@ -252,8 +257,513 @@ public static class ReceiptEndpoints
             return Results.NotFound();
         });
 
+        g.MapGet("/{id:guid}/proposal", async (
+            Guid id,
+            NumeraDbContext db,
+            AccountResolver accountResolver,
+            ICurrentTenant tenant,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+            await GetProposalAsync(
+                id, db, accountResolver, tenant, loggerFactory, ct).ConfigureAwait(false));
+
+        g.MapPatch("/{id:guid}/review", async (
+            Guid id,
+            ReceiptContracts.ReviewReceiptRequest request,
+            NumeraDbContext db,
+            IAuditWriter audit,
+            ICurrentUser currentUser,
+            CancellationToken ct) =>
+            await ReviewAsync(id, request, db, audit, currentUser, ct).ConfigureAwait(false));
+
+        g.MapPost("/{id:guid}/confirm-book", async (
+            Guid id,
+            NumeraDbContext db,
+            PostingEngine postingEngine,
+            AccountResolver accountResolver,
+            IAuditWriter audit,
+            ICurrentTenant tenant,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+            await ConfirmBookAsync(
+                id,
+                db,
+                postingEngine,
+                accountResolver,
+                audit,
+                tenant,
+                loggerFactory,
+                ct).ConfigureAwait(false));
+
         return app;
     }
+
+    internal static async Task<IResult> GetProposalAsync(
+        Guid id,
+        NumeraDbContext db,
+        AccountResolver accountResolver,
+        ICurrentTenant tenant,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var receipt = await db.Set<Receipt>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(candidate => candidate.Id == id, ct)
+            .ConfigureAwait(false);
+        if (receipt is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (receipt.Status == ReceiptStatus.Quarantined)
+        {
+            return Unprocessable("Ein quarant\u00e4nisierter Beleg kann keine Buchung vorschlagen.");
+        }
+
+        if (receipt.Status is not (ReceiptStatus.Extracted or ReceiptStatus.Reviewed))
+        {
+            return Results.Problem(
+                title: "Beleg kann nicht vorgeschlagen werden",
+                detail: $"Nur extrahierte oder gepr\u00fcfte Belege haben einen Buchungsvorschlag; Status ist {receipt.Status}.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        var tenantId = tenant.TenantId
+            ?? throw new InvalidOperationException("No tenant is active for receipt proposal.");
+        var chartVariant = await TryResolveChartVariant(
+            db, loggerFactory, tenantId, receipt.Id, ct).ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            return Unprocessable("F\u00fcr den Mandanten ist kein Kontenrahmen eingerichtet.");
+        }
+
+        try
+        {
+            var supplier = await LoadSupplierAsync(db, receipt.MatchedPartnerId, ct).ConfigureAwait(false);
+            var input = await BuildPostingInputAsync(receipt, supplier?.CreditorAccount, db, ct)
+                .ConfigureAwait(false);
+            EnsureBookingTotals(receipt, input);
+
+            var postings = new ExpensePostingSource(
+                    tenantId, chartVariant.Value, input, accountResolver)
+                .BuildPostings();
+            var accountIds = postings.Select(posting => posting.AccountId).Distinct().ToArray();
+            var accountNumbers = await db.Set<Account>()
+                .AsNoTracking()
+                .Where(account => accountIds.Contains(account.Id))
+                .ToDictionaryAsync(account => account.Id, account => account.Number, ct)
+                .ConfigureAwait(false);
+            var defaultExpenseAccount = SkrMapping
+                .ExpenseMapping(chartVariant.Value, input.Breakdowns[0].RatePercent)
+                .ExpenseAccount;
+            var expenseAccount = string.IsNullOrWhiteSpace(input.ExpenseAccount)
+                ? defaultExpenseAccount
+                : input.ExpenseAccount.Trim();
+            var creditorAccount = string.IsNullOrWhiteSpace(input.CreditorAccount)
+                ? SkrMapping.StandardAccount(chartVariant.Value, StandardAccountKind.Creditor)
+                : input.CreditorAccount.Trim();
+
+            return Results.Ok(new ReceiptContracts.ReceiptBookingProposalResponse(
+                receipt.Id,
+                new ReceiptContracts.ReceiptProposalSupplier(
+                    supplier?.Id,
+                    supplier?.Name ?? receipt.SupplierName,
+                    creditorAccount),
+                expenseAccount,
+                input.EntryDate,
+                input.Breakdowns
+                    .Select(row => new ReceiptContracts.ReceiptProposalBreakdown(
+                        row.RatePercent, row.Net, row.Tax))
+                    .ToList(),
+                postings.Select(posting => new ReceiptContracts.ReceiptProposalPostingLeg(
+                        accountNumbers[posting.AccountId],
+                        (int)posting.Direction,
+                        posting.Amount,
+                        posting.TaxRatePercent,
+                        posting.Steuerschluessel is null ? null : (int)posting.Steuerschluessel.Value))
+                    .ToList(),
+                input.Breakdowns.Sum(row => row.Net),
+                input.Breakdowns.Sum(row => row.Tax),
+                input.Breakdowns.Sum(row => row.Net + row.Tax)));
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or JsonException)
+        {
+            return Unprocessable(ex.Message);
+        }
+    }
+
+    internal static async Task<IResult> ReviewAsync(
+        Guid id,
+        ReceiptContracts.ReviewReceiptRequest request,
+        NumeraDbContext db,
+        IAuditWriter audit,
+        ICurrentUser currentUser,
+        CancellationToken ct)
+    {
+        var receipt = await db.Set<Receipt>()
+            .FirstOrDefaultAsync(candidate => candidate.Id == id, ct)
+            .ConfigureAwait(false);
+        if (receipt is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (receipt.Status == ReceiptStatus.Quarantined)
+        {
+            return Unprocessable("Ein quarant\u00e4nisierter Beleg darf nicht gepr\u00fcft oder gebucht werden.");
+        }
+
+        if (receipt.Status is not (ReceiptStatus.Extracted or ReceiptStatus.Reviewed))
+        {
+            return Results.Problem(
+                title: "Beleg ist nicht bearbeitbar",
+                detail: $"Nur extrahierte oder bereits gepr\u00fcfte Belege d\u00fcrfen gepr\u00fcft werden; Status ist {receipt.Status}.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
+
+        if (currentUser.UserId is not Guid actorId)
+        {
+            return Unprocessable("Die Belegpr\u00fcfung erfordert einen angemeldeten Benutzer.");
+        }
+
+        var errors = ValidateReview(request, receipt.InboundDocumentId.HasValue);
+        if (request.SupplierPartnerId is { } supplierPartnerId)
+        {
+            var supplierExists = await db.Set<BusinessPartner>()
+                .AsNoTracking()
+                .AnyAsync(partner => partner.Id == supplierPartnerId && partner.IsSupplier, ct)
+                .ConfigureAwait(false);
+            if (!supplierExists)
+            {
+                errors["supplierPartnerId"] = ["Der ausgew\u00e4hlte Lieferant wurde nicht gefunden."];
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            return Results.ValidationProblem(
+                errors,
+                statusCode: StatusCodes.Status422UnprocessableEntity,
+                title: "Belegpr\u00fcfung ist unvollst\u00e4ndig");
+        }
+
+        var before = Snapshot(receipt);
+        var now = DateTimeOffset.UtcNow;
+        receipt.MatchedPartnerId = request.SupplierPartnerId;
+        receipt.ExpenseAccountOverride = NormalizeOptional(request.ExpenseAccountOverride);
+        receipt.VatRatePercent = request.VatRatePercent;
+        receipt.NetAmount = request.NetAmount;
+        receipt.VatAmount = request.VatAmount;
+        receipt.GrossAmount = request.GrossAmount;
+        receipt.InvoiceNumber = NormalizeOptional(request.InvoiceNumber);
+        receipt.InvoiceDate = request.InvoiceDate;
+        receipt.ExpenseDate = request.ExpenseDate;
+        receipt.Status = ReceiptStatus.Reviewed;
+        receipt.ReviewedByUserId = actorId;
+        receipt.ReviewedAt = now;
+
+        await audit.RecordAsync(
+            new ReceiptAuditEvent("receipt.reviewed", receipt.Id, before, Snapshot(receipt)), ct)
+            .ConfigureAwait(false);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return Results.Ok(new ReceiptContracts.ReviewReceiptResponse(
+            receipt.Id, (int)receipt.Status, actorId, now));
+    }
+
+    internal static async Task<IResult> ConfirmBookAsync(
+        Guid id,
+        NumeraDbContext db,
+        PostingEngine postingEngine,
+        AccountResolver accountResolver,
+        IAuditWriter audit,
+        ICurrentTenant tenant,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        var receipt = await db.Set<Receipt>()
+            .FirstOrDefaultAsync(candidate => candidate.Id == id, ct)
+            .ConfigureAwait(false);
+        if (receipt is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (receipt.Status == ReceiptStatus.Quarantined)
+        {
+            return Unprocessable("Ein quarant\u00e4nisierter Beleg darf nicht gebucht werden.");
+        }
+
+        var sourceRef = receipt.Id.ToString();
+        if (await db.Set<JournalEntry>()
+                .AnyAsync(
+                    entry => entry.SourceType == LedgerSourceType.Expense && entry.SourceRef == sourceRef,
+                    ct)
+                .ConfigureAwait(false))
+        {
+            var existingEntryId = receipt.JournalEntryId
+                ?? await db.Set<JournalEntry>()
+                    .AsNoTracking()
+                    .Where(entry => entry.SourceType == LedgerSourceType.Expense && entry.SourceRef == sourceRef)
+                    .Select(entry => entry.Id)
+                    .SingleAsync(ct)
+                    .ConfigureAwait(false);
+            return Results.Ok(new ReceiptContracts.ReceiptBookingResponse(
+                receipt.Id,
+                existingEntryId,
+                (int)ReceiptStatus.Booked,
+                AlreadyBooked: true));
+        }
+
+        if (receipt.Status != ReceiptStatus.Reviewed || receipt.ReviewedByUserId is null)
+        {
+            return Unprocessable("Beleg muss gepr\u00fcft und best\u00e4tigt sein");
+        }
+
+        var tenantId = tenant.TenantId
+            ?? throw new InvalidOperationException("No tenant is active for receipt booking.");
+        var chartVariant = await TryResolveChartVariant(
+            db, loggerFactory, tenantId, receipt.Id, ct).ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            return Unprocessable("F\u00fcr den Mandanten ist kein Kontenrahmen eingerichtet.");
+        }
+
+        ExpensePostingInput input;
+        BusinessPartner? supplier;
+        try
+        {
+            supplier = await LoadSupplierAsync(db, receipt.MatchedPartnerId, ct).ConfigureAwait(false);
+            input = await BuildPostingInputAsync(receipt, supplier?.CreditorAccount, db, ct)
+                .ConfigureAwait(false);
+            EnsureBookingTotals(receipt, input);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or JsonException)
+        {
+            return Unprocessable(ex.Message);
+        }
+
+        var supplierName = supplier?.Name ?? receipt.SupplierName ?? "Unbekannter Lieferant";
+        var description = $"Eingangsrechnung {supplierName} {receipt.InvoiceNumber}".TrimEnd();
+        var header = new JournalEntry
+        {
+            TenantId = tenantId,
+            EntryDate = input.EntryDate,
+            SourceType = LedgerSourceType.Expense,
+            SourceRef = sourceRef,
+            Description = description,
+            PostingType = PostingType.Normal,
+        };
+
+        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        await postingEngine.PostAsync(
+            new ExpensePostingSource(tenantId, chartVariant.Value, input, accountResolver),
+            header,
+            ct).ConfigureAwait(false);
+
+        var bookedNet = input.Breakdowns.Sum(row => row.Net);
+        var bookedVat = input.Breakdowns.Sum(row => row.Tax);
+        if (!AmountsMatch(bookedNet, receipt.NetAmount!.Value)
+            || !AmountsMatch(bookedVat, receipt.VatAmount!.Value)
+            || !AmountsMatch(bookedNet + bookedVat, receipt.GrossAmount!.Value))
+        {
+            throw new InvalidOperationException("Die gebuchten Netto-/Vorsteuerbetr\u00e4ge entsprechen nicht den Belegsummern.");
+        }
+
+        var before = Snapshot(receipt);
+        receipt.Status = ReceiptStatus.Booked;
+        receipt.JournalEntryId = header.Id;
+        await audit.RecordAsync(
+            new ReceiptAuditEvent("receipt.booked", receipt.Id, before, Snapshot(receipt)), ct)
+            .ConfigureAwait(false);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+
+        return Results.Ok(new ReceiptContracts.ReceiptBookingResponse(
+            receipt.Id, header.Id, (int)receipt.Status, AlreadyBooked: false));
+    }
+
+    private static Dictionary<string, string[]> ValidateReview(
+        ReceiptContracts.ReviewReceiptRequest request,
+        bool hasInboundDocument)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (request.NetAmount < 0m || request.VatAmount < 0m || request.GrossAmount < 0m)
+        {
+            errors["amounts"] = ["Netto-, Vorsteuer- und Bruttobetrag d\u00fcrfen nicht negativ sein."];
+        }
+
+        if (!AmountsMatch(request.NetAmount + request.VatAmount, request.GrossAmount))
+        {
+            errors["grossAmount"] = ["Netto plus Vorsteuer muss bis auf einen Cent dem Bruttobetrag entsprechen."];
+        }
+
+        if (request.VatRatePercent is { } rate && !IsSupportedRate(rate))
+        {
+            errors["vatRatePercent"] = ["Unterst\u00fctzt werden 19 %, 7 % und 0 %/steuerfrei."];
+        }
+        else if (!hasInboundDocument && request.VatRatePercent is null)
+        {
+            errors["vatRatePercent"] = ["Ein Beleg ohne E-Rechnungs-Aufschl\u00fcsselung ben\u00f6tigt einen Umsatzsteuersatz."];
+        }
+
+        if (request.InvoiceDate is null && request.ExpenseDate is null)
+        {
+            errors["dates"] = ["Rechnungs- oder Aufwandsdatum ist erforderlich."];
+        }
+
+        return errors;
+    }
+
+    private static async Task<BusinessPartner?> LoadSupplierAsync(
+        NumeraDbContext db,
+        Guid? partnerId,
+        CancellationToken ct) =>
+        partnerId is null
+            ? null
+            : await db.Set<BusinessPartner>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(partner => partner.Id == partnerId && partner.IsSupplier, ct)
+                .ConfigureAwait(false);
+
+    private static async Task<ExpensePostingInput> BuildPostingInputAsync(
+        Receipt receipt,
+        string? creditorAccount,
+        NumeraDbContext db,
+        CancellationToken ct)
+    {
+        var breakdown = await LoadInboundBreakdownAsync(receipt, db, ct).ConfigureAwait(false);
+        return ReceiptBookingProposal.Build(receipt, breakdown, creditorAccount);
+    }
+
+    private static async Task<IReadOnlyList<(decimal RatePercent, decimal Net, decimal Tax)>>
+        LoadInboundBreakdownAsync(
+            Receipt receipt,
+            NumeraDbContext db,
+            CancellationToken ct)
+    {
+        if (receipt.InboundDocumentId is not { } inboundDocumentId)
+        {
+            return [];
+        }
+
+        var readModelJson = await db.Set<InboundDocument>()
+            .AsNoTracking()
+            .Where(document => document.Id == inboundDocumentId)
+            .Select(document => document.ReadModel)
+            .SingleOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(readModelJson))
+        {
+            throw new InvalidOperationException("Die verkn\u00fcpfte E-Rechnung hat keine lesbare Steueraufschl\u00fcsselung.");
+        }
+
+        var readModel = JsonSerializer.Deserialize<InboundReadModel>(readModelJson, Json)
+            ?? throw new InvalidOperationException("Das Lesemodell der E-Rechnung konnte nicht geladen werden.");
+        if (readModel.BreakdownRows.Count == 0)
+        {
+            return [];
+        }
+
+        var rows = new List<(decimal RatePercent, decimal Net, decimal Tax)>(
+            readModel.BreakdownRows.Count);
+        foreach (var row in readModel.BreakdownRows)
+        {
+            if (row.VatRatePercent is not { } rate
+                || row.TaxableBase is not { } net
+                || row.TaxAmount is not { } tax)
+            {
+                throw new InvalidOperationException(
+                    "Jede Steuerzeile der E-Rechnung ben\u00f6tigt Satz, Bemessungsgrundlage und Steuerbetrag.");
+            }
+
+            if (!IsSupportedRate(rate)
+                || row.TaxCategory is "AE" or "K")
+            {
+                throw new InvalidOperationException(
+                    $"Der Eingangsbeleg enth\u00e4lt die in dieser Phase nicht unterst\u00fctzte Steuerart {row.TaxCategory ?? "?"} mit {rate} %.");
+            }
+
+            rows.Add((rate, net, tax));
+        }
+
+        return rows;
+    }
+
+    private static void EnsureBookingTotals(Receipt receipt, ExpensePostingInput input)
+    {
+        if (receipt.NetAmount is not { } documentNet
+            || receipt.VatAmount is not { } documentVat
+            || receipt.GrossAmount is not { } documentGross)
+        {
+            throw new InvalidOperationException("Netto-, Vorsteuer- und Bruttobetrag m\u00fcssen best\u00e4tigt sein.");
+        }
+
+        var bookedNet = input.Breakdowns.Sum(row => row.Net);
+        var bookedVat = input.Breakdowns.Sum(row => row.Tax);
+        if (!AmountsMatch(bookedNet, documentNet)
+            || !AmountsMatch(bookedVat, documentVat)
+            || !AmountsMatch(bookedNet + bookedVat, documentGross))
+        {
+            throw new InvalidOperationException(
+                "Die Steueraufschl\u00fcsselung entspricht nicht den best\u00e4tigten Belegsummern.");
+        }
+    }
+
+    private static async Task<ChartVariant?> TryResolveChartVariant(
+        NumeraDbContext db,
+        ILoggerFactory loggerFactory,
+        Guid tenantId,
+        Guid receiptId,
+        CancellationToken ct)
+    {
+        var chartVariant = await db.Set<LedgerSettings>()
+            .AsNoTracking()
+            .Where(settings => settings.TenantId == tenantId)
+            .Select(settings => (ChartVariant?)settings.ChartVariant)
+            .SingleOrDefaultAsync(ct)
+            .ConfigureAwait(false);
+        if (chartVariant is null)
+        {
+            loggerFactory.CreateLogger("LedgerExpensePosting").LogWarning(
+                "Skipping ledger booking for receipt {ReceiptId}: tenant {TenantId} has no ledger settings.",
+                receiptId,
+                tenantId);
+        }
+
+        return chartVariant;
+    }
+
+    private static IResult Unprocessable(string detail) =>
+        Results.Problem(
+            title: "Beleg kann nicht gebucht werden",
+            detail: detail,
+            statusCode: StatusCodes.Status422UnprocessableEntity);
+
+    private static bool AmountsMatch(decimal left, decimal right) => Math.Abs(left - right) <= 0.01m;
+
+    private static bool IsSupportedRate(decimal rate) => rate is 0m or 7m or 19m;
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string Snapshot(Receipt receipt) => JsonSerializer.Serialize(new
+    {
+        Status = receipt.Status.ToString(),
+        receipt.SupplierName,
+        receipt.InvoiceNumber,
+        receipt.InvoiceDate,
+        receipt.ExpenseDate,
+        receipt.NetAmount,
+        receipt.VatAmount,
+        receipt.GrossAmount,
+        receipt.VatRatePercent,
+        receipt.MatchedPartnerId,
+        receipt.ExpenseAccountOverride,
+        receipt.ReviewedByUserId,
+        receipt.ReviewedAt,
+        receipt.JournalEntryId,
+    }, Json);
 
     private static async Task<Dictionary<Guid, OriginalMetadata>> LoadArchivesAsync(
         NumeraDbContext db,

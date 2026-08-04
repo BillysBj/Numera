@@ -53,10 +53,22 @@ public sealed class ReportRecognitionTests(PostgresFixture fixture)
 
         SollRecognitionRow[] expected =
         [
-            new("81", TaxCategory.S, 19m, PostingDirection.Credit, 100m),
-            new("83", TaxCategory.S, 7m, PostingDirection.Credit, 14m),
-            new("83", TaxCategory.S, 19m, PostingDirection.Credit, 19m),
-            new("86", TaxCategory.S, 7m, PostingDirection.Credit, 200m),
+            new("81", TaxCategory.S, 19m, PostingDirection.Credit, 100m)
+            {
+                AccountType = AccountType.Revenue,
+            },
+            new("83", TaxCategory.S, 7m, PostingDirection.Credit, 14m)
+            {
+                AccountType = AccountType.Liability,
+            },
+            new("83", TaxCategory.S, 19m, PostingDirection.Credit, 19m)
+            {
+                AccountType = AccountType.Liability,
+            },
+            new("86", TaxCategory.S, 7m, PostingDirection.Credit, 200m)
+            {
+                AccountType = AccountType.Revenue,
+            },
         ];
         Assert.Equal(expected, actual);
         Assert.Empty(outsidePeriod);

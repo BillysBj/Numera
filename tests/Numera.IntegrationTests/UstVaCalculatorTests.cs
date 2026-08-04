@@ -28,7 +28,7 @@ public sealed class UstVaCalculatorTests(PostgresFixture fixture)
     private static readonly DateOnly FebruaryDate = new(2026, 2, 10);
 
     [Fact]
-    public async Task Soll_computes_81_86_and_output_vat_only_83_from_untruncated_bases()
+    public async Task Soll_computes_81_86_zero_66_and_83_from_untruncated_bases()
     {
         var tenant = await SetupTenantAsync(Besteuerungsart.Soll, ChartVariant.Skr03);
         await CreateInvoiceAsync(
@@ -44,9 +44,10 @@ public sealed class UstVaCalculatorTests(PostgresFixture fixture)
         Assert.Equal(Besteuerungsart.Soll, report.Besteuerungsart);
         Assert.Equal(100m, FindLine(report, "81").Bemessungsgrundlage);
         Assert.Equal(200m, FindLine(report, "86").Bemessungsgrundlage);
+        Assert.Equal(0m, FindLine(report, "66").Steuer);
         Assert.Equal(33.18m, FindLine(report, "83").Steuer);
         Assert.Equal(33.18m, report.Zahllast);
-        Assert.Equal(UstVaKennzifferMap.ZahllastHinweis, report.Hinweis);
+        Assert.Null(report.Hinweis);
     }
 
     [Fact]
@@ -111,6 +112,25 @@ public sealed class UstVaCalculatorTests(PostgresFixture fixture)
         Assert.Equal(-60.99m, reversalPeriod.Zahllast);
     }
 
+    [Theory]
+    [InlineData(Besteuerungsart.Soll)]
+    [InlineData(Besteuerungsart.Ist)]
+    public async Task Input_vat_uses_booking_date_for_both_taxation_methods_and_storno_nets(
+        Besteuerungsart besteuerungsart)
+    {
+        var tenant = await SetupTenantAsync(besteuerungsart, ChartVariant.Skr03);
+        var originalEntryId = await PostExpenseAsync(tenant, JanuaryDate);
+        await PostExpenseReversalAsync(tenant, originalEntryId, FebruaryDate);
+
+        var originalPeriod = await ComputeAsync(tenant, "01");
+        var reversalPeriod = await ComputeAsync(tenant, "02");
+
+        Assert.Equal(19m, FindLine(originalPeriod, "66").Steuer);
+        Assert.Equal(-19m, originalPeriod.Zahllast);
+        Assert.Equal(-19m, FindLine(reversalPeriod, "66").Steuer);
+        Assert.Equal(19m, reversalPeriod.Zahllast);
+    }
+
     [Fact]
     public async Task Kleinunternehmer_is_gated_without_zero_filled_vat_lines()
     {
@@ -138,8 +158,8 @@ public sealed class UstVaCalculatorTests(PostgresFixture fixture)
 
         var report = await ComputeAsync(tenant, "01");
         var actual = report.Lines.Select(line => line.Kz).ToHashSet(StringComparer.Ordinal);
-        var producible = new HashSet<string>(["81", "86", "41", "83"], StringComparer.Ordinal);
-        string[] omitted = ["66", "35", "36", "89", "61", "46", "47"];
+        var producible = new HashSet<string>(["81", "86", "41", "66", "83"], StringComparer.Ordinal);
+        string[] omitted = ["35", "36", "89", "61", "46", "47"];
 
         Assert.All(actual, kz => Assert.Contains(kz, producible));
         Assert.All(omitted, kz => Assert.DoesNotContain(kz, actual));
@@ -215,6 +235,52 @@ public sealed class UstVaCalculatorTests(PostgresFixture fixture)
                 "USTVA-TEST",
                 [new PaymentAllocationInput(openItemId, amount)]));
         Assert.Equal(PaymentOperationStatus.Success, result.Status);
+    }
+
+    private async Task<Guid> PostExpenseAsync(Guid tenant, DateOnly entryDate)
+    {
+        await using var db = fixture.CreateAppContext(tenant);
+        var header = new JournalEntry
+        {
+            TenantId = tenant,
+            EntryDate = entryDate,
+            SourceType = LedgerSourceType.Expense,
+            SourceRef = $"expense-{Guid.CreateVersion7()}",
+            Description = "Vorsteuer-Test",
+            PostingType = PostingType.Normal,
+        };
+        await new PostingEngine(db).PostAsync(
+            new ExpensePostingSource(
+                tenant,
+                ChartVariant.Skr03,
+                new ExpensePostingInput(null, null, 19m, 100m, 19m, entryDate),
+                new AccountResolver(db)),
+            header,
+            CancellationToken.None);
+        return header.Id;
+    }
+
+    private async Task PostExpenseReversalAsync(Guid tenant, Guid originalEntryId, DateOnly entryDate)
+    {
+        await using var db = fixture.CreateAppContext(tenant);
+        var original = await db.Set<JournalEntry>()
+            .AsNoTracking()
+            .Include(entry => entry.Postings)
+            .SingleAsync(entry => entry.Id == originalEntryId);
+        var header = new JournalEntry
+        {
+            TenantId = tenant,
+            EntryDate = entryDate,
+            SourceType = LedgerSourceType.Expense,
+            SourceRef = $"expense-storno-{Guid.CreateVersion7()}",
+            Description = "Vorsteuer-Test Storno",
+            PostingType = PostingType.Storno,
+            ReversesEntryId = original.Id,
+        };
+        await new PostingEngine(db).PostAsync(
+            new TestReversalPostingSource(original.Postings, tenant),
+            header,
+            CancellationToken.None);
     }
 
     private async Task StornoAsync(Guid tenant, Guid originalDocumentId, DateOnly stornoDate)
@@ -311,4 +377,24 @@ public sealed class UstVaCalculatorTests(PostgresFixture fixture)
 
     private static UstVaLine FindLine(UstVaReport report, string kz) =>
         Assert.Single(report.Lines, line => line.Kz == kz);
+
+    private sealed class TestReversalPostingSource(
+        IEnumerable<Posting> originalPostings,
+        Guid tenantId) : IPostingSource
+    {
+        public IReadOnlyList<Posting> BuildPostings() => originalPostings
+            .Select(posting => new Posting
+            {
+                TenantId = tenantId,
+                AccountId = posting.AccountId,
+                Amount = posting.Amount,
+                Direction = posting.Direction == PostingDirection.Debit
+                    ? PostingDirection.Credit
+                    : PostingDirection.Debit,
+                Steuerschluessel = posting.Steuerschluessel,
+                TaxRatePercent = posting.TaxRatePercent,
+                TaxCategory = posting.TaxCategory,
+            })
+            .ToList();
+    }
 }

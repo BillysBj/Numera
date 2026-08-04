@@ -47,19 +47,33 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
         var baseDefinitions = definitions
             .Where(definition => definition.FigureKind == UstVaFigureKind.Bemessungsgrundlage)
             .ToList();
+        var taxDefinitions = definitions
+            .Where(definition =>
+                definition.FigureKind == UstVaFigureKind.Steuer
+                && !definition.IsComputed)
+            .ToList();
+        var sollRows = await recognitionReader.ReadSollAsync(from, to, ct).ConfigureAwait(false);
         var untruncatedBases = besteuerungsart == Besteuerungsart.Soll
-            ? await ReadSollBasesAsync(baseDefinitions, from, to, ct).ConfigureAwait(false)
+            ? ReadSollFigures(baseDefinitions, sollRows)
             : await ReadIstBasesAsync(baseDefinitions, from, to, ct).ConfigureAwait(false);
-        var accountNumbers = await ReadAccountNumbersAsync(baseDefinitions, ct).ConfigureAwait(false);
+        var taxFigures = ReadSollFigures(taxDefinitions, sollRows)
+            .ToDictionary(
+                pair => pair.Key,
+                pair => RoundingPolicy.RoundAmount(pair.Value),
+                StringComparer.Ordinal);
+        var accountNumbers = await ReadAccountNumbersAsync(
+            definitions.Where(definition => !definition.IsComputed).ToList(), ct).ConfigureAwait(false);
 
         var zahllast = RoundingPolicy.RoundAmount(
             untruncatedBases["81"] * 0.19m
-            + untruncatedBases["86"] * 0.07m);
+            + untruncatedBases["86"] * 0.07m
+            - taxFigures["66"]);
 
         // Every definition below is producible, so a genuine zero is meaningful. Kz
         // without a posting/recognition source are absent from the versioned map entirely.
-        var lines = definitions.Select(definition => definition.IsComputed
-            ? new UstVaLine(
+        var lines = definitions.Select(definition => definition switch
+        {
+            { IsComputed: true } => new UstVaLine(
                 definition.Kz,
                 definition.Bezeichnung,
                 Bemessungsgrundlage: null,
@@ -67,13 +81,22 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
                 IsComputed: true)
             {
                 ContributingAccountNumbers = accountNumbers
-                    .Where(pair => pair.Key is "81" or "86")
+                    .Where(pair => pair.Key is "81" or "86" or "66")
                     .SelectMany(pair => pair.Value)
                     .Distinct(StringComparer.Ordinal)
                     .Order(StringComparer.Ordinal)
                     .ToList(),
-            }
-            : new UstVaLine(
+            },
+            { FigureKind: UstVaFigureKind.Steuer } => new UstVaLine(
+                definition.Kz,
+                definition.Bezeichnung,
+                Bemessungsgrundlage: null,
+                Steuer: taxFigures[definition.Kz],
+                IsComputed: false)
+            {
+                ContributingAccountNumbers = accountNumbers[definition.Kz],
+            },
+            _ => new UstVaLine(
                 definition.Kz,
                 definition.Bezeichnung,
                 Bemessungsgrundlage: decimal.Floor(untruncatedBases[definition.Kz]),
@@ -81,7 +104,8 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
                 IsComputed: false)
             {
                 ContributingAccountNumbers = accountNumbers[definition.Kz],
-            })
+            },
+        })
             .ToList();
 
         return new UstVaReport(
@@ -91,17 +115,14 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
             isFestgeschrieben,
             lines,
             zahllast,
-            UstVaKennzifferMap.ZahllastHinweis,
+            Hinweis: null,
             IsKleinunternehmer: false);
     }
 
-    private async Task<Dictionary<string, decimal>> ReadSollBasesAsync(
+    private static Dictionary<string, decimal> ReadSollFigures(
         IReadOnlyList<UstVaKennzifferDefinition> definitions,
-        DateOnly from,
-        DateOnly to,
-        CancellationToken ct)
+        IReadOnlyList<SollRecognitionRow> rows)
     {
-        var rows = await recognitionReader.ReadSollAsync(from, to, ct).ConfigureAwait(false);
         return definitions.ToDictionary(
             definition => definition.Kz,
             definition =>
@@ -110,8 +131,10 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
                 return rows
                     .Where(row =>
                         row.Kennziffer == definition.Kz
-                        && row.TaxCategory == selector.TaxCategory
-                        && row.TaxRatePercent == selector.TaxRatePercent)
+                        && (selector.AccountType is null || row.AccountType == selector.AccountType)
+                        && (!selector.MatchTaxMetadata
+                            || (row.TaxCategory == selector.TaxCategory
+                                && row.TaxRatePercent == selector.TaxRatePercent)))
                     .Sum(row => row.Direction == selector.NaturalSide ? row.Amount : -row.Amount);
             },
             StringComparer.Ordinal);
@@ -149,14 +172,17 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
         var rows = await db.Set<Account>()
             .AsNoTracking()
             .Where(account => account.UstvaKennziffer != null && kennziffern.Contains(account.UstvaKennziffer))
-            .Select(account => new { account.UstvaKennziffer, account.Number })
+            .Select(account => new { account.UstvaKennziffer, account.Number, account.Type })
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
         return definitions.ToDictionary(
             definition => definition.Kz,
             definition => (IReadOnlyList<string>)rows
-                .Where(row => row.UstvaKennziffer == definition.Kz)
+                .Where(row =>
+                    row.UstvaKennziffer == definition.Kz
+                    && (definition.RecognitionSelector!.AccountType is null
+                        || row.Type == definition.RecognitionSelector.AccountType))
                 .Select(row => row.Number)
                 .Distinct(StringComparer.Ordinal)
                 .Order(StringComparer.Ordinal)

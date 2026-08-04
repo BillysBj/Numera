@@ -29,6 +29,7 @@ public sealed class RecognitionReader(NumeraDbContext db)
         var rows = await db.Database.SqlQuery<SollRecognitionRow>(
             $"""
             SELECT a.ustva_kennziffer AS "Kennziffer",
+                   a.type AS "AccountType",
                    p.tax_category AS "TaxCategory",
                    p.tax_rate_percent AS "TaxRatePercent",
                    p.direction AS "Direction",
@@ -40,10 +41,12 @@ public sealed class RecognitionReader(NumeraDbContext db)
                AND je.entry_date <= {to}
                AND a.ustva_kennziffer IS NOT NULL
              GROUP BY a.ustva_kennziffer,
+                      a.type,
                       p.tax_category,
                       p.tax_rate_percent,
                       p.direction
              ORDER BY a.ustva_kennziffer,
+                      a.type,
                       p.tax_category,
                       p.tax_rate_percent,
                       p.direction
