@@ -16,6 +16,7 @@ using Numera.Api.Reporting;
 using Numera.Api.Services;
 using Numera.Modules.Ledger;
 using Numera.Modules.Ledger.Seed;
+using Numera.Modules.Sales.Belege;
 using Numera.Modules.Sales.EInvoice.Inbound;
 using Numera.Modules.Sales.Events;
 using Numera.Modules.Sales.Numbering;
@@ -122,6 +123,34 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueueEInvoic
 // inbound_document (RLS). POST /api/inbound-documents uploads; GET list/detail/original read.
 builder.Services.AddScoped<SupplierMatcher>();
 builder.Services.AddScoped<InboundEInvoiceService>();
+// --- Receipt extraction + attachment scanning (plan 12-03, D1/D4) ---------
+// The zero-cloud StubReceiptExtractor is the shipping default (D1). Azure is an
+// explicit config opt-in and replaces it only when both endpoint and API key exist.
+builder.Services.Configure<AzureDocumentIntelligenceOptions>(
+    builder.Configuration.GetSection(AzureDocumentIntelligenceOptions.SectionName));
+var documentIntelligence = builder.Configuration.GetSection(
+    AzureDocumentIntelligenceOptions.SectionName);
+if (!string.IsNullOrWhiteSpace(documentIntelligence[nameof(AzureDocumentIntelligenceOptions.Endpoint)])
+    && !string.IsNullOrWhiteSpace(documentIntelligence[nameof(AzureDocumentIntelligenceOptions.ApiKey)]))
+{
+    builder.Services.AddScoped<IReceiptExtractor, AzureReceiptExtractor>();
+}
+else
+{
+    builder.Services.AddScoped<IReceiptExtractor, StubReceiptExtractor>();
+}
+
+builder.Services.Configure<ClamAvOptions>(
+    builder.Configuration.GetSection(ClamAvOptions.SectionName));
+var clamAv = builder.Configuration.GetSection(ClamAvOptions.SectionName);
+if (!string.IsNullOrWhiteSpace(clamAv[nameof(ClamAvOptions.Host)]))
+{
+    builder.Services.AddScoped<IAttachmentScanner, ClamAvAttachmentScanner>();
+}
+else
+{
+    builder.Services.AddScoped<IAttachmentScanner, NoopAttachmentScanner>();
+}
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<DunningConfigService>();
 builder.Services.AddTransient<SendDunningNoticeJob>();

@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <!-- Required by the EF Core tools (dotnet ef) when Api is the startup project. -->
+    <PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.*">
