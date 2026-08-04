@@ -18,8 +18,8 @@ Committed scope for this milestone. Each maps to a roadmap phase (numbering cont
 - [x] **ACCT-04**: Erfasste Zahlungen werden automatisch verbucht und gleichen den offenen Posten aus (Bank ↔ Forderung)
 - [x] **ACCT-05**: Eingangsrechnungen/Ausgaben werden ins Journal gebucht (Aufwand + Vorsteuer) und speisen EÜR/USt-VA *(Buchungsregel + Tests in Phase 10; Beleg-Erfassungs-Einstieg in Phase 12)*
 - [x] **ACCT-06**: Nutzer sieht Buchungsjournal und Kontoauszug je Konto (revisionssichere Lesesichten)
-- [ ] **ACCT-07**: EÜR-Bericht (Struktur der Anlage EÜR, Zufluss/Abfluss-Prinzip) für Freiberufler/Kleinunternehmer
-- [ ] **ACCT-08**: USt-Voranmeldung — Kennziffern-Berechnung (Kz 81/86/35/66/83/41/89/46/47/61) + Prüfansicht + Export als ELSTER-XML/Druck (kein ERiC-Direktversand)
+- [x] **ACCT-07**: EÜR-Bericht (Struktur der Anlage EÜR, Zufluss/Abfluss-Prinzip) für Freiberufler/Kleinunternehmer
+- [x] **ACCT-08**: USt-Voranmeldung — Kennziffern-Berechnung (Kz 81/86/35/66/83/41/89/46/47/61) + Prüfansicht + Export als ELSTER-XML/Druck (kein ERiC-Direktversand) *(produzierbare Kz 81/86/83/41 in Phase 11; Vorsteuer-/§13b-/i.g.-Erwerb-Kz 66/35/36/89/61/46/47 mit der Belegerfassung in Phase 12)*
 - [x] **ACCT-09**: Buchungsperioden lassen sich sperren (Festschreibung); gesperrte Perioden sind unveränderbar
 
 ### Banking (BANK) — Multibanking & Abgleich
@@ -108,7 +108,7 @@ Wird bei der Roadmap-Erstellung befüllt (jede Anforderung → genau eine Phase,
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-09 | Phase 10 — Buchhaltungs-Fundament | ✓ Done (2026-08-03) — ACCT-05 = posting rule + tests; runtime entry point in Phase 12 |
-| ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | Pending |
+| ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | ✓ Done (2026-08-04) — USt-VA Kz 81/86/83/41; übrige Kz (Vorsteuer/§13b/i.g.-Erwerb) in Phase 12 |
 | BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | Pending |
 | BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | Pending |
 | BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07 | Phase 14 — Monetarisierung (Stripe) | Pending |

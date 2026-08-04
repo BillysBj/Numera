@@ -27,7 +27,7 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 ### 🚧 v2.0 Buchhaltung, Banking & Belege (Phasen 10–14)
 
 - [x] **Phase 10: Buchhaltungs-Fundament** — SKR03/04-Kontenrahmen, doppische unveränderbare Buchungs-Engine, Steuerschlüssel-Mapping, Auto-Buchung aus Rechnungen & Zahlungen, Journal/Konto-Sichten, Periodensperre — ✓ 2026-08-03
-- [ ] **Phase 11: Berichte & USt-Voranmeldung** — EÜR + USt-Voranmeldung (Kennziffern-Berechnung + ELSTER-XML/Druck-Export, kein ERiC-Direktversand)
+- [x] **Phase 11: Berichte & USt-Voranmeldung** — EÜR + USt-Voranmeldung (Kennziffern-Berechnung + ELSTER-XML/Druck-Export, kein ERiC-Direktversand) — ✓ 2026-08-04
 - [ ] **Phase 12: Belege & Ausgaben** — Belegscan (Kamera/Upload) + OCR + Buchungsvorschlag, strukturierte E-Rechnungs-Lesung, GoBD-Langzeitarchiv, Lieferanten-Match, E-Mail-Eingang
 - [ ] **Phase 13: Banking & Zahlungsabgleich** — finAPI-Anbindung, Umsatz-Sync, automatischer Abgleich mit offenen Posten (+ Buchung), manuelle Zuordnung/Split, CSV/CAMT-Fallback
 - [ ] **Phase 14: Monetarisierung (Stripe)** — Stripe Checkout, Webhook-Berechtigung → `tenants.plan`-Gate, Customer-Portal-Self-Service, Trial, Abo-Mahnwesen/Degradation, USt-korrekte Eigen-Abrechnung
@@ -61,14 +61,14 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 2. Nutzer erzeugt eine USt-Voranmeldung; die Kennziffern (81/86/35/66/83/41/89/46/47/61) werden korrekt aus den Buchungen berechnet und in einer Prüfansicht angezeigt.
 3. Die USt-VA lässt sich als ELSTER-konformes XML und als Druck exportieren (für den manuellen ELSTER-Upload); ein Direktversand via ERiC erfolgt bewusst nicht.
 
-**Plans:** 7 plans (5 waves) — LOCKED decisions D1/D2/D3 (siehe 11-CONTEXT.md): Ist+Soll via report-time Zahlungsdatum-Ableitung (Phase-10-Ledger FROZEN); EÜR nur Bildschirm+QuestPDF-Druck; nur produzierbare Kennziffern (81/86/83, +41 via Seed) — 66/35/36/89/61/46/47 bewusst OMITTED (NO-FABRICATION).
-- [ ] 11-01-PLAN.md — Report-time Recognition-Read-Model (Soll-Buchungsaggregation + Ist/Kassen-Zahlungsattribution) [Fundament]
-- [ ] 11-02-PLAN.md — USt-VA Kennziffern-Map + Calculator (Soll/Ist, Zahllast, §19-Gate, Kz 41 Seed) [ACCT-08]
-- [ ] 11-03-PLAN.md — EÜR Kontenzeilen-Map + Calculator (Zufluss/Abfluss, brutto/netto, Gewinn) [ACCT-07]
-- [ ] 11-04-PLAN.md — ELSTER USt-VA XML (ISO-8859-15 Anmeldungssteuern v2026) + Steuernummer-Umsetzung [ACCT-08]
-- [ ] 11-05-PLAN.md — QuestPDF-Berichtsdokumente (UstVaDocument + EuerDocument) [ACCT-07, ACCT-08]
-- [ ] 11-06-PLAN.md — Report-Endpoints + ust_va_filing-Persistenz (RLS/immutable) + Festschreibung-Kopplung [ACCT-07, ACCT-08]
-- [ ] 11-07-PLAN.md — Frontend Prüfansicht + EÜR-Ansicht + Human-Verify-Checkpoint [ACCT-07, ACCT-08]
+**Plans:** 7 plans (5 waves) — ✓ all complete 2026-08-04. LOCKED decisions D1/D2/D3 (siehe 11-CONTEXT.md): Ist+Soll via report-time Zahlungsdatum-Ableitung (Phase-10-Ledger FROZEN); EÜR nur Bildschirm+QuestPDF-Druck; nur produzierbare Kennziffern (81/86/83, +41 via Seed) — 66/35/36/89/61/46/47 bewusst OMITTED (NO-FABRICATION).
+- [x] 11-01-PLAN.md — Report-time Recognition-Read-Model (Soll-Buchungsaggregation + Ist/Kassen-Zahlungsattribution) [Fundament]
+- [x] 11-02-PLAN.md — USt-VA Kennziffern-Map + Calculator (Soll/Ist, Zahllast, §19-Gate, Kz 41 Seed) [ACCT-08]
+- [x] 11-03-PLAN.md — EÜR Kontenzeilen-Map + Calculator (Zufluss/Abfluss, brutto/netto, Gewinn) [ACCT-07]
+- [x] 11-04-PLAN.md — ELSTER USt-VA XML (ISO-8859-15 Anmeldungssteuern v2026) + Steuernummer-Umsetzung [ACCT-08]
+- [x] 11-05-PLAN.md — QuestPDF-Berichtsdokumente (UstVaDocument + EuerDocument) [ACCT-07, ACCT-08]
+- [x] 11-06-PLAN.md — Report-Endpoints + ust_va_filing-Persistenz (RLS/immutable) + Festschreibung-Kopplung [ACCT-07, ACCT-08]
+- [x] 11-07-PLAN.md — Frontend Prüfansicht + EÜR-Ansicht + Human-Verify-Checkpoint (approved) [ACCT-07, ACCT-08]
 
 ### Phase 12: Belege & Ausgaben
 **Goal**: „Belege fotografieren, sie buchen sich selbst" — Eingangsbelege werden erfasst, per OCR ausgelesen, geprüft gebucht und GoBD-konform revisionssicher archiviert.
@@ -108,7 +108,7 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 |-------|-----------|-------|--------|-----------|
 | 1.–9. (v1.0) | v1.0 | 61/61 | ✓ Complete | 2026-08-02 |
 | 10. Buchhaltungs-Fundament | v2.0 | 6/6 | ✓ Complete | 2026-08-03 |
-| 11. Berichte & USt-Voranmeldung | v2.0 | 0/7 | Planned | - |
-| 12. Belege & Ausgaben | v2.0 | 0/? | Pending | - |
+| 11. Berichte & USt-Voranmeldung | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
+| 12. Belege & Ausgaben | v2.0 | 0/? | Next | - |
 | 13. Banking & Zahlungsabgleich | v2.0 | 0/? | Pending | - |
 | 14. Monetarisierung (Stripe) | v2.0 | 0/? | Pending | - |
