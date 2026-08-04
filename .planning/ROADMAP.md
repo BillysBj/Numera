@@ -80,6 +80,16 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 3. Das Originaldokument liegt unveränderbar (WORM) im GoBD-Archiv, indiziert, mit der Buchung verknüpft, 10 Jahre aufbewahrt.
 4. An die mandanteneigene E-Mail-Eingangsadresse weitergeleitete Belege werden automatisch erfasst; der Lieferant wird zugeordnet (v1-CRM), Dubletten werden erkannt.
 
+**Plans:** 7 plans (4 waves)
+Plans:
+- [ ] 12-01-PLAN.md — Ledger 0%/steuerfrei expense extension (unblocks zero-rated Ausgaben)
+- [ ] 12-02-PLAN.md — Beleg (receipt) aggregate + GoBD WORM archive migration + dedup + booking-proposal mapping
+- [ ] 12-03-PLAN.md — IReceiptExtractor port (stub default + Azure adapter) + IAttachmentScanner (ClamAV + test double) + DI
+- [ ] 12-04-PLAN.md — Capture pipeline: scan → WORM archive → Receipt → async OCR job + Tier-A e-invoice→Beleg + endpoints
+- [ ] 12-05-PLAN.md — Review + confirm→book (human-gated, idempotent, multi-leg) feeding USt-VA Kz 66 + EÜR
+- [ ] 12-06-PLAN.md — Per-tenant email intake: IMAP polling job + address provisioning + GreenMail test (BELEG-07)
+- [ ] 12-07-PLAN.md — belege frontend feature (capture/queue/review-and-book/mailbox) + end-to-end human-verify
+
 ### Phase 13: Banking & Zahlungsabgleich
 **Goal**: Numera trifft die Realität — echte Kontoumsätze über finAPI, automatisch abgeglichen mit den offenen Posten und ins Journal gebucht.
 **Depends on**: Phase 10 (Buchung Bank↔Forderung/Verbindlichkeit); v1 (offene Posten, Zahlungslogik, CRM-Stammdaten)
@@ -109,6 +119,6 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 | 1.–9. (v1.0) | v1.0 | 61/61 | ✓ Complete | 2026-08-02 |
 | 10. Buchhaltungs-Fundament | v2.0 | 6/6 | ✓ Complete | 2026-08-03 |
 | 11. Berichte & USt-Voranmeldung | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
-| 12. Belege & Ausgaben | v2.0 | 0/? | Next | - |
+| 12. Belege & Ausgaben | v2.0 | 0/7 | Planned | - |
 | 13. Banking & Zahlungsabgleich | v2.0 | 0/? | Pending | - |
 | 14. Monetarisierung (Stripe) | v2.0 | 0/? | Pending | - |
