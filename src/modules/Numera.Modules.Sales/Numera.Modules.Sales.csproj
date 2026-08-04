@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <!-- Receipt booking proposals map confirmed fields to Ledger expense posting inputs. -->
+    <ProjectReference Include="..\Numera.Modules.Ledger\Numera.Modules.Ledger.csproj" />
     <!-- TaxCategory (EN 16931 BT-151 seam) used as the issuer's optional default. -->
     <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
     <!-- Inbound e-invoicing (05-05) matches a received invoice's seller to a BusinessPartner

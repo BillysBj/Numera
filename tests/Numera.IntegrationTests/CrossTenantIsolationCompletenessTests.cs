@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Numera.Api.Reporting;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.Belege;
 using Numera.Modules.Sales.Dunning;
 using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.EInvoice.Inbound;
@@ -21,7 +22,8 @@ namespace Numera.IntegrationTests;
 /// <c>payment</c>, <c>payment_allocation</c>, <c>dunning_level_config</c>, <c>dunning_notice</c>,
 /// <c>recurring_invoice_templates</c>, <c>recurring_invoice_template_lines</c>,
 /// <c>sales_document_prepayment</c>, <c>partner_tasks</c>, <c>customer_files</c>,
-/// <c>document_einvoice</c>, <c>inbound_document</c>.
+/// <c>document_einvoice</c>, <c>inbound_document</c>, <c>receipt</c>,
+/// <c>receipt_archive</c>.
 /// </summary>
 /// <remarks>
 /// Mirrors <see cref="RlsIsolationTests"/> exactly: on real postgres:18 as the non-BYPASSRLS
@@ -61,6 +63,8 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         await ReadIsolationAsync<CustomerFile>((t, ctx) => ctx.Add(NewCustomerFile(t)));
         await ReadIsolationAsync<EInvoiceArtifact>((t, ctx) => ctx.Add(NewEInvoiceArtifact(t)));
         await ReadIsolationAsync<InboundDocument>((t, ctx) => ctx.Add(NewInboundDocument(t)));
+        await ReadIsolationAsync<Receipt>((t, ctx) => ctx.Add(NewReceipt(t)));
+        await ReadIsolationAsync<ReceiptArchive>((t, ctx) => ctx.Add(NewReceiptArchive(t)));
         await ReadIsolationAsync<UstVaFiling>((t, ctx) => ctx.Add(NewUstVaFiling(t)));
     }
 
@@ -99,6 +103,8 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewCustomerFile(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewEInvoiceArtifact(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewInboundDocument(b)));
+        await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewReceipt(b)));
+        await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewReceiptArchive(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewUstVaFiling(b)));
 
         // FK tables: seed the parent as tenant A (so the ONLY violation is the foreign child
@@ -254,6 +260,28 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         OriginalContentType = "application/xml",
         ByteSize = 3,
         UploadedAt = DateTimeOffset.UtcNow,
+    };
+
+    private static Receipt NewReceipt(Guid t) => new()
+    {
+        TenantId = t,
+        Source = ReceiptSource.Upload,
+        Status = ReceiptStatus.Captured,
+        ContentHash = "receipt-content-hash",
+        CreatedAt = DateTimeOffset.UtcNow,
+    };
+
+    private static ReceiptArchive NewReceiptArchive(Guid t) => new()
+    {
+        TenantId = t,
+        ReceiptId = Guid.CreateVersion7(),
+        OriginalBytes = [1, 2, 3],
+        OriginalFileName = "receipt.pdf",
+        ContentType = "application/pdf",
+        ByteSize = 3,
+        ContentHash = "receipt-archive-content-hash",
+        Source = ReceiptSource.Upload,
+        ReceivedAt = DateTimeOffset.UtcNow,
     };
 
     private static UstVaFiling NewUstVaFiling(Guid t) => new()
