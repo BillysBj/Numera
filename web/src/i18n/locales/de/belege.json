@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "group": "Belege",
+    "queue": "Prüfen & Buchen",
+    "capture": "Beleg erfassen"
+  },
+  "actions": {
+    "capture": "Beleg erfassen",
+    "backToQueue": "Zur Belegliste"
+  },
+  "status": {
+    "0": "Erfasst",
+    "1": "Ausgelesen",
+    "2": "Geprüft",
+    "3": "Gebucht",
+    "4": "Duplikat",
+    "5": "Abgelehnt",
+    "6": "Quarantäne"
+  },
+  "source": {
+    "0": "Kamera",
+    "1": "Upload",
+    "2": "E-Mail",
+    "3": "E-Rechnung"
+  },
+  "capture": {
+    "eyebrow": "Original erfassen",
+    "title": "Neuen Beleg hinzufügen",
+    "subtitle": "Fotografiere einen Beleg oder lade das unveränderte Original hoch. Nach dem Auslesen entscheidest du selbst, was gebucht wird.",
+    "camera": {
+      "title": "Mit Kamera aufnehmen",
+      "hint": "Beleg flach ausrichten und vollständig fotografieren.",
+      "action": "Kamera öffnen"
+    },
+    "upload": {
+      "title": "Datei hochladen",
+      "drop": "PDF oder Bild hier ablegen",
+      "formats": "PDF, JPEG, PNG, TIFF oder HEIF · maximal 15 MB",
+      "action": "Original hochladen",
+      "uploading": "Wird geprüft & hochgeladen …"
+    },
+    "wormHint": "Das hochgeladene Original wird unveränderbar archiviert. Korrekturen betreffen nur die Buchungsdaten.",
+    "errors": {
+      "empty": "Wähle zuerst eine Datei aus.",
+      "size": "Die Datei muss größer als 0 Byte und höchstens 15 MB groß sein.",
+      "type": "Unterstützt werden PDF, JPEG, PNG, TIFF und HEIF.",
+      "upload": "Der Beleg konnte nicht hochgeladen werden. Prüfe die Datei und versuche es erneut."
+    },
+    "notices": {
+      "uploaded": "Der Beleg wurde sicher erfasst und erscheint nach dem Auslesen in der Prüfliste.",
+      "duplicate": "Die Datei wurde bereits erfasst und ist als Duplikat markiert. Es wurde nichts gebucht.",
+      "quarantined": "Die Datei wurde bei der Sicherheitsprüfung quarantänisiert. Sie kann nicht archiviert oder gebucht werden."
+    }
+  },
+  "mailbox": {
+    "title": "Deine Beleg-E-Mail",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "loading": "Adresse wird geladen …",
+    "error": "Die Beleg-E-Mail-Adresse ist derzeit nicht verfügbar.",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "copyError": "Kopieren nicht möglich. Markiere die Adresse und kopiere sie manuell.",
+    "hint": "Leite Lieferantenbelege an diese Adresse weiter. Anhänge landen mandantengetrennt in dieser Prüfliste."
+  },
+  "queue": {
+    "title": "Belege prüfen",
+    "subtitle": "Originale, Ausleseergebnisse und Buchungsstatus auf einen Blick.",
+    "filterLabel": "Status filtern",
+    "allStatuses": "Alle Status",
+    "unknownSupplier": "Lieferant noch unbekannt",
+    "loading": "Belege werden geladen …",
+    "error": "Die Belegliste konnte nicht geladen werden.",
+    "empty": "Für diesen Status liegen keine Belege vor.",
+    "showing": "{{shown}} von {{total}} Belegen werden angezeigt.",
+    "columns": {
+      "supplier": "Lieferant / Beleg",
+      "source": "Quelle",
+      "status": "Status",
+      "date": "Rechnungsdatum",
+      "amount": "Brutto"
+    }
+  },
+  "confidence": {
+    "manual": "Manuell prüfen",
+    "low": "Niedrig · {{value}} %",
+    "medium": "Mittel · {{value}} %",
+    "high": "Hoch · {{value}} %"
+  },
+  "review": {
+    "title": "Beleg prüfen",
+    "subtitle": "Rechnungsdatum {{date}}",
+    "loading": "Beleg wird geladen …",
+    "error": "Der Beleg konnte nicht geladen werden.",
+    "structured": "Strukturell gelesen",
+    "fieldsTitle": "Ausgelesene Buchungsdaten",
+    "fieldsHint": "Niedrige oder fehlende Konfidenz ist hervorgehoben. Vergleiche jedes Feld mit dem Original.",
+    "validation": "Fülle die Beträge und mindestens ein Datum aus. Für normale Belege ist außerdem ein Steuersatz erforderlich.",
+    "saving": "Prüfung wird gespeichert …",
+    "saveAndPreview": "Prüfen & Buchungsvorschlag erstellen",
+    "reviewed": "Prüfung gespeichert. Der Buchungsvorschlag ist jetzt aktuell.",
+    "saveError": "Die Prüfung konnte nicht gespeichert werden.",
+    "booked": "Der Beleg wurde bestätigt und gebucht.",
+    "alreadyBooked": "Dieser Beleg war bereits gebucht. Die verknüpfte Buchung wurde geladen.",
+    "bookError": "Der Beleg konnte nicht gebucht werden.",
+    "stateHint": {
+      "0": "Der Beleg wird noch ausgelesen. Erst danach kann er geprüft werden.",
+      "4": "Dieses Original wurde als Duplikat erkannt. Du kannst es ansehen, aber nicht buchen.",
+      "6": "Dieser Beleg ist quarantänisiert und kann weder geprüft noch gebucht werden. Es wurde kein gültiges Original archiviert."
+    },
+    "fields": {
+      "supplier": "Lieferant",
+      "supplierVatId": "USt-IdNr. des Lieferanten",
+      "noSupplier": "Kein Lieferant zugeordnet",
+      "extractedValue": "Ausgelesen: {{value}}",
+      "invoiceNumber": "Rechnungsnummer",
+      "invoiceDate": "Rechnungsdatum",
+      "expenseDate": "Aufwands-/Buchungsdatum",
+      "expenseAccount": "Aufwandskonto",
+      "accountAutomatic": "Automatisch aus Kontenrahmen",
+      "otherExpenseSkr03": "Sonstiger betrieblicher Aufwand (SKR03)",
+      "otherExpenseSkr04": "Sonstiger betrieblicher Aufwand (SKR04)",
+      "vatRate": "Vorsteuersatz",
+      "chooseVatRate": "Steuersatz wählen",
+      "multiRateEinvoice": "Steueraufteilung aus E-Rechnung",
+      "taxFree": "steuerfrei",
+      "net": "Netto",
+      "vat": "Vorsteuer",
+      "gross": "Brutto"
+    },
+    "original": {
+      "title": "Unverändertes Original",
+      "unknownFile": "Originaldatei",
+      "immutable": "GoBD · unveränderbar",
+      "unavailable": "Für diesen Datensatz ist kein anzeigbares Original archiviert.",
+      "loading": "Original wird sicher geladen …",
+      "error": "Das archivierte Original konnte nicht geladen werden.",
+      "alt": "Archiviertes Belegoriginal",
+      "previewUnsupported": "Dieser Dateityp kann im Browser nicht direkt angezeigt werden.",
+      "download": "Original öffnen / herunterladen"
+    },
+    "proposal": {
+      "title": "Buchungsvorschlag",
+      "reviewFirst": "Speichere zuerst deine Prüfung. Bis dahin existiert keine buchbare Freigabe.",
+      "loading": "Buchungszeilen werden aufgelöst …",
+      "error": "Der Buchungsvorschlag konnte nicht erstellt werden.",
+      "unsaved": "Die Felder wurden seit der letzten Prüfung geändert. Speichere erneut, bevor du buchst.",
+      "multiRate": "{{count}} Steuersätze aus E-Rechnung",
+      "supplier": "Kreditor",
+      "expenseAccount": "Aufwandskonto",
+      "entryDate": "Buchungsdatum",
+      "breakdownTitle": "Steueraufteilung",
+      "legsTitle": "Buchungszeilen",
+      "rate": "Steuersatz",
+      "account": "Konto",
+      "direction": "Seite",
+      "amount": "Betrag",
+      "debit": "Soll",
+      "credit": "Haben"
+    },
+    "confirm": {
+      "title": "Menschliche Bestätigung erforderlich",
+      "neverAutomatic": "Erst dieser Klick erzeugt die Buchung. Auslesen, E-Rechnung und Prüfung allein buchen niemals automatisch.",
+      "action": "Bestätigen & Buchen",
+      "booking": "Buchung wird erstellt …"
+    },
+    "booking": {
+      "linked": "Verknüpfte Buchung",
+      "hint": "Der Beleg ist gebucht; das unveränderte Original bleibt daneben dauerhaft einsehbar."
+    }
+  }
+}

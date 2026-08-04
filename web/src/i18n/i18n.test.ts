@@ -27,11 +27,12 @@ describe('i18n (DE/EN)', () => {
     expect(localStorage.getItem('lng')).toBe('de')
   })
 
-  it('exposes both de and en for common, auth, and reports namespaces', () => {
+  it('exposes both de and en for common, auth, reports, and belege namespaces', () => {
     for (const lng of ['de', 'en']) {
       expect(i18n.hasResourceBundle(lng, 'common')).toBe(true)
       expect(i18n.hasResourceBundle(lng, 'auth')).toBe(true)
       expect(i18n.hasResourceBundle(lng, 'reports')).toBe(true)
+      expect(i18n.hasResourceBundle(lng, 'belege')).toBe(true)
     }
   })
 })

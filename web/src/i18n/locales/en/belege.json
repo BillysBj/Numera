@@ -1,0 +1,172 @@
+{
+  "nav": {
+    "group": "Receipts",
+    "queue": "Review & post",
+    "capture": "Capture receipt"
+  },
+  "actions": {
+    "capture": "Capture receipt",
+    "backToQueue": "Back to receipts"
+  },
+  "status": {
+    "0": "Captured",
+    "1": "Extracted",
+    "2": "Reviewed",
+    "3": "Posted",
+    "4": "Duplicate",
+    "5": "Rejected",
+    "6": "Quarantined"
+  },
+  "source": {
+    "0": "Camera",
+    "1": "Upload",
+    "2": "Email",
+    "3": "E-invoice"
+  },
+  "capture": {
+    "eyebrow": "Capture original",
+    "title": "Add a new receipt",
+    "subtitle": "Photograph a receipt or upload the unchanged original. After extraction, you decide what gets posted.",
+    "camera": {
+      "title": "Take a photo",
+      "hint": "Lay the receipt flat and keep the entire document in frame.",
+      "action": "Open camera"
+    },
+    "upload": {
+      "title": "Upload a file",
+      "drop": "Drop a PDF or image here",
+      "formats": "PDF, JPEG, PNG, TIFF or HEIF · up to 15 MB",
+      "action": "Upload original",
+      "uploading": "Scanning & uploading …"
+    },
+    "wormHint": "The uploaded original is archived immutably. Corrections only change the posting data.",
+    "errors": {
+      "empty": "Select a file first.",
+      "size": "The file must be larger than 0 bytes and no more than 15 MB.",
+      "type": "PDF, JPEG, PNG, TIFF and HEIF are supported.",
+      "upload": "The receipt could not be uploaded. Check the file and try again."
+    },
+    "notices": {
+      "uploaded": "The receipt was captured safely and will appear in the review list after extraction.",
+      "duplicate": "This file was already captured and has been marked as a duplicate. Nothing was posted.",
+      "quarantined": "The file was quarantined during the security scan. It cannot be archived or posted."
+    }
+  },
+  "mailbox": {
+    "title": "Your receipt email",
+    "active": "Active",
+    "inactive": "Inactive",
+    "loading": "Loading address …",
+    "error": "The receipt email address is currently unavailable.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyError": "Copying failed. Select the address and copy it manually.",
+    "hint": "Forward supplier receipts to this address. Attachments arrive in this tenant-isolated review list."
+  },
+  "queue": {
+    "title": "Review receipts",
+    "subtitle": "Originals, extraction results and posting status at a glance.",
+    "filterLabel": "Filter by status",
+    "allStatuses": "All statuses",
+    "unknownSupplier": "Supplier not identified yet",
+    "loading": "Loading receipts …",
+    "error": "The receipt list could not be loaded.",
+    "empty": "There are no receipts with this status.",
+    "showing": "Showing {{shown}} of {{total}} receipts.",
+    "columns": {
+      "supplier": "Supplier / receipt",
+      "source": "Source",
+      "status": "Status",
+      "date": "Invoice date",
+      "amount": "Gross"
+    }
+  },
+  "confidence": {
+    "manual": "Check manually",
+    "low": "Low · {{value}}%",
+    "medium": "Medium · {{value}}%",
+    "high": "High · {{value}}%"
+  },
+  "review": {
+    "title": "Review receipt",
+    "subtitle": "Invoice date {{date}}",
+    "loading": "Loading receipt …",
+    "error": "The receipt could not be loaded.",
+    "structured": "Read structurally",
+    "fieldsTitle": "Extracted posting data",
+    "fieldsHint": "Low or missing confidence is highlighted. Compare every field with the original.",
+    "validation": "Complete the amounts and at least one date. A VAT rate is also required for regular receipts.",
+    "saving": "Saving review …",
+    "saveAndPreview": "Review & create posting proposal",
+    "reviewed": "Review saved. The posting proposal is now current.",
+    "saveError": "The review could not be saved.",
+    "booked": "The receipt was confirmed and posted.",
+    "alreadyBooked": "This receipt was already posted. The linked journal entry was loaded.",
+    "bookError": "The receipt could not be posted.",
+    "stateHint": {
+      "0": "This receipt is still being extracted. It can be reviewed afterwards.",
+      "4": "This original was identified as a duplicate. You can view it, but it cannot be posted.",
+      "6": "This receipt is quarantined and cannot be reviewed or posted. No valid original was archived."
+    },
+    "fields": {
+      "supplier": "Supplier",
+      "supplierVatId": "Supplier VAT ID",
+      "noSupplier": "No supplier assigned",
+      "extractedValue": "Extracted: {{value}}",
+      "invoiceNumber": "Invoice number",
+      "invoiceDate": "Invoice date",
+      "expenseDate": "Expense / posting date",
+      "expenseAccount": "Expense account",
+      "accountAutomatic": "Automatic from chart of accounts",
+      "otherExpenseSkr03": "Other operating expense (SKR03)",
+      "otherExpenseSkr04": "Other operating expense (SKR04)",
+      "vatRate": "Input VAT rate",
+      "chooseVatRate": "Choose VAT rate",
+      "multiRateEinvoice": "Tax breakdown from e-invoice",
+      "taxFree": "tax exempt",
+      "net": "Net",
+      "vat": "Input VAT",
+      "gross": "Gross"
+    },
+    "original": {
+      "title": "Unchanged original",
+      "unknownFile": "Original file",
+      "immutable": "GoBD · immutable",
+      "unavailable": "No viewable original is archived for this record.",
+      "loading": "Loading original securely …",
+      "error": "The archived original could not be loaded.",
+      "alt": "Archived receipt original",
+      "previewUnsupported": "This file type cannot be previewed directly in the browser.",
+      "download": "Open / download original"
+    },
+    "proposal": {
+      "title": "Posting proposal",
+      "reviewFirst": "Save your review first. Until then there is no posting approval.",
+      "loading": "Resolving posting legs …",
+      "error": "The posting proposal could not be created.",
+      "unsaved": "Fields changed since the last review. Save again before posting.",
+      "multiRate": "{{count}} VAT rates from e-invoice",
+      "supplier": "Creditor",
+      "expenseAccount": "Expense account",
+      "entryDate": "Posting date",
+      "breakdownTitle": "Tax breakdown",
+      "legsTitle": "Posting legs",
+      "rate": "VAT rate",
+      "account": "Account",
+      "direction": "Side",
+      "amount": "Amount",
+      "debit": "Debit",
+      "credit": "Credit"
+    },
+    "confirm": {
+      "title": "Human confirmation required",
+      "neverAutomatic": "Only this click creates the journal entry. Extraction, e-invoices and review never post automatically.",
+      "action": "Confirm & Post",
+      "booking": "Creating journal entry …"
+    },
+    "booking": {
+      "linked": "Linked journal entry",
+      "hint": "The receipt is posted; the unchanged original remains permanently viewable alongside it."
+    }
+  }
+}

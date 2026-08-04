@@ -43,6 +43,9 @@ import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFor
 import TeamPage from './features/team/TeamPage'
 import UstVaPruefansichtPage from './features/reports/UstVaPruefansichtPage'
 import EuerReportPage from './features/reports/EuerReportPage'
+import BelegReviewQueuePage from './features/belege/BelegReviewQueuePage'
+import BelegCapturePage from './features/belege/BelegCapturePage'
+import BelegReviewPage from './features/belege/BelegReviewPage'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
 interface NavItem {
@@ -67,6 +70,7 @@ function useNavGroups(): NavGroup[] {
   const { t: tr } = useTranslation('recurring')
   const { t: tt } = useTranslation('team')
   const { t: trep } = useTranslation('reports')
+  const { t: tb } = useTranslation('belege')
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -78,6 +82,13 @@ function useNavGroups(): NavGroup[] {
         { to: '/settings/dunning', label: tdu('nav'), icon: IconDunning },
         { to: '/recurring', label: tr('nav'), icon: IconRecurring },
         { to: '/inbound', label: ti('nav'), icon: IconInbound },
+      ],
+    },
+    {
+      label: tb('nav.group'),
+      items: [
+        { to: '/belege', label: tb('nav.queue'), icon: IconDocuments },
+        { to: '/belege/capture', label: tb('nav.capture'), icon: IconInbound },
       ],
     },
     {
@@ -335,6 +346,9 @@ function AppShell() {
             <Route path="/team" element={<TeamPage />} />
             <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
             <Route path="/reports/euer" element={<EuerReportPage />} />
+            <Route path="/belege" element={<BelegReviewQueuePage />} />
+            <Route path="/belege/capture" element={<BelegCapturePage />} />
+            <Route path="/belege/:id" element={<BelegReviewPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

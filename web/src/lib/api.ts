@@ -22,13 +22,13 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     // The HttpOnly session cookie carries auth — always send it.
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(typeof init?.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
       ...init?.headers,
     },
     ...init,
@@ -48,6 +48,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T
 }
+
+/** Fetch an authenticated same-origin API payload that is intentionally binary. */
+export async function apiBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: 'include',
+    headers: { Accept: '*/*', ...init?.headers },
+    ...init,
+  })
+
+  if (!res.ok) {
+    let body: unknown
+    try {
+      body = await res.json()
+    } catch {
+      body = await res.text().catch(() => undefined)
+    }
+    throw new ApiError(res.status, `Request failed: ${res.status}`, body)
+  }
+
+  return res.blob()
+}
+
+const request = apiRequest
 
 // ---- Typed responses (server remains authoritative) -----------------------
 
