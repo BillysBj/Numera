@@ -16,6 +16,14 @@
     "ustvaKennziffer": "86"
   },
   {
+    "number": "4125",
+    "name": "Steuerfreie innergemeinschaftliche Lieferungen",
+    "type": "Revenue",
+    "isAutomatikkonto": false,
+    "steuerschluessel": 1,
+    "ustvaKennziffer": "41"
+  },
+  {
     "number": "4200",
     "name": "Steuerfreie Erlöse",
     "type": "Revenue",
