@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <Stmt>
+      <Id>STATEMENT-2026-08</Id>
+      <Ntry>
+        <NtryRef>ENTRY-CREDIT</NtryRef>
+        <Amt Ccy="EUR">119.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-08-05</Dt></BookgDt>
+        <ValDt><Dt>2026-08-05</Dt></ValDt>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>BANK-CREDIT-1</AcctSvcrRef>
+              <EndToEndId>EREF-CREDIT-1</EndToEndId>
+            </Refs>
+            <RltdPties>
+              <Dbtr><Nm>Musterkunde GmbH</Nm></Dbtr>
+              <DbtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></DbtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Rechnung RE-2026-0042</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Ntry>
+        <NtryRef>ENTRY-DEBIT</NtryRef>
+        <Amt Ccy="EUR">49.95</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <BookgDt><Dt>2026-08-06</Dt></BookgDt>
+        <ValDt><Dt>2026-08-06</Dt></ValDt>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <AcctSvcrRef>BANK-DEBIT-1</AcctSvcrRef>
+              <EndToEndId>EREF-DEBIT-1</EndToEndId>
+            </Refs>
+            <RltdPties>
+              <Cdtr><Nm>Bürobedarf AG</Nm></Cdtr>
+              <CdtrAcct><Id><IBAN>DE12500105170648489890</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Büromaterial</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>
