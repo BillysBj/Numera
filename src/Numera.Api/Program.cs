@@ -17,6 +17,8 @@ using Numera.Api.Reporting;
 using Numera.Api.Services;
 using Numera.Api.Services.FinApi;
 using Numera.Modules.Banking;
+using Numera.Modules.Banking.Import;
+using Numera.Modules.Banking.Reconciliation;
 using Numera.Modules.Ledger;
 using Numera.Modules.Ledger.Seed;
 using Numera.Modules.Sales.Belege;
@@ -172,6 +174,11 @@ else
 
 builder.Services.AddTransient<CheckBankConsentJob>();
 builder.Services.AddBankingModule(builder.Configuration);
+builder.Services.AddScoped<ReconciliationScorer>();
+builder.Services.AddScoped<IBankStatementImporter, CsvImporter>();
+builder.Services.AddScoped<IBankStatementImporter, Mt940Importer>();
+builder.Services.AddScoped<IBankStatementImporter, Camt053Importer>();
+builder.Services.AddScoped<BankStatementImportDispatcher>();
 
 builder.Services.Configure<ClamAvOptions>(
     builder.Configuration.GetSection(ClamAvOptions.SectionName));
@@ -262,6 +269,8 @@ app.MapReceiptEndpoints();
 app.MapMailboxEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
+app.MapBankAccountEndpoints();
+app.MapBankTransactionEndpoints();
 app.MapDunningEndpoints();
 app.MapRecurringInvoiceEndpoints();
 app.MapTeamEndpoints();
