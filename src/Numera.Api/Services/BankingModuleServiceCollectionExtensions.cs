@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
+using Numera.Api.Jobs;
+using Numera.Modules.Banking;
+
 namespace Numera.Api.Services;
 
 /// <summary>Central registration seam for Banking module application services.</summary>
@@ -11,8 +14,10 @@ public static class BankingModuleServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Later Banking plans add sync, ingest, import, and reconciliation services here.
         _ = configuration;
+        services.AddScoped<BankTransactionIngestService>();
+        services.AddTransient<SyncBankTransactionsJob>();
+        services.AddTransient<SyncBankTransactionsFanOutJob>();
         return services;
     }
 }

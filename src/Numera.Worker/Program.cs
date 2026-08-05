@@ -59,5 +59,10 @@ recurringJobs.AddOrUpdate<PollBelegMailboxJob>(
     "belege-mailbox:poll",
     job => job.RunAsync(CancellationToken.None),
     string.IsNullOrWhiteSpace(mailbox.PollCron) ? "*/5 * * * *" : mailbox.PollCron);
+var bankSyncCron = builder.Configuration["Banking:SyncCron"];
+recurringJobs.AddOrUpdate<SyncBankTransactionsFanOutJob>(
+    "bank-transactions:sync-fan-out",
+    job => job.RunAsync(CancellationToken.None),
+    string.IsNullOrWhiteSpace(bankSyncCron) ? "0 * * * *" : bankSyncCron);
 
 host.Run();
