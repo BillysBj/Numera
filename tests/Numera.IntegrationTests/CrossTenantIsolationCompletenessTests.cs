@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Reporting;
+using Numera.Modules.Banking;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Belege;
@@ -23,7 +24,8 @@ namespace Numera.IntegrationTests;
 /// <c>recurring_invoice_templates</c>, <c>recurring_invoice_template_lines</c>,
 /// <c>sales_document_prepayment</c>, <c>partner_tasks</c>, <c>customer_files</c>,
 /// <c>document_einvoice</c>, <c>inbound_document</c>, <c>receipt</c>,
-/// <c>receipt_archive</c>.
+/// <c>receipt_archive</c>, <c>bank_connection</c>, <c>bank_account</c>,
+/// <c>bank_transaction</c>.
 /// </summary>
 /// <remarks>
 /// Mirrors <see cref="RlsIsolationTests"/> exactly: on real postgres:18 as the non-BYPASSRLS
@@ -66,6 +68,14 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         await ReadIsolationAsync<Receipt>((t, ctx) => ctx.Add(NewReceipt(t)));
         await ReadIsolationAsync<ReceiptArchive>((t, ctx) => ctx.Add(NewReceiptArchive(t)));
         await ReadIsolationAsync<UstVaFiling>((t, ctx) => ctx.Add(NewUstVaFiling(t)));
+        await ReadIsolationAsync<BankConnection>((t, ctx) => ctx.Add(NewBankConnection(t)));
+        await ReadIsolationAsync<BankAccount>((t, ctx) => ctx.Add(NewBankAccount(t)));
+        await ReadIsolationAsync<BankTransaction>((t, ctx) =>
+        {
+            var account = NewBankAccount(t);
+            ctx.Add(account);
+            ctx.Add(NewBankTransaction(t, account.Id));
+        });
     }
 
     // Seeds one row (+ any parents) as tenant A and one as tenant B, then proves — with the EF
@@ -106,6 +116,8 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewReceipt(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewReceiptArchive(b)));
         await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewUstVaFiling(b)));
+        await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewBankConnection(b)));
+        await WithCheckRejectsAsync((a, b, ctx) => ctx.Add(NewBankAccount(b)));
 
         // FK tables: seed the parent as tenant A (so the ONLY violation is the foreign child
         // TenantId), then attempt the cross-tenant child insert.
@@ -122,6 +134,13 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
             ctx.Add(doc);
             await ctx.SaveChangesAsync();
             ctx.Add(NewPrepayment(b, doc.Id));
+        });
+        await WithCheckRejectsAsync(async (a, b, ctx) =>
+        {
+            var account = NewBankAccount(a);
+            ctx.Add(account);
+            await ctx.SaveChangesAsync();
+            ctx.Add(NewBankTransaction(b, account.Id));
         });
     }
 
@@ -294,5 +313,29 @@ public sealed class CrossTenantIsolationCompletenessTests(PostgresFixture fixtur
         Zahllast = 0m,
         Status = UstVaFilingStatus.Draft,
         CreatedAt = DateTimeOffset.UtcNow,
+    };
+
+    private static BankConnection NewBankConnection(Guid t) => new()
+    {
+        TenantId = t,
+        Provider = BankProvider.Stub,
+        ConsentStatus = ConsentStatus.Active,
+    };
+
+    private static BankAccount NewBankAccount(Guid t) => new()
+    {
+        TenantId = t,
+        Iban = $"DE{t:N}",
+        DisplayName = "Testkonto",
+    };
+
+    private static BankTransaction NewBankTransaction(Guid t, Guid bankAccountId) => new()
+    {
+        TenantId = t,
+        BankAccountId = bankAccountId,
+        DedupeKey = Guid.CreateVersion7().ToString("N"),
+        Source = BankTransactionSource.Csv,
+        Amount = 100m,
+        ValueDate = Date,
     };
 }

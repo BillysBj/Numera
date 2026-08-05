@@ -14,6 +14,7 @@ using Numera.Api.Events;
 using Numera.Api.Jobs;
 using Numera.Api.Reporting;
 using Numera.Api.Services;
+using Numera.Modules.Banking;
 using Numera.Modules.Ledger;
 using Numera.Modules.Ledger.Seed;
 using Numera.Modules.Sales.Belege;
@@ -141,6 +142,12 @@ else
 {
     builder.Services.AddScoped<IReceiptExtractor, StubReceiptExtractor>();
 }
+
+// --- Banking foundation (plan 13-01, D1) ---------------------------------
+// The no-network stub is the shipping default. Plan 13-05 adds the finAPI
+// configuration gate while retaining this fallback.
+builder.Services.AddScoped<IBankConnectionProvider, StubBankConnectionProvider>();
+builder.Services.AddBankingModule(builder.Configuration);
 
 builder.Services.Configure<ClamAvOptions>(
     builder.Configuration.GetSection(ClamAvOptions.SectionName));

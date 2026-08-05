@@ -37,6 +37,9 @@
     <ProjectReference Include="..\..\src\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
     <ProjectReference Include="..\..\src\platform\Numera.Platform.Tenancy\Numera.Platform.Tenancy.csproj" />
     <ProjectReference Include="..\..\src\platform\Numera.Platform.Audit\Numera.Platform.Audit.csproj" />
+    <!-- Banking is referenced both for direct isolation-test type use and so its
+         reflectively discovered entities are present in the runtime EF model. -->
+    <ProjectReference Include="..\..\src\modules\Numera.Modules.Banking\Numera.Modules.Banking.csproj" />
     <!--
       Modules.Ledger is referenced so its DLL is deployed next to the test assembly:
       NumeraDbContext discovers the inert ledger entities the same way the Api host

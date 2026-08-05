@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Numera.Api.Jobs;
 using Numera.Api.Services;
 
+using Numera.Modules.Banking;
 using Numera.Platform.Db;
 using Numera.Platform.Tenancy;
 
@@ -34,6 +35,11 @@ builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(conn
 
 // Shared capture closure only: scanner + audit + enqueue; no extractor or ledger services.
 builder.Services.AddBelegeMailboxWorker(builder.Configuration);
+
+// Banking jobs added by later plans resolve the same stub-default port and shared
+// module registration seam as the API host.
+builder.Services.AddScoped<IBankConnectionProvider, StubBankConnectionProvider>();
+builder.Services.AddBankingModule(builder.Configuration);
 
 builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)

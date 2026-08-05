@@ -36,6 +36,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <!-- Referenced so the Banking assembly is deployed next to Platform.Db, letting
+         NumeraDbContext discover its ITenantEntity types for the shared migration. -->
+    <ProjectReference Include="..\modules\Numera.Modules.Banking\Numera.Modules.Banking.csproj" />
     <!-- Server-authoritative tier entitlements + FeatureManagement plan filter. -->
     <ProjectReference Include="..\platform\Numera.Platform.Entitlements\Numera.Platform.Entitlements.csproj" />
     <!-- Referenced so the modular-monolith host loads the ledger assembly, letting

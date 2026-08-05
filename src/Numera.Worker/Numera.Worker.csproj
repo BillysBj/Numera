@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <ProjectReference Include="..\modules\Numera.Modules.Banking\Numera.Modules.Banking.csproj" />
     <ProjectReference Include="..\Numera.Api\Numera.Api.csproj" />
   </ItemGroup>
 

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Numera.Modules.Banking</RootNamespace>
+    <AssemblyName>Numera.Modules.Banking</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <ProjectReference Include="..\..\platform\Numera.Platform.Money\Numera.Platform.Money.csproj" />
+  </ItemGroup>
+
+</Project>
