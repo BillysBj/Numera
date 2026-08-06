@@ -34,6 +34,8 @@ import deReports from './locales/de/reports.json'
 import enReports from './locales/en/reports.json'
 import deBelege from './locales/de/belege.json'
 import enBelege from './locales/en/belege.json'
+import deBanking from './locales/de/banking.json'
+import enBanking from './locales/en/banking.json'
 
 // Supported UI languages. German is the default/fallback (Numera is a German
 // financial product); English is the secondary locale (success criterion 5).
@@ -59,6 +61,7 @@ export const resources = {
     files: deFiles,
     reports: deReports,
     belege: deBelege,
+    banking: deBanking,
   },
   en: {
     common: enCommon,
@@ -77,6 +80,7 @@ export const resources = {
     files: enFiles,
     reports: enReports,
     belege: enBelege,
+    banking: enBanking,
   },
 } as const
 
@@ -89,7 +93,7 @@ i18n
     fallbackLng: 'de',
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],
     nonExplicitSupportedLngs: true, // treat "de-DE" as "de"
-    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'inbound', 'payments', 'settings', 'dunning', 'recurring', 'team', 'tasks', 'files', 'reports', 'belege'],
+    ns: ['common', 'auth', 'partners', 'catalog', 'documents', 'openItems', 'inbound', 'payments', 'settings', 'dunning', 'recurring', 'team', 'tasks', 'files', 'reports', 'belege', 'banking'],
     defaultNS: 'common',
     interpolation: {
       escapeValue: false, // React already escapes

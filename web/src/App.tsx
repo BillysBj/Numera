@@ -46,6 +46,9 @@ import EuerReportPage from './features/reports/EuerReportPage'
 import BelegReviewQueuePage from './features/belege/BelegReviewQueuePage'
 import BelegCapturePage from './features/belege/BelegCapturePage'
 import BelegReviewPage from './features/belege/BelegReviewPage'
+import BankAccountsPage from './features/banking/BankAccountsPage'
+import ReconciliationQueuePage from './features/banking/ReconciliationQueuePage'
+import ReconciliationMatchPage from './features/banking/ReconciliationMatchPage'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
 interface NavItem {
@@ -71,6 +74,7 @@ function useNavGroups(): NavGroup[] {
   const { t: tt } = useTranslation('team')
   const { t: trep } = useTranslation('reports')
   const { t: tb } = useTranslation('belege')
+  const { t: tbank } = useTranslation('banking')
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -89,6 +93,13 @@ function useNavGroups(): NavGroup[] {
       items: [
         { to: '/belege', label: tb('nav.queue'), icon: IconDocuments },
         { to: '/belege/capture', label: tb('nav.capture'), icon: IconInbound },
+      ],
+    },
+    {
+      label: tbank('nav.group'),
+      items: [
+        { to: '/banking', label: tbank('nav.accounts'), icon: IconOpenItems },
+        { to: '/banking/queue', label: tbank('nav.queue'), icon: IconDashboard },
       ],
     },
     {
@@ -349,6 +360,9 @@ function AppShell() {
             <Route path="/belege" element={<BelegReviewQueuePage />} />
             <Route path="/belege/capture" element={<BelegCapturePage />} />
             <Route path="/belege/:id" element={<BelegReviewPage />} />
+            <Route path="/banking" element={<BankAccountsPage />} />
+            <Route path="/banking/queue" element={<ReconciliationQueuePage />} />
+            <Route path="/banking/tx/:id" element={<ReconciliationMatchPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
