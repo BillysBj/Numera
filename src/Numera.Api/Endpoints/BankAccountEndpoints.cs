@@ -23,6 +23,9 @@ public static class BankAccountEndpoints
 
         group.MapPost("/connect", ConnectAsync);
         group.MapPost("/{connectionId:guid}/reauth", ReauthAsync);
+        group.MapPost(
+            "/connections/{connectionId:guid}/refresh-accounts",
+            RefreshAccountsAsync);
         group.MapGet("/", ListAsync);
         group.MapGet("/connections/{id:guid}/consent", GetConsentAsync);
         group.MapPost("/{bankAccountId:guid}/sync", SyncAsync);
@@ -113,6 +116,85 @@ public static class BankAccountEndpoints
             .ToListAsync(ct)
             .ConfigureAwait(false);
         return Results.Ok(accounts);
+    }
+
+    internal static async Task<IResult> RefreshAccountsAsync(
+        Guid connectionId,
+        NumeraDbContext db,
+        IBankConnectionProvider provider,
+        CancellationToken ct)
+    {
+        var connection = await db.Set<BankConnection>()
+            .FirstOrDefaultAsync(candidate => candidate.Id == connectionId, ct)
+            .ConfigureAwait(false);
+        if (connection is null)
+        {
+            return Results.NotFound();
+        }
+
+        var drafts = await provider.ListAccountsAsync(connection, ct).ConfigureAwait(false);
+        var providerAccountIds = drafts
+            .Select(draft => draft.FinApiAccountId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var persistedAccounts = providerAccountIds.Length == 0
+            ? []
+            : await db.Set<BankAccount>()
+                .Where(account =>
+                    account.FinApiAccountId != null
+                    && providerAccountIds.Contains(account.FinApiAccountId))
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
+        var accountsByProviderId = persistedAccounts.ToDictionary(
+            account => account.FinApiAccountId!,
+            StringComparer.Ordinal);
+
+        foreach (var draft in drafts)
+        {
+            if (!accountsByProviderId.TryGetValue(draft.FinApiAccountId, out var account))
+            {
+                account = new BankAccount
+                {
+                    TenantId = connection.TenantId,
+                    Iban = draft.Iban,
+                    DisplayName = draft.DisplayName,
+                    Currency = draft.Currency,
+                    FinApiAccountId = draft.FinApiAccountId,
+                    BankConnectionId = connection.Id,
+                };
+                db.Add(account);
+                accountsByProviderId.Add(draft.FinApiAccountId, account);
+            }
+
+            account.Iban = draft.Iban;
+            account.DisplayName = draft.DisplayName;
+            account.Currency = draft.Currency;
+            account.FinApiAccountId = draft.FinApiAccountId;
+            account.BankConnectionId = connection.Id;
+        }
+
+        var consent = await provider.GetConsentStatusAsync(connection, ct).ConfigureAwait(false);
+        connection.ConsentStatus = consent.Status;
+        connection.ConsentExpiresAt = consent.ExpiresAt;
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        var refreshedAccounts = await db.Set<BankAccount>()
+            .AsNoTracking()
+            .Where(account => account.BankConnectionId == connection.Id)
+            .OrderBy(account => account.DisplayName)
+            .ThenBy(account => account.Id)
+            .Select(account => new BankingContracts.BankAccountListItem(
+                account.Id,
+                account.Iban,
+                account.DisplayName,
+                account.Currency,
+                account.BankConnectionId,
+                account.BankConnection == null ? null : (int?)account.BankConnection.ConsentStatus,
+                account.BankConnection == null ? null : account.BankConnection.LastSyncedAt,
+                account.BankConnection == null ? null : account.BankConnection.ConsentExpiresAt))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        return Results.Ok(refreshedAccounts);
     }
 
     internal static async Task<IResult> GetConsentAsync(

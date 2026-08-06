@@ -38,7 +38,7 @@ builder.Services.AddBelegeMailboxWorker(builder.Configuration);
 
 // Banking jobs added by later plans resolve the same stub-default port and shared
 // module registration seam as the API host.
-builder.Services.AddScoped<IBankConnectionProvider, StubBankConnectionProvider>();
+builder.Services.AddBankConnectionProvider(builder.Configuration);
 builder.Services.AddBankingModule(builder.Configuration);
 
 builder.Services.AddHangfire(config => config
@@ -64,5 +64,9 @@ recurringJobs.AddOrUpdate<SyncBankTransactionsFanOutJob>(
     "bank-transactions:sync-fan-out",
     job => job.RunAsync(CancellationToken.None),
     string.IsNullOrWhiteSpace(bankSyncCron) ? "0 * * * *" : bankSyncCron);
+recurringJobs.AddOrUpdate<CheckBankConsentJob>(
+    "bank-connections:check-consent",
+    job => job.RunAllAsync(CancellationToken.None),
+    "0 6 * * *");
 
 host.Run();

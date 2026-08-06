@@ -24,6 +24,9 @@ public sealed class FakeBankConnectionProvider : IBankConnectionProvider
     /// <summary>Cursors received by synchronization calls, in call order.</summary>
     public List<string?> ReceivedCursors { get; } = [];
 
+    /// <summary>Connection ids received by account-discovery calls, in call order.</summary>
+    public List<Guid> ListedConnectionIds { get; } = [];
+
     /// <inheritdoc />
     public Task<WebFormSession> StartImportAsync(BankConnection connection, CancellationToken ct)
     {
@@ -44,6 +47,7 @@ public sealed class FakeBankConnectionProvider : IBankConnectionProvider
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        ListedConnectionIds.Add(connection.Id);
         return Task.FromResult(Accounts);
     }
 

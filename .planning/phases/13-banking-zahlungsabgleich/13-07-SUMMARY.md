@@ -110,6 +110,34 @@ No .NET or Docker command was run. No file was staged or committed.
   API lacks a detail route. This is correct for the available surface but is less efficient than a
   future dedicated detail endpoint.
 
+## Live finAPI gap closure (2026-08-06)
+
+- GAP 1: Added authenticated
+  `POST /api/bank-accounts/connections/{connectionId}/refresh-accounts`. The RLS-scoped endpoint
+  loads the connection, calls `IBankConnectionProvider.ListAccountsAsync`, upserts provider-backed
+  `BankAccount` rows by `FinApiAccountId`, updates IBAN/name/currency/connection metadata, refreshes
+  the persisted consent snapshot through `GetConsentStatusAsync`, and returns the connection's
+  accounts. Repeated calls update existing rows instead of duplicating them; the Stub path returns
+  an empty list without an error.
+- GAP 2: Extracted the complete config-gated Stub/finAPI registration into the shared
+  `AddBankConnectionProvider` service-collection extension. Both API and Worker call it. The
+  Worker already references `Numera.Api`, so it can reuse `FinApiOptions`, `FinApiClient`, the data
+  protection credential adapter, and `FinApiBankConnectionProvider` without moving types or adding
+  packages. Missing ClientId/ClientSecret/BaseUrl continues to resolve `StubBankConnectionProvider`.
+- GAP 3: Registered `CheckBankConsentJob` through the shared banking module and added a Worker
+  recurring entry `bank-connections:check-consent` at `0 6 * * *`. Its recurring entry point scans
+  connections tenant-agnostically using the same infrastructure-connection pattern as sync fan-out,
+  then calls the existing idempotent tenant-scoped check for each connection; the class remains on
+  Hangfire's `worker` queue.
+- Added a real-Postgres integration test for account creation, metadata update, repeat-call
+  idempotency, consent persistence, and a cross-tenant connection-id attempt. Added a compile-time
+  DI assertion that missing finAPI configuration resolves the no-network Stub. Integration tests
+  were deliberately not executed.
+- Verification with .NET SDK 10.0.301 and `--configuration Release --no-restore`: API build passed
+  with 0 warnings/0 errors; Worker build passed with 0 warnings/0 errors; the integration-test
+  project was additionally compiled (not run) with 0 warnings/0 errors.
+- No live finAPI call, package addition, migration, frontend change, staging, or commit was made.
+
 ## Pending human checkpoint (Task 3)
 
 Human verification of connect/import → sync → queue → confirm/book → split → unmatch, idempotent

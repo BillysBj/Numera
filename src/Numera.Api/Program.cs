@@ -4,7 +4,6 @@ using Hangfire;
 using Hangfire.PostgreSql;
 
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
@@ -15,7 +14,6 @@ using Numera.Api.Events;
 using Numera.Api.Jobs;
 using Numera.Api.Reporting;
 using Numera.Api.Services;
-using Numera.Api.Services.FinApi;
 using Numera.Modules.Banking;
 using Numera.Modules.Banking.Import;
 using Numera.Modules.Banking.Reconciliation;
@@ -150,29 +148,7 @@ else
 // --- Banking provider (plan 13-05, D1) -----------------------------------
 // The no-network stub is the safe default. finAPI is an explicit opt-in and
 // replaces it only when all required sandbox application settings are present.
-builder.Services.Configure<FinApiOptions>(
-    builder.Configuration.GetSection(FinApiOptions.SectionName));
-var finApi = builder.Configuration.GetSection(FinApiOptions.SectionName);
-if (!string.IsNullOrWhiteSpace(finApi[nameof(FinApiOptions.ClientId)])
-    && !string.IsNullOrWhiteSpace(finApi[nameof(FinApiOptions.ClientSecret)])
-    && !string.IsNullOrWhiteSpace(finApi[nameof(FinApiOptions.BaseUrl)]))
-{
-    builder.Services.AddDataProtection();
-    builder.Services.AddSingleton<IBankCredentialProtector, DataProtectionBankCredentialProtector>();
-    builder.Services.AddHttpClient<FinApiClient>((services, http) =>
-    {
-        var options = services.GetRequiredService<IOptions<FinApiOptions>>().Value;
-        http.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/", UriKind.Absolute);
-        http.Timeout = TimeSpan.FromSeconds(30);
-    });
-    builder.Services.AddScoped<IBankConnectionProvider, FinApiBankConnectionProvider>();
-}
-else
-{
-    builder.Services.AddScoped<IBankConnectionProvider, StubBankConnectionProvider>();
-}
-
-builder.Services.AddTransient<CheckBankConsentJob>();
+builder.Services.AddBankConnectionProvider(builder.Configuration);
 builder.Services.AddBankingModule(builder.Configuration);
 builder.Services.AddScoped<ReconciliationScorer>();
 builder.Services.AddScoped<IBankStatementImporter, CsvImporter>();
