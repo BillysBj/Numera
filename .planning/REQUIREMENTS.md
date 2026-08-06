@@ -24,12 +24,12 @@ Committed scope for this milestone. Each maps to a roadmap phase (numbering cont
 
 ### Banking (BANK) — Multibanking & Abgleich
 
-- [ ] **BANK-01**: Nutzer verbindet Bankkonten über finAPI (AIS) und verwaltet die PSD2-Einwilligung inkl. periodischer Re-Authentifizierung/SCA
-- [ ] **BANK-02**: Kontoumsätze werden regelmäßig, idempotent und dublettenfrei synchronisiert (pro Mandant, RLS)
-- [ ] **BANK-03**: Umsätze werden automatisch offenen Posten zugeordnet (Betrag + Verwendungszweck/Referenz + Gegenpartei), mit Konfidenz-Score und Prüf-Queue
-- [ ] **BANK-04**: Bestätigte Zuordnung erfasst die Zahlung und verbucht Bank ↔ Forderung/Verbindlichkeit (nutzt die v1-Zahlungslogik)
-- [ ] **BANK-05**: Nutzer kann eine Transaktion manuell zuordnen, korrigieren oder auf mehrere Rechnungen/Konten splitten
-- [ ] **BANK-06**: Import-Fallback für Kontoumsätze per CSV/MT940/CAMT (falls PSD2 nicht verfügbar)
+- [x] **BANK-01**: Nutzer verbindet Bankkonten über finAPI (AIS) und verwaltet die PSD2-Einwilligung inkl. periodischer Re-Authentifizierung/SCA
+- [x] **BANK-02**: Kontoumsätze werden regelmäßig, idempotent und dublettenfrei synchronisiert (pro Mandant, RLS)
+- [x] **BANK-03**: Umsätze werden automatisch offenen Posten zugeordnet (Betrag + Verwendungszweck/Referenz + Gegenpartei), mit Konfidenz-Score und Prüf-Queue
+- [x] **BANK-04**: Bestätigte Zuordnung erfasst die Zahlung und verbucht Bank ↔ Forderung/Verbindlichkeit (nutzt die v1-Zahlungslogik)
+- [x] **BANK-05**: Nutzer kann eine Transaktion manuell zuordnen, korrigieren oder auf mehrere Rechnungen/Konten splitten
+- [x] **BANK-06**: Import-Fallback für Kontoumsätze per CSV/MT940/CAMT (falls PSD2 nicht verfügbar)
 
 ### Belege & Ausgaben (BELEG)
 
@@ -110,7 +110,7 @@ Wird bei der Roadmap-Erstellung befüllt (jede Anforderung → genau eine Phase,
 | ACCT-01, ACCT-02, ACCT-03, ACCT-04, ACCT-05, ACCT-06, ACCT-09 | Phase 10 — Buchhaltungs-Fundament | ✓ Done (2026-08-03) — ACCT-05 = posting rule + tests; runtime entry point in Phase 12 |
 | ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | ✓ Done (2026-08-04) — USt-VA Kz 81/86/83/41; übrige Kz (Vorsteuer/§13b/i.g.-Erwerb) in Phase 12 |
 | BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | ✓ Done (2026-08-04) |
-| BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | Pending |
+| BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | ✓ Done (2026-08-06) — Receivable-only; finAPI live (Sandbox) hinter Port + StubProvider-Default; immer Human-Confirm |
 | BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07 | Phase 14 — Monetarisierung (Stripe) | Pending |
 
 **Coverage:**
