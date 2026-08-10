@@ -98,6 +98,56 @@ public static class StripeWebhookFixture
             subscriptionId,
             eventId);
 
+    /// <summary>Builds an <c>invoice.paid</c> event linked to a subscription.</summary>
+    public static string InvoicePaid(
+        Guid tenantId,
+        string priceId,
+        string customerId,
+        string subscriptionId,
+        string eventId) =>
+        SerializeEvent(
+            eventId,
+            "invoice.paid",
+            new
+            {
+                id = "in_fixture",
+                @object = "invoice",
+                customer = customerId,
+                parent = new
+                {
+                    type = "subscription_details",
+                    subscription_details = new
+                    {
+                        subscription = subscriptionId,
+                        metadata = new Dictionary<string, string>
+                        {
+                            ["tenant_id"] = tenantId.ToString(),
+                        },
+                    },
+                },
+                lines = new
+                {
+                    @object = "list",
+                    data = new[]
+                    {
+                        new
+                        {
+                            id = "il_fixture",
+                            @object = "line_item",
+                            metadata = new Dictionary<string, string>
+                            {
+                                ["tenant_id"] = tenantId.ToString(),
+                            },
+                            pricing = new
+                            {
+                                type = "price_details",
+                                price_details = new { price = priceId },
+                            },
+                        },
+                    },
+                },
+            });
+
     private static string SubscriptionEvent(
         string eventType,
         string status,
@@ -115,7 +165,6 @@ public static class StripeWebhookFixture
                 @object = "subscription",
                 customer = customerId,
                 status,
-                current_period_end = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeSeconds(),
                 metadata = new Dictionary<string, string>
                 {
                     ["tenant_id"] = tenantId.ToString(),
@@ -128,6 +177,7 @@ public static class StripeWebhookFixture
                         new
                         {
                             @object = "subscription_item",
+                            current_period_end = DateTimeOffset.UtcNow.AddDays(30).ToUnixTimeSeconds(),
                             price = new { id = priceId, @object = "price" },
                         },
                     },

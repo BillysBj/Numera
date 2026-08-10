@@ -14,6 +14,23 @@ namespace Numera.Api.Endpoints;
 /// <summary>Authenticated hosted Checkout, Customer Portal, and billing-status endpoints.</summary>
 public static class BillingEndpoints
 {
+    /// <summary>Maps the anonymous raw-body Stripe webhook endpoint.</summary>
+    public static IEndpointRouteBuilder MapBillingWebhook(this IEndpointRouteBuilder app)
+    {
+        app.MapPost("/api/billing/webhook", async (
+            HttpContext context,
+            IBillingWebhookHandler handler,
+            CancellationToken ct) =>
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            var json = await reader.ReadToEndAsync(ct).ConfigureAwait(false);
+            var signatureHeader = context.Request.Headers["Stripe-Signature"].ToString();
+            return await handler.HandleAsync(json, signatureHeader, ct).ConfigureAwait(false);
+        });
+
+        return app;
+    }
+
     /// <summary>Maps the authenticated billing self-service surface.</summary>
     public static IEndpointRouteBuilder MapBillingEndpoints(this IEndpointRouteBuilder app)
     {

@@ -14,6 +14,7 @@ using Numera.Api.Events;
 using Numera.Api.Jobs;
 using Numera.Api.Reporting;
 using Numera.Api.Services;
+using Numera.Api.Services.Stripe;
 using Numera.Modules.Banking;
 using Numera.Modules.Banking.Import;
 using Numera.Modules.Banking.Reconciliation;
@@ -150,6 +151,7 @@ else
 // replaces it only when all required sandbox application settings are present.
 builder.Services.AddBankConnectionProvider(builder.Configuration);
 builder.Services.AddBillingProvider(builder.Configuration);
+builder.Services.AddScoped<IBillingWebhookHandler, BillingWebhookHandler>();
 builder.Services.AddBankingModule(builder.Configuration);
 builder.Services.AddScoped<ReconciliationScorer>();
 builder.Services.AddScoped<IBankStatementImporter, CsvImporter>();
@@ -220,6 +222,7 @@ var app = builder.Build();
 
 // Liveness probe — intentionally unauthenticated and tenant-agnostic.
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapBillingWebhook();
 
 app.UseAuthentication();
 app.UseAuthorization();
