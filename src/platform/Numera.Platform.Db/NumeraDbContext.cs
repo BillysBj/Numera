@@ -56,6 +56,9 @@ public class NumeraDbContext : DbContext
     /// <summary>User&lt;-&gt;tenant memberships (mirror of Keycloak org membership).</summary>
     public DbSet<Membership> Memberships => Set<Membership>();
 
+    /// <summary>Global Stripe webhook idempotency records; intentionally not tenant-scoped.</summary>
+    public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
+
     /// <inheritdoc />
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -73,6 +76,7 @@ public class NumeraDbContext : DbContext
 
         ConfigureTenant(modelBuilder);
         ConfigureMembership(modelBuilder);
+        ConfigureProcessedStripeEvent(modelBuilder);
 
         // Discover tenant-scoped entities contributed by modules whose assemblies are
         // loaded in the current app-domain (e.g. Modules.Ledger via the Api startup
@@ -299,7 +303,26 @@ public class NumeraDbContext : DbContext
             b.Property(t => t.Id).ValueGeneratedNever();
             b.Property(t => t.Name).IsRequired();
             b.Property(t => t.Plan).HasConversion<int>();
+            b.Property(t => t.CurrentPeriodEnd).HasColumnType("timestamptz");
+            b.Property(t => t.TrialEndsAt).HasColumnType("timestamptz");
             b.Property(t => t.CreatedAt).HasColumnType("timestamptz");
+            b.HasIndex(t => t.StripeCustomerId)
+                .IsUnique()
+                .HasFilter("stripe_customer_id IS NOT NULL");
+        });
+    }
+
+    private static void ConfigureProcessedStripeEvent(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ProcessedStripeEvent>(b =>
+        {
+            b.ToTable("processed_stripe_event");
+            b.HasKey(e => e.Id);
+            b.Property(e => e.Id).ValueGeneratedNever();
+            b.Property(e => e.EventId).IsRequired();
+            b.Property(e => e.EventType).IsRequired();
+            b.Property(e => e.ProcessedAt).HasColumnType("timestamptz");
+            b.HasIndex(e => e.EventId).IsUnique();
         });
     }
 

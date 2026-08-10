@@ -70,6 +70,7 @@ public static class PlanCapabilityMap
     public static readonly IReadOnlyDictionary<Plan, IReadOnlySet<Capability>> Matrix =
         new Dictionary<Plan, IReadOnlySet<Capability>>
         {
+            // Free: intentionally absent from Matrix -> empty capability set (D4 read-only tier)
             [Plan.S] = SmallCaps,
             [Plan.M] = MediumCaps,
             [Plan.L] = LargeCaps,

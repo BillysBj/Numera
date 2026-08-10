@@ -17,6 +17,8 @@ export const Capability = {
 
 export type CapabilityName = keyof typeof Capability
 
+export type PlanName = 'Free' | 'S' | 'M' | 'L' | 'XL'
+
 export interface Entitlements {
   capabilities: CapabilityName[]
 }

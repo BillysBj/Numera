@@ -89,11 +89,13 @@ public sealed class RegistrationService
         // GUC (and thus RLS WITH CHECK) admits the tenants + membership inserts.
         _currentTenant.SetTenant(organizationId);
 
+        var trialEndsAt = DateTimeOffset.UtcNow.AddDays(14);
         _db.Add(new Tenant
         {
             Id = organizationId,
             Name = request.CompanyName,
             Plan = TenantPlan.S,
+            TrialEndsAt = trialEndsAt,
         });
 
         _db.Add(new Membership
@@ -115,7 +117,12 @@ public sealed class RegistrationService
             EntityType = nameof(Tenant),
             EntityId = organizationId,
             Before = null,
-            After = JsonSerializer.Serialize(new { name = request.CompanyName, plan = TenantPlan.S.ToString() }),
+            After = JsonSerializer.Serialize(new
+            {
+                name = request.CompanyName,
+                plan = TenantPlan.S.ToString(),
+                trialEndsAt,
+            }),
             OccurredAt = DateTimeOffset.UtcNow,
         });
 

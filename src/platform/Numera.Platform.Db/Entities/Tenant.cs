@@ -18,6 +18,9 @@ public enum TenantPlan
 
     /// <summary>Extra-large tier.</summary>
     XL = 4,
+
+    /// <summary>Degraded read-only tier used when trial or paid access has lapsed.</summary>
+    Free = 5,
 }
 
 /// <summary>
@@ -51,6 +54,21 @@ public sealed class Tenant
 
     /// <summary>The subscription plan; feeds plan 01-04 entitlements. Default S.</summary>
     public TenantPlan Plan { get; set; } = TenantPlan.S;
+
+    /// <summary>Stripe customer id used for Checkout and Customer Portal linkage.</summary>
+    public string? StripeCustomerId { get; set; }
+
+    /// <summary>The tenant's current Stripe subscription id, when one exists.</summary>
+    public string? StripeSubscriptionId { get; set; }
+
+    /// <summary>The raw Stripe subscription status (for example active or past_due).</summary>
+    public string? SubscriptionStatus { get; set; }
+
+    /// <summary>End of the current paid Stripe subscription period, in UTC.</summary>
+    public DateTimeOffset? CurrentPeriodEnd { get; set; }
+
+    /// <summary>End of the app-managed, no-card trial period, in UTC.</summary>
+    public DateTimeOffset? TrialEndsAt { get; set; }
 
     /// <summary>Creation timestamp (UTC).</summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
