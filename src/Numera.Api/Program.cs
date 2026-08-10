@@ -60,6 +60,7 @@ builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(conn
 // --- Audit + entitlements --------------------------------------------------
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
+builder.Services.AddScoped<IBillingState, BillingStateService>();
 
 // --- Ledger setup ---------------------------------------------------------
 // Materializes the selected embedded SKR03/SKR04 chart in the caller's tenant
@@ -230,6 +231,7 @@ app.UseAuthorization();
 // After authentication: map the organization claim -> tenant_id -> ICurrentTenant so
 // RLS receives the tenant on every request.
 app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseMiddleware<BillingDegradationWriteGuardMiddleware>();
 app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
 
 app.MapAuthEndpoints();

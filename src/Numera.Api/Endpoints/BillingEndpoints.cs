@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+using Numera.Api.Auth;
 using Numera.Api.Services.Stripe;
 using Numera.Modules.Billing;
 using Numera.Platform.Db;
@@ -127,6 +128,7 @@ public static class BillingEndpoints
         app.MapGet("/api/billing/status", async (
             ICurrentTenant currentTenant,
             NumeraDbContext db,
+            IBillingState billingState,
             CancellationToken ct) =>
         {
             var tenantId = currentTenant.TenantId;
@@ -148,18 +150,18 @@ public static class BillingEndpoints
 
             var now = DateTimeOffset.UtcNow;
             var trialActive = tenant.TrialEndsAt > now;
-            var subscriptionAllowsAccess = tenant.SubscriptionStatus is
-                "trialing" or "active" or "past_due";
+            var effectivePlan = await billingState.EffectivePlanAsync(ct).ConfigureAwait(false);
+            var degraded = await billingState.IsDegradedAsync(ct).ConfigureAwait(false);
 
             return Results.Ok(new
             {
-                plan = tenant.Plan.ToString(),
+                plan = effectivePlan.ToString(),
                 tenant.TrialEndsAt,
                 tenant.SubscriptionStatus,
                 tenant.CurrentPeriodEnd,
                 hasSubscription = tenant.StripeSubscriptionId is not null,
                 trialActive,
-                degraded = !(subscriptionAllowsAccess || trialActive),
+                degraded,
             });
         })
         .RequireAuthorization();
