@@ -1,0 +1,69 @@
+{
+  "nav": {
+    "group": "Abrechnung",
+    "billing": "Tarife & Abrechnung"
+  },
+  "page": {
+    "title": "Tarife & Abrechnung",
+    "subtitle": "Verwalte deinen Tarif und öffne die sichere Stripe-Abrechnung.",
+    "currentPlan": "Aktueller Tarif",
+    "accessActive": "Zugriff aktiv",
+    "readOnly": "Nur-Lese-Modus",
+    "loading": "Abrechnungsstatus wird geladen …",
+    "loadError": "Der Abrechnungsstatus konnte nicht geladen werden."
+  },
+  "plans": {
+    "title": "Tarif wählen",
+    "subtitle": "Der Abschluss und Tarifwechsel erfolgen sicher im gehosteten Stripe Checkout.",
+    "tier": "Tarif",
+    "current": "Aktuell",
+    "labels": {
+      "Free": "Free",
+      "S": "S",
+      "M": "M",
+      "L": "L",
+      "XL": "XL"
+    },
+    "descriptions": {
+      "S": "Die wesentlichen Funktionen für den Einstieg.",
+      "M": "Mehr Möglichkeiten für wachsende Abläufe.",
+      "L": "Erweiterte Funktionen und Automatisierung.",
+      "XL": "Der volle Funktionsumfang für große Anforderungen."
+    }
+  },
+  "trial": {
+    "label": "Testphase",
+    "remaining": "Testphase: noch {{count}} Tage",
+    "inactive": "Keine aktive Testphase"
+  },
+  "subscription": {
+    "label": "Abonnementstatus",
+    "none": "Kein aktives Abonnement",
+    "status": {
+      "trialing": "Testphase",
+      "active": "Aktiv",
+      "past_due": "Zahlung ausstehend",
+      "canceled": "Gekündigt",
+      "unpaid": "Nicht bezahlt"
+    }
+  },
+  "buttons": {
+    "start": "Tarif starten",
+    "switch": "Wechseln",
+    "current": "Aktueller Tarif",
+    "manage": "Abrechnung verwalten",
+    "redirecting": "Weiterleitung …"
+  },
+  "messages": {
+    "success": "Checkout abgeschlossen. Dein Tarifstatus wird aktualisiert, sobald Stripe die Zahlung bestätigt hat.",
+    "cancel": "Checkout abgebrochen. Dein Tarif wurde nicht geändert.",
+    "checkoutError": "Stripe Checkout konnte nicht gestartet werden.",
+    "portalError": "Die Stripe-Abrechnung konnte nicht geöffnet werden.",
+    "portalRequiresPlan": "Starte zuerst einen Tarif, bevor du die Abrechnung verwalten kannst."
+  },
+  "banner": {
+    "title": "Nur-Lese-Modus",
+    "text": "Dein Zugriff ist eingeschränkt, weil die Testphase oder Zahlung abgelaufen ist. Starte einen Tarif, um wieder Änderungen vorzunehmen.",
+    "action": "Tarif auswählen"
+  }
+}

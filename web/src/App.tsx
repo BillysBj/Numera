@@ -49,6 +49,8 @@ import BelegReviewPage from './features/belege/BelegReviewPage'
 import BankAccountsPage from './features/banking/BankAccountsPage'
 import ReconciliationQueuePage from './features/banking/ReconciliationQueuePage'
 import ReconciliationMatchPage from './features/banking/ReconciliationMatchPage'
+import BillingPage from './features/billing/BillingPage'
+import DegradationBanner from './features/billing/DegradationBanner'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
 interface NavItem {
@@ -75,6 +77,7 @@ function useNavGroups(): NavGroup[] {
   const { t: trep } = useTranslation('reports')
   const { t: tb } = useTranslation('belege')
   const { t: tbank } = useTranslation('banking')
+  const { t: tbilling } = useTranslation('billing')
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -120,6 +123,7 @@ function useNavGroups(): NavGroup[] {
       label: t('nav.sections.system'),
       items: [
         { to: '/settings', label: ts('nav'), icon: IconSettings },
+        { to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems },
         { to: '/team', label: tt('nav'), icon: IconTeam },
       ],
     },
@@ -332,6 +336,7 @@ function AppShell() {
       {/* Content column */}
       <div className="flex min-h-dvh flex-col md:pl-[264px]">
         <Topbar title={title} onOpenMenu={() => setMobileOpen(true)} />
+        <DegradationBanner />
         <div className="flex-1">
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
@@ -363,6 +368,9 @@ function AppShell() {
             <Route path="/banking" element={<BankAccountsPage />} />
             <Route path="/banking/queue" element={<ReconciliationQueuePage />} />
             <Route path="/banking/tx/:id" element={<ReconciliationMatchPage />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/billing/success" element={<BillingPage />} />
+            <Route path="/billing/cancel" element={<BillingPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

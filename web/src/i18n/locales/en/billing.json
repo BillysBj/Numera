@@ -1,0 +1,69 @@
+{
+  "nav": {
+    "group": "Billing",
+    "billing": "Plans & billing"
+  },
+  "page": {
+    "title": "Plans & billing",
+    "subtitle": "Manage your plan and open secure Stripe billing.",
+    "currentPlan": "Current plan",
+    "accessActive": "Access active",
+    "readOnly": "Read-only mode",
+    "loading": "Loading billing status …",
+    "loadError": "The billing status could not be loaded."
+  },
+  "plans": {
+    "title": "Choose a plan",
+    "subtitle": "Purchases and plan changes take place securely in hosted Stripe Checkout.",
+    "tier": "Plan",
+    "current": "Current",
+    "labels": {
+      "Free": "Free",
+      "S": "S",
+      "M": "M",
+      "L": "L",
+      "XL": "XL"
+    },
+    "descriptions": {
+      "S": "The essential features to get started.",
+      "M": "More options for growing workflows.",
+      "L": "Advanced features and automation.",
+      "XL": "The full feature set for demanding teams."
+    }
+  },
+  "trial": {
+    "label": "Trial",
+    "remaining": "Trial: {{count}} days remaining",
+    "inactive": "No active trial"
+  },
+  "subscription": {
+    "label": "Subscription status",
+    "none": "No active subscription",
+    "status": {
+      "trialing": "Trialing",
+      "active": "Active",
+      "past_due": "Payment past due",
+      "canceled": "Canceled",
+      "unpaid": "Unpaid"
+    }
+  },
+  "buttons": {
+    "start": "Start plan",
+    "switch": "Switch",
+    "current": "Current plan",
+    "manage": "Manage billing",
+    "redirecting": "Redirecting …"
+  },
+  "messages": {
+    "success": "Checkout complete. Your plan status will update as soon as Stripe confirms the payment.",
+    "cancel": "Checkout canceled. Your plan was not changed.",
+    "checkoutError": "Stripe Checkout could not be started.",
+    "portalError": "Stripe billing could not be opened.",
+    "portalRequiresPlan": "Start a plan before managing billing."
+  },
+  "banner": {
+    "title": "Read-only mode",
+    "text": "Your access is limited because the trial or payment has expired. Start a plan to make changes again.",
+    "action": "Choose a plan"
+  }
+}
