@@ -43,13 +43,13 @@ Committed scope for this milestone. Each maps to a roadmap phase (numbering cont
 
 ### Monetarisierung (BILL) — Stripe-Abrechnung (unabhängiger Track)
 
-- [ ] **BILL-01**: Nutzer startet einen bezahlten Tarif über Stripe Checkout (gehostet, keine Kartendaten in Numera)
-- [ ] **BILL-02**: Tarif-Berechtigung wird per signierten, idempotenten Stripe-Webhooks gesetzt (Stripe = Quelle der Wahrheit) und steuert das bestehende `tenants.plan`-Gate
-- [ ] **BILL-03**: Self-Service Upgrade/Downgrade über das Stripe Customer Portal (inkl. Proration)
-- [ ] **BILL-04**: Testphase (Trial) mit vollem Zugriff, danach automatische Umstellung auf Bezahlung
-- [ ] **BILL-05**: Mahnwesen für das eigene Abo + geordnete Degradation bei fehlgeschlagener Zahlung
-- [ ] **BILL-06**: Nutzer verwaltet Zahlungsmethode und sieht eigene Abo-Rechnungen (Customer Portal)
-- [ ] **BILL-07**: USt-korrekte Abrechnung des eigenen Abos (inkl. Reverse-Charge für EU-B2B)
+- [x] **BILL-01**: Nutzer startet einen bezahlten Tarif über Stripe Checkout (gehostet, keine Kartendaten in Numera)
+- [x] **BILL-02**: Tarif-Berechtigung wird per signierten, idempotenten Stripe-Webhooks gesetzt (Stripe = Quelle der Wahrheit) und steuert das bestehende `tenants.plan`-Gate
+- [x] **BILL-03**: Self-Service Upgrade/Downgrade über das Stripe Customer Portal (inkl. Proration)
+- [x] **BILL-04**: Testphase (Trial) mit vollem Zugriff, danach automatische Umstellung auf Bezahlung
+- [x] **BILL-05**: Mahnwesen für das eigene Abo + geordnete Degradation bei fehlgeschlagener Zahlung
+- [x] **BILL-06**: Nutzer verwaltet Zahlungsmethode und sieht eigene Abo-Rechnungen (Customer Portal)
+- [x] **BILL-07**: USt-korrekte Abrechnung des eigenen Abos (inkl. Reverse-Charge für EU-B2B)
 
 ## Deferred Requirements (v2.1+)
 
@@ -111,7 +111,7 @@ Wird bei der Roadmap-Erstellung befüllt (jede Anforderung → genau eine Phase,
 | ACCT-07, ACCT-08 | Phase 11 — Berichte & USt-Voranmeldung | ✓ Done (2026-08-04) — USt-VA Kz 81/86/83/41; übrige Kz (Vorsteuer/§13b/i.g.-Erwerb) in Phase 12 |
 | BELEG-01, BELEG-02, BELEG-03, BELEG-04, BELEG-05, BELEG-06, BELEG-07 | Phase 12 — Belege & Ausgaben | ✓ Done (2026-08-04) |
 | BANK-01, BANK-02, BANK-03, BANK-04, BANK-05, BANK-06 | Phase 13 — Banking & Zahlungsabgleich | ✓ Done (2026-08-06) — Receivable-only; finAPI live (Sandbox) hinter Port + StubProvider-Default; immer Human-Confirm |
-| BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07 | Phase 14 — Monetarisierung (Stripe) | Pending |
+| BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, BILL-06, BILL-07 | Phase 14 — Monetarisierung (Stripe) | ✓ Done (2026-08-10) — Stripe.net TEST-Mode hinter Port + Config-Gate; Stripe Tax (EU-Reverse-Charge); No-Card-14d-Trial; Read-only-Degradation-Guard; Human-Verify approved |
 
 **Coverage:**
 - v2.0 requirements: 29 total (ACCT 9, BANK 6, BELEG 7, BILL 7)

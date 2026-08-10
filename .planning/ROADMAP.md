@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Rechnungen & E-Rechnung** — Phasen 1–9 (shipped 2026-08-02) → [Archiv](milestones/v1.0-ROADMAP.md)
-- 🚧 **v2.0 Buchhaltung, Banking & Belege** — Phasen 10–14 (in Arbeit)
+- 🚧 **v2.0 Buchhaltung, Banking & Belege** — Phasen 10–14 (alle Phasen ✓ 2026-08-10; Milestone-Abschluss via `/gsd:complete-milestone` ausstehend)
 
 ## Phases
 
@@ -30,7 +30,7 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 - [x] **Phase 11: Berichte & USt-Voranmeldung** — EÜR + USt-Voranmeldung (Kennziffern-Berechnung + ELSTER-XML/Druck-Export, kein ERiC-Direktversand) — ✓ 2026-08-04
 - [x] **Phase 12: Belege & Ausgaben** — Belegscan (Kamera/Upload) + OCR + Buchungsvorschlag, strukturierte E-Rechnungs-Lesung, GoBD-Langzeitarchiv, Lieferanten-Match, E-Mail-Eingang — ✓ 2026-08-04
 - [x] **Phase 13: Banking & Zahlungsabgleich** — finAPI-Anbindung, Umsatz-Sync, automatischer Abgleich mit offenen Posten (+ Buchung), manuelle Zuordnung/Split, CSV/MT940/CAMT-Fallback — ✓ 2026-08-06
-- [ ] **Phase 14: Monetarisierung (Stripe)** — Stripe Checkout, Webhook-Berechtigung → `tenants.plan`-Gate, Customer-Portal-Self-Service, Trial, Abo-Mahnwesen/Degradation, USt-korrekte Eigen-Abrechnung
+- [x] **Phase 14: Monetarisierung (Stripe)** — Stripe Checkout, Webhook-Berechtigung → `tenants.plan`-Gate, Customer-Portal-Self-Service, Trial, Abo-Mahnwesen/Degradation, USt-korrekte Eigen-Abrechnung — ✓ 2026-08-10
 
 ## Phase Details
 
@@ -118,14 +118,14 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 3. Eine Testphase gewährt vollen Zugriff und stellt danach automatisch auf Bezahlung um; eine fehlgeschlagene Zahlung führt zu Smart-Retries und geordneter Degradation.
 4. Numera rechnet das eigene Abo USt-korrekt ab (inkl. Reverse-Charge für EU-B2B).
 
-**Plans:** 7 plans (5 waves) — geplant 2026-08-10
-- [ ] 14-01-PLAN.md — Datenmodell-Fundament: tenants-Billing-Spalten + 14-Tage-Trial + Free-Tier + processed_stripe_event (Dedupe) [BILL-04, D3/D4]
-- [ ] 14-02-PLAN.md — IBillingProvider-Port + Stub + FakeBillingProvider + signierte Webhook-Fixtures (CI ohne Stripe) [D1]
-- [ ] 14-03-PLAN.md — Stripe.net-Adapter + Config-Gate + Checkout/Portal/Status-Endpoints (Stripe Tax) [BILL-01, BILL-03, BILL-06, BILL-07]
-- [ ] 14-04-PLAN.md — Anonymer signierter idempotenter Webhook -> tenants.plan (Quelle der Wahrheit) [BILL-02]
-- [ ] 14-05-PLAN.md — Billing-Write-Guard (Read-only-Degradation) + Effective-Plan compute-on-read [BILL-05, D4]
-- [ ] 14-06-PLAN.md — Frontend: Pricing/Upgrade + Trial-Status + Manage-Billing + Degradations-Banner [BILL-01, BILL-03, BILL-06]
-- [ ] 14-07-PLAN.md — Human-Verify: End-to-End-Loop in Stripe TEST-Mode (blocking checkpoint) [alle BILL]
+**Plans:** 7 plans (5 waves) — ✓ all complete 2026-08-10. LOCKED decisions D1–D4 (siehe 14-CONTEXT.md): Stripe.net 52.2.0 TEST-Mode hinter IBillingProvider-Port + Config-Gate (StubBillingProvider-Default + FakeBillingProvider + lokal-signierte Webhook-Fixtures → CI kontaktiert NIE Stripe); Stripe Tax automatisch (inkl. EU-B2B Reverse-Charge, Stripe-issued Invoices, keine eigene USt-Rechnung, kein SKR-Booking der Eigen-Rechnungen); No-Card App-managed 14-Tage-Trial (server-autoritatives trial_ends_at, compute-on-read); Read-only/Free-Degradation via dedizierten Billing-Write-Guard (autoritativ, kein Datenverlust, keine Login-Wall; EntitlementService NICHT umverdrahtet). Human-Verify approved (Stripe TEST-Mode end-to-end).
+- [x] 14-01-PLAN.md — Datenmodell-Fundament: tenants-Billing-Spalten + 14-Tage-Trial + Free-Tier + processed_stripe_event (Dedupe) [BILL-04, D3/D4]
+- [x] 14-02-PLAN.md — IBillingProvider-Port + Stub + FakeBillingProvider + signierte Webhook-Fixtures (CI ohne Stripe) [D1]
+- [x] 14-03-PLAN.md — Stripe.net-Adapter + Config-Gate + Checkout/Portal/Status-Endpoints (Stripe Tax) [BILL-01, BILL-03, BILL-06, BILL-07]
+- [x] 14-04-PLAN.md — Anonymer signierter idempotenter Webhook -> tenants.plan (Quelle der Wahrheit) [BILL-02]
+- [x] 14-05-PLAN.md — Billing-Write-Guard (Read-only-Degradation) + Effective-Plan compute-on-read [BILL-05, D4]
+- [x] 14-06-PLAN.md — Frontend: Pricing/Upgrade + Trial-Status + Manage-Billing + Degradations-Banner [BILL-01, BILL-03, BILL-06]
+- [x] 14-07-PLAN.md — Human-Verify: End-to-End-Loop in Stripe TEST-Mode (blocking checkpoint, approved) [alle BILL]
 
 ## Progress
 
@@ -138,4 +138,4 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 | 11. Berichte & USt-Voranmeldung | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
 | 12. Belege & Ausgaben | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
 | 13. Banking & Zahlungsabgleich | v2.0 | 7/7 | ✓ Complete | 2026-08-06 |
-| 14. Monetarisierung (Stripe) | v2.0 | 0/7 | Geplant | - |
+| 14. Monetarisierung (Stripe) | v2.0 | 7/7 | ✓ Complete | 2026-08-10 |
