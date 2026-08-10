@@ -118,6 +118,15 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 3. Eine Testphase gewährt vollen Zugriff und stellt danach automatisch auf Bezahlung um; eine fehlgeschlagene Zahlung führt zu Smart-Retries und geordneter Degradation.
 4. Numera rechnet das eigene Abo USt-korrekt ab (inkl. Reverse-Charge für EU-B2B).
 
+**Plans:** 7 plans (5 waves) — geplant 2026-08-10
+- [ ] 14-01-PLAN.md — Datenmodell-Fundament: tenants-Billing-Spalten + 14-Tage-Trial + Free-Tier + processed_stripe_event (Dedupe) [BILL-04, D3/D4]
+- [ ] 14-02-PLAN.md — IBillingProvider-Port + Stub + FakeBillingProvider + signierte Webhook-Fixtures (CI ohne Stripe) [D1]
+- [ ] 14-03-PLAN.md — Stripe.net-Adapter + Config-Gate + Checkout/Portal/Status-Endpoints (Stripe Tax) [BILL-01, BILL-03, BILL-06, BILL-07]
+- [ ] 14-04-PLAN.md — Anonymer signierter idempotenter Webhook -> tenants.plan (Quelle der Wahrheit) [BILL-02]
+- [ ] 14-05-PLAN.md — Billing-Write-Guard (Read-only-Degradation) + Effective-Plan compute-on-read [BILL-05, D4]
+- [ ] 14-06-PLAN.md — Frontend: Pricing/Upgrade + Trial-Status + Manage-Billing + Degradations-Banner [BILL-01, BILL-03, BILL-06]
+- [ ] 14-07-PLAN.md — Human-Verify: End-to-End-Loop in Stripe TEST-Mode (blocking checkpoint) [alle BILL]
+
 ## Progress
 
 **Execution Order:** v2.0 baut in numerischer Reihenfolge auf: 10 → 11 → 12 → 13 → 14. Phase 14 (Monetarisierung) ist unabhängig und kann parallel/vorgezogen werden.
@@ -129,4 +138,4 @@ Full phase details are archived in [milestones/v1.0-ROADMAP.md](milestones/v1.0-
 | 11. Berichte & USt-Voranmeldung | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
 | 12. Belege & Ausgaben | v2.0 | 7/7 | ✓ Complete | 2026-08-04 |
 | 13. Banking & Zahlungsabgleich | v2.0 | 7/7 | ✓ Complete | 2026-08-06 |
-| 14. Monetarisierung (Stripe) | v2.0 | 0/? | Next | - |
+| 14. Monetarisierung (Stripe) | v2.0 | 0/7 | Geplant | - |
