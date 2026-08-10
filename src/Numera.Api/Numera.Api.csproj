@@ -32,10 +32,12 @@
     <PackageReference Include="Hangfire.PostgreSql" Version="1.20.*" />
     <!-- Override Hangfire's transitive Newtonsoft.Json 11.0.1 (NU1903 vulnerability). -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Stripe.net" Version="52.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\platform\Numera.Platform.Db\Numera.Platform.Db.csproj" />
+    <ProjectReference Include="..\modules\Numera.Modules.Billing\Numera.Modules.Billing.csproj" />
     <!-- Referenced so the Banking assembly is deployed next to Platform.Db, letting
          NumeraDbContext discover its ITenantEntity types for the shared migration. -->
     <ProjectReference Include="..\modules\Numera.Modules.Banking\Numera.Modules.Banking.csproj" />
