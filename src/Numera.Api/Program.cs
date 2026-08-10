@@ -149,6 +149,7 @@ else
 // The no-network stub is the safe default. finAPI is an explicit opt-in and
 // replaces it only when all required sandbox application settings are present.
 builder.Services.AddBankConnectionProvider(builder.Configuration);
+builder.Services.AddBillingProvider(builder.Configuration);
 builder.Services.AddBankingModule(builder.Configuration);
 builder.Services.AddScoped<ReconciliationScorer>();
 builder.Services.AddScoped<IBankStatementImporter, CsvImporter>();
@@ -230,6 +231,7 @@ app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
 
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
+app.MapBillingEndpoints();
 app.MapPartnerEndpoints();
 app.MapPartnerTaskEndpoints();
 app.MapCustomerFileEndpoints();
