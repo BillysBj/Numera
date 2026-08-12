@@ -5,6 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 import { getMe } from './lib/api'
 import { useTheme } from './lib/useTheme'
 import { cn } from './lib/utils'
+import markLight from './assets/numera-mark.png'
+import markDark from './assets/numera-mark-dark.png'
 import LanguageSwitcher from './components/LanguageSwitcher'
 import {
   IconDashboard,
@@ -144,14 +146,15 @@ function activePath(items: NavItem[], pathname: string): string | null {
 
 function BrandMark() {
   const { t } = useTranslation('common')
+  const { theme } = useTheme()
   return (
     <Link to="/dashboard" className="flex items-center gap-2.5 px-1 group">
-      <span
-        className="grid h-9 w-9 place-items-center rounded-[0.7rem] bg-primary text-primary-foreground text-[1.05rem] font-bold shadow-sm"
+      <img
+        src={theme === 'dark' ? markDark : markLight}
+        alt=""
         aria-hidden="true"
-      >
-        N
-      </span>
+        className="h-9 w-9 object-contain"
+      />
       <span className="flex flex-col leading-none">
         <span className="text-[1.05rem] font-bold tracking-tight text-sidebar-foreground">
           {t('app.name')}

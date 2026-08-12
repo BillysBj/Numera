@@ -10,6 +10,8 @@ import {
   IconSun,
   IconMoon,
 } from '../components/icons'
+import markLight from '../assets/numera-mark.png'
+import markDark from '../assets/numera-mark-dark.png'
 
 // Numera's public product website. Deliberately no fabricated prices, customer
 // logos or testimonials — the trust markers are the real compliance standards the
@@ -65,11 +67,15 @@ const TIERS = [
 ]
 
 function Logo() {
+  const { theme } = useTheme()
   return (
-    <Link to="/" className="flex items-center gap-2.5">
-      <span className="grid h-9 w-9 place-items-center rounded-[0.7rem] bg-primary text-[1.05rem] font-bold text-primary-foreground shadow-sm">
-        N
-      </span>
+    <Link to="/" className="flex items-center gap-2.5" aria-label="Numera">
+      <img
+        src={theme === 'dark' ? markDark : markLight}
+        alt=""
+        aria-hidden="true"
+        className="h-8 w-8 object-contain"
+      />
       <span className="text-[1.15rem] font-bold tracking-tight text-foreground">Numera</span>
     </Link>
   )

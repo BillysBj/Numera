@@ -4,6 +4,8 @@ import { registerCompany, loginUrl, ApiError } from '../lib/api'
 import { useTheme } from '../lib/useTheme'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { IconSun, IconMoon } from '../components/icons'
+import logoLight from '../assets/numera-logo.png'
+import logoDark from '../assets/numera-logo-dark.png'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -67,9 +69,11 @@ export default function Login() {
       <div className="relative w-full max-w-[26rem]">
         {/* Brand */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-[0.85rem] bg-primary text-xl font-bold text-primary-foreground shadow-sm">
-            N
-          </span>
+          <img
+            src={theme === 'dark' ? logoDark : logoLight}
+            alt="Numera — Buchhaltung. Einfach. Digital."
+            className="h-12 w-auto"
+          />
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground">
             {t('login.title')}
           </h1>
