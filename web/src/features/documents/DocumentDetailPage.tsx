@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   convertSalesDocument,
   createCreditNote,
+  deleteSalesDocument,
   downloadDocumentPdf,
   downloadXRechnung,
   downloadZugferd,
@@ -211,6 +212,15 @@ export default function DocumentDetailPage() {
     onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
   })
 
+  const del = useMutation({
+    mutationFn: () => deleteSalesDocument(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      navigate('/documents')
+    },
+    onError: (err) => setBanner({ kind: 'error', text: actionErrorMessage(err) }),
+  })
+
   const storno = useMutation({
     mutationFn: () => stornoSalesDocument(id),
     onSuccess: (res) => {
@@ -293,6 +303,7 @@ export default function DocumentDetailPage() {
 
   const busy =
     finalize.isPending ||
+    del.isPending ||
     storno.isPending ||
     creditNote.isPending ||
     convert.isPending ||
@@ -384,6 +395,16 @@ export default function DocumentDetailPage() {
             >
               {t('actions.editDraft')}
             </Link>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={actionsDisabled}
+              onClick={() =>
+                confirmRun(t('actions.confirmDeleteDraft'), () => del.mutate())
+              }
+            >
+              {del.isPending ? t('actions.deleting') : t('actions.deleteDraft')}
+            </Button>
             <Button
               size="sm"
               disabled={actionsDisabled}

@@ -106,33 +106,8 @@ public static class SalesDocumentEndpoints
         });
 
         // GET /api/documents/{id} — full detail incl. lines, breakdown and chain links.
-        g.MapGet("/{id:guid}", async (Guid id, NumeraDbContext db, CancellationToken ct) =>
-        {
-            var d = await db.Set<SalesDocument>()
-                .AsNoTracking()
-                .Include(x => x.Lines)
-                .Include(x => x.TaxBreakdown)
-                .FirstOrDefaultAsync(x => x.Id == id, ct)
-                .ConfigureAwait(false);
-
-            if (d is null)
-            {
-                return Results.NotFound();
-            }
-
-            var prepayments = await db.Set<SalesDocumentPrepayment>()
-                .AsNoTracking()
-                .Where(p => p.DocumentId == d.Id)
-                .OrderBy(p => p.AbschlagDate)
-                .ThenBy(p => p.AbschlagNumber)
-                .Select(p => new SalesDocumentPrepaymentDto(
-                    p.AbschlagDocumentId, p.AbschlagNumber, p.AbschlagDate,
-                    p.NetAmount, p.VatAmount, p.GrossAmount))
-                .ToListAsync(ct)
-                .ConfigureAwait(false);
-
-            return Results.Ok(ToDetail(d, prepayments));
-        });
+        g.MapGet("/{id:guid}", (Guid id, NumeraDbContext db, CancellationToken ct) =>
+            GetAsync(id, db, ct));
 
         // GET /api/documents/{id}/pdf — download the finalized document's §14 PDF (DOCS-02).
         // Returns the stored render if present, else renders-on-demand from the frozen snapshot
@@ -499,35 +474,11 @@ public static class SalesDocumentEndpoints
         });
 
         // DELETE /api/documents/{id} — hard-delete a Draft (409 if not Draft).
-        g.MapDelete("/{id:guid}", async (
+        g.MapDelete("/{id:guid}", (
             Guid id,
             NumeraDbContext db,
             IAuditWriter audit,
-            CancellationToken ct) =>
-        {
-            var doc = await db.Set<SalesDocument>()
-                .Include(x => x.Lines)
-                .FirstOrDefaultAsync(x => x.Id == id, ct)
-                .ConfigureAwait(false);
-            if (doc is null)
-            {
-                return Results.NotFound();
-            }
-
-            if (doc.Status != DocumentStatus.Draft)
-            {
-                return NonDraftConflict(doc.Status);
-            }
-
-            await audit.RecordAsync(
-                new SalesDocumentAuditEvent("sales_document.deleted", doc.Id, Snapshot(doc), After: null), ct)
-                .ConfigureAwait(false);
-
-            db.Remove(doc);
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            return Results.NoContent();
-        });
+            CancellationToken ct) => DeleteDraftAsync(id, db, audit, ct));
 
         // POST /api/documents/{id}/convert — copy-forward the chain (DOCS-01).
         // Creates a NEW Draft of the target type copying header + lines from the source
@@ -1008,6 +959,78 @@ public static class SalesDocumentEndpoints
         });
 
         return app;
+    }
+
+    internal static async Task<IResult> GetAsync(
+        Guid id,
+        NumeraDbContext db,
+        CancellationToken ct)
+    {
+        var doc = await db.Set<SalesDocument>()
+            .AsNoTracking()
+            .Include(x => x.Lines)
+            .Include(x => x.TaxBreakdown)
+            .FirstOrDefaultAsync(x => x.Id == id, ct)
+            .ConfigureAwait(false);
+
+        if (doc is null)
+        {
+            return Results.NotFound();
+        }
+
+        var prepayments = await db.Set<SalesDocumentPrepayment>()
+            .AsNoTracking()
+            .Where(p => p.DocumentId == doc.Id)
+            .OrderBy(p => p.AbschlagDate)
+            .ThenBy(p => p.AbschlagNumber)
+            .Select(p => new SalesDocumentPrepaymentDto(
+                p.AbschlagDocumentId, p.AbschlagNumber, p.AbschlagDate,
+                p.NetAmount, p.VatAmount, p.GrossAmount))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return Results.Ok(ToDetail(doc, prepayments));
+    }
+
+    internal static async Task<IResult> DeleteDraftAsync(
+        Guid id,
+        NumeraDbContext db,
+        IAuditWriter audit,
+        CancellationToken ct)
+    {
+        var doc = await db.Set<SalesDocument>()
+            .Include(x => x.Lines)
+            .Include(x => x.TaxBreakdown)
+            .FirstOrDefaultAsync(x => x.Id == id, ct)
+            .ConfigureAwait(false);
+        if (doc is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (doc.Status != DocumentStatus.Draft)
+        {
+            return NonDraftConflict(doc.Status);
+        }
+
+        var prepayments = await db.Set<SalesDocumentPrepayment>()
+            .Where(p => p.DocumentId == doc.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        var before = Snapshot(doc);
+
+        db.RemoveRange(prepayments);
+        db.RemoveRange(doc.TaxBreakdown);
+        db.RemoveRange(doc.Lines);
+        db.Remove(doc);
+
+        await audit.RecordAsync(
+            new SalesDocumentAuditEvent("sales_document.deleted", doc.Id, before, After: null), ct)
+            .ConfigureAwait(false);
+
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return Results.NoContent();
     }
 
     // --- Line building + mapping helpers -------------------------------------
