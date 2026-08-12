@@ -528,15 +528,17 @@
       "redirectUris": [
         "http://localhost:5173/signin-oidc",
         "http://localhost:5080/signin-oidc",
-        "https://localhost:5080/signin-oidc"
+        "https://localhost:5080/signin-oidc",
+        "https://${NUMERA_DOMAIN}/signin-oidc"
       ],
       "webOrigins": [
         "http://localhost:5173",
-        "http://localhost:5080"
+        "http://localhost:5080",
+        "https://${NUMERA_DOMAIN}"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:5080/*",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:5080/*##https://${NUMERA_DOMAIN}/*",
         "backchannel.logout.session.required": "true"
       },
       "defaultClientScopes": [

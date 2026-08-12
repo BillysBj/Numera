@@ -1,0 +1,138 @@
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: numera
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: numera
+    volumes:
+      # postgres:18 requires the volume at /var/lib/postgresql so it can manage
+      # its major-version data subdirectory itself.
+      - db_data:/var/lib/postgresql
+      - ./deploy/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U numera -d numera"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  migrate:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - ./:/workspace:ro
+    entrypoint: ["/bin/bash", "/workspace/deploy/migrate.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    command: start --features=organization --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: numera
+      KC_DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      KC_HOSTNAME: https://${DOMAIN:?Set DOMAIN in .env}/auth
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
+      # Keycloak replaces this placeholder in the realm's production redirect URIs.
+      NUMERA_DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+      - ./keycloak/themes:/opt/keycloak/themes:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Numera.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ReverseProxy__Enabled: "true"
+      DataProtection__KeyPath: /keys
+      ConnectionStrings__Default: Host=db;Port=5432;Database=numera;Username=numera_app;Password=${DB_PASSWORD}
+      ConnectionStrings__Hangfire: Host=db;Port=5432;Database=numera;Username=numera;Password=${DB_PASSWORD}
+      Keycloak__Authority: https://${DOMAIN}/auth/realms/numera
+      Keycloak__ClientId: numera-bff
+      Keycloak__ClientSecret: ${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}
+      Keycloak__AdminBaseUrl: https://${DOMAIN}/auth
+      Keycloak__Realm: numera
+      Keycloak__AdminUsername: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      Keycloak__AdminPassword: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
+      Stripe__SecretKey: ${Stripe__SecretKey:-}
+      Stripe__WebhookSecret: ${Stripe__WebhookSecret:-}
+      Stripe__PriceIds__S: ${Stripe__PriceIds__S:-}
+      Stripe__PriceIds__M: ${Stripe__PriceIds__M:-}
+      Stripe__PriceIds__L: ${Stripe__PriceIds__L:-}
+      Stripe__PriceIds__XL: ${Stripe__PriceIds__XL:-}
+      FinApi__ClientId: ${FinApi__ClientId:-}
+      FinApi__ClientSecret: ${FinApi__ClientSecret:-}
+      FinApi__BaseUrl: ${FinApi__BaseUrl:-}
+      FinApi__WebFormBaseUrl: ${FinApi__WebFormBaseUrl:-}
+    volumes:
+      - keys:/keys
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_started
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: src/Numera.Worker/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=db;Port=5432;Database=numera;Username=numera_app;Password=${DB_PASSWORD}
+      ConnectionStrings__Hangfire: Host=db;Port=5432;Database=numera;Username=numera;Password=${DB_PASSWORD}
+      FinApi__ClientId: ${FinApi__ClientId:-}
+      FinApi__ClientSecret: ${FinApi__ClientSecret:-}
+      FinApi__BaseUrl: ${FinApi__BaseUrl:-}
+      FinApi__WebFormBaseUrl: ${FinApi__WebFormBaseUrl:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/Caddy.Dockerfile
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  keys:
+  caddy_data:
+  caddy_config:

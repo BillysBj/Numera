@@ -4,6 +4,8 @@ using Hangfire;
 using Hangfire.PostgreSql;
 
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
@@ -35,6 +37,15 @@ using Numera.Platform.Tenancy;
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
+{
+    builder.Services
+        .AddDataProtection()
+        .SetApplicationName("Numera")
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeyPath));
+}
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
@@ -220,6 +231,19 @@ builder.Services.AddHangfire(config => config
 builder.Services.AddHangfireServer();
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue<bool>("ReverseProxy:Enabled"))
+{
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    };
+#pragma warning disable ASPDEPR005 // KnownNetworks is the requested compatibility collection.
+    forwardedHeadersOptions.KnownNetworks.Clear();
+#pragma warning restore ASPDEPR005
+    forwardedHeadersOptions.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+}
 
 // Liveness probe — intentionally unauthenticated and tenant-agnostic.
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
