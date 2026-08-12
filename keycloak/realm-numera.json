@@ -2,6 +2,7 @@
   "realm": "numera",
   "enabled": true,
   "displayName": "Numera",
+  "loginTheme": "numera",
   "sslRequired": "external",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
@@ -523,17 +524,19 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
-      "secret": "__REPLACE_WITH_GENERATED_SECRET__",
+      "secret": "numera-dev-secret",
       "redirectUris": [
+        "http://localhost:5173/signin-oidc",
         "http://localhost:5080/signin-oidc",
         "https://localhost:5080/signin-oidc"
       ],
       "webOrigins": [
+        "http://localhost:5173",
         "http://localhost:5080"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:5080/*",
+        "post.logout.redirect.uris": "http://localhost:5173/*##http://localhost:5080/*",
         "backchannel.logout.session.required": "true"
       },
       "defaultClientScopes": [

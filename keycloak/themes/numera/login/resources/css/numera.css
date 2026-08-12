@@ -1,0 +1,160 @@
+/* Numera brand theme for the Keycloak login page.
+   Mirrors the web app tokens (web/src/index.css): primary #0c7c6d, bg #f5f6f8,
+   Inter font, rounded cards. Parent theme = classic `keycloak` login. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --numera-primary: #0c7c6d;
+  --numera-primary-hover: #0a6b5e;
+  --numera-bg: #f5f6f8;
+  --numera-fg: #0e1116;
+  --numera-muted: #667085;
+  --numera-border: #e2e6ea;
+  --numera-field: #f9fafb;
+}
+
+/* Page background + typography */
+html,
+body,
+body.login-pf,
+.login-pf body {
+  background: var(--numera-bg) !important;
+  color: var(--numera-fg);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+}
+
+.login-pf-page {
+  padding-top: 56px;
+}
+
+/* ---- Brand header: teal "N" chip + "Numera" wordmark (replaces default text) ---- */
+#kc-header,
+#kc-header-wrapper {
+  color: transparent !important;
+  font-size: 0 !important;
+  text-shadow: none !important;
+  margin-bottom: 18px;
+  padding: 0 !important;
+}
+
+#kc-header-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  line-height: 1;
+}
+
+#kc-header-wrapper::before {
+  content: "N";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--numera-primary);
+  color: #fff;
+  font: 700 22px/1 "Inter", system-ui, sans-serif;
+}
+
+#kc-header-wrapper::after {
+  content: "Numera";
+  color: var(--numera-fg);
+  font: 700 26px/1 "Inter", system-ui, sans-serif;
+  letter-spacing: -0.5px;
+}
+
+/* ---- Card ---- */
+.login-pf-page .card-pf {
+  background: #ffffff !important;
+  border: 1px solid var(--numera-border) !important;
+  border-top: 1px solid var(--numera-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 34px rgba(14, 17, 22, 0.07) !important;
+  padding: 2rem !important;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+#kc-page-title,
+.login-pf-page .login-pf-header h1 {
+  color: var(--numera-fg);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+/* ---- Labels + inputs ---- */
+label,
+.control-label,
+.pf-c-form__label {
+  color: var(--numera-fg) !important;
+  font-weight: 500 !important;
+}
+
+input.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+.pf-c-form-control {
+  background: var(--numera-field) !important;
+  border: 1px solid var(--numera-border) !important;
+  border-radius: 10px !important;
+  height: 44px !important;
+  color: var(--numera-fg) !important;
+  box-shadow: none !important;
+  padding: 0 12px !important;
+}
+
+input.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+  background: #fff !important;
+  border-color: var(--numera-primary) !important;
+  box-shadow: 0 0 0 3px rgba(12, 124, 109, 0.15) !important;
+  outline: none !important;
+}
+
+/* ---- Primary button ---- */
+.btn-primary,
+input[type="submit"].btn-primary,
+button.btn-primary,
+#kc-login {
+  background: var(--numera-primary) !important;
+  background-image: none !important;
+  border: none !important;
+  border-radius: 10px !important;
+  height: 44px !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+#kc-login:hover {
+  background: var(--numera-primary-hover) !important;
+}
+
+/* ---- Links + misc ---- */
+a,
+a:hover,
+a:focus,
+#kc-registration a,
+#kc-info-wrapper a,
+.login-pf-page a {
+  color: var(--numera-primary) !important;
+}
+
+#kc-locale a {
+  color: var(--numera-muted) !important;
+}
+
+.pf-c-check__label,
+.checkbox label {
+  color: var(--numera-fg) !important;
+}

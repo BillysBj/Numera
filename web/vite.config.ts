@@ -55,9 +55,23 @@ export default defineConfig({
     // Same-origin BFF in dev: SPA and backend share an origin so the HttpOnly
     // session cookie flows on same-origin fetch (credentials: 'include').
     proxy: {
+      // changeOrigin:false keeps the browser's Host (localhost:5173) so the BFF
+      // builds its OIDC redirect_uri on the SPA origin (single-origin dev BFF).
       '/api': {
-        target: 'http://localhost:5080',
-        changeOrigin: true,
+        target: 'http://127.0.0.1:5080',
+        changeOrigin: false,
+        secure: false,
+      },
+      // The OIDC code-flow callback lands here (response_mode=query, top-level GET);
+      // proxy it to the API so the session cookie is set for the 5173 origin.
+      '/signin-oidc': {
+        target: 'http://127.0.0.1:5080',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/signout-callback-oidc': {
+        target: 'http://127.0.0.1:5080',
+        changeOrigin: false,
         secure: false,
       },
     },

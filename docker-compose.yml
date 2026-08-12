@@ -32,6 +32,8 @@ services:
     volumes:
       # Mount the realm export so --import-realm picks up realm-numera.json.
       - ./keycloak:/opt/keycloak/data/import:ro
+      # Custom login theme (Numera brand); realm loginTheme=numera selects it.
+      - ./keycloak/themes:/opt/keycloak/themes:ro
     ports:
       - "8080:8080"
 
