@@ -30,8 +30,9 @@
     <!-- Background jobs (welcome-email skeleton), Postgres-backed. -->
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.*" />
     <PackageReference Include="Hangfire.PostgreSql" Version="1.20.*" />
-    <!-- Override Hangfire's transitive Newtonsoft.Json 11.0.1 (NU1903 vulnerability). -->
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- Override Hangfire's transitive Newtonsoft.Json 11.0.1 (NU1903 vulnerability);
+         13.0.4 also satisfies EFCore.Design's floor (avoids the NU1605 downgrade). -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Stripe.net" Version="52.2.0" />
   </ItemGroup>
 
