@@ -1,8 +1,10 @@
 # Verfahrensdokumentation (GoBD)
 
-> **Status: ENTWURF / DRAFT — nicht freigegeben**
-> **Version:** 0.1 (Entwurf)
-> **Stand:** 2026-07-29
+> **Status: ENTWURF / DRAFT — noch nicht freigegeben.** Vor dem Produktivbetrieb den
+> Betreiber-Block ausfüllen und die Dokumentation durch die **steuerliche Beratung**
+> prüfen und freigeben lassen.
+> **Version:** 0.2 (Entwurf)
+> **Stand:** 2026-09-30
 > **Gegenstand:** Numera — mandantenfähige Auftrags- und Finanzverwaltung
 > **Bearbeitungshinweis:** Dies ist ein versionierter Entwurf einer Verfahrensdokumentation
 > im Sinne der GoBD (BMF-Schreiben zu den „Grundsätzen zur ordnungsmäßigen Führung und
@@ -21,6 +23,25 @@ und Kurzbegründung.
 | Version | Datum      | Änderung                                                        |
 | ------- | ---------- | --------------------------------------------------------------- |
 | 0.1     | 2026-07-29 | Erstentwurf — 4-teilige Struktur, Bestandsmechanismen erfasst.  |
+| 0.2     | 2026-09-30 | Go-Live: automatisierte Backups (backup-Dienst) konkretisiert; Betreiber-Ausfüllblock ergänzt; Self-hosted-Betrieb. |
+
+---
+
+## Betreiber / verantwortliches Unternehmen
+
+> *Vom Betreiber auszufüllen — eine Verfahrensdokumentation ist die Selbstauskunft des
+> Unternehmens, das die Software einsetzt. Vor der Freigabe zusätzlich durch die
+> steuerliche Beratung prüfen lassen.*
+
+| Feld                             | Angabe                                        |
+| -------------------------------- | --------------------------------------------- |
+| Unternehmen (Firma)              | _______________________________________      |
+| Anschrift                        | _______________________________________      |
+| Steuernummer / USt-IdNr.         | _______________________________________      |
+| Verantwortliche Person (GoBD)    | _______________________________________      |
+| Betriebsart der Installation     | Self-hosted (eigener Server), Numera-Instanz  |
+| Zahl der Nutzer                  | _______________________________________      |
+| Stand dieser Dokumentation       | ________-____-____                            |
 
 ---
 
@@ -213,10 +234,22 @@ Job stellt in einem frischen Scope explizit den Mandantenkontext her
 
 Die maßgeblichen Aufzeichnungen liegen vollständig in der PostgreSQL-Datenbank (inklusive
 der binären Belegbilder, E-Rechnungs-XML, Eingangsoriginale und Kundenakte-Dateien als
-`bytea`). Die Datensicherung erfolgt über das PostgreSQL-Backup des Betriebs
-(regelmäßige Sicherung und Wiederherstellungstest). *Betreiberspezifische Details
-(Frequenz, Aufbewahrungsort, Restore-Test-Turnus) sind vom Betreiber je Installation zu
-ergänzen.*
+`bytea`). Die Datensicherung erfolgt **automatisiert** über den mitgelieferten
+`backup`-Dienst (`deploy/backup.sh`):
+
+- **Turnus:** standardmäßig **täglich** ein konsistenter Dump (`pg_dump` im komprimierten
+  Custom-Format); Intervall über `BACKUP_INTERVAL_HOURS` konfigurierbar.
+- **Aufbewahrung (lokal):** die letzten **14 Tages-** und **8 Wochen-Sicherungen**
+  (`BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY`). Nur vollständige Dumps werden veröffentlicht
+  (atomar via `.partial`→Umbenennung); ein fehlgeschlagener Dump löst keine Löschung aus.
+- **Ablageort:** `./backups` auf dem Host. **Diese Sicherungen sind zusätzlich an einen
+  räumlich getrennten Ort zu kopieren** (Offsite, z. B. verschlüsselt per `rclone`/`rsync`),
+  da eine Sicherung auf derselben Maschine einen Totalausfall nicht übersteht.
+- **Wiederherstellung:** `deploy/restore.sh <dump> --yes` (setzt die Datenbank aus einem
+  Dump zurück; API/Worker vorher stoppen). Ein **Restore-Test** ist regelmäßig durchzuführen.
+
+*Betreiberspezifisch zu ergänzen: gewählter Offsite-Speicher + Verschlüsselung, Turnus des
+Restore-Tests, verantwortliche Person.*
 
 ### 4.2 Aufbewahrungsfrist
 
