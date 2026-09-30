@@ -163,7 +163,7 @@ public sealed class BillingDegradationGuardTests(PostgresFixture fixture)
         var currentTenant = new TenantContext();
         currentTenant.SetTenant(tenantId);
         await using var db = fixture.CreateAppContext(tenantId);
-        return await new BillingStateService(currentTenant, db).EffectivePlanAsync();
+        return await new BillingStateService(currentTenant, db, Microsoft.Extensions.Options.Options.Create(new Numera.Platform.Entitlements.BillingOptions())).EffectivePlanAsync();
     }
 
     private static void AssertAllowed(GuardResponse response)
@@ -233,6 +233,24 @@ public sealed class BillingReadOnlyAccessPolicyTests
         Assert.False(BillingReadOnlyAccessPolicy.IsAllowed(
             method,
             new PathString("/api/documents")));
+
+    [Fact]
+    public async Task Self_hosted_is_never_degraded_and_effective_plan_is_xl()
+    {
+        var currentTenant = new TenantContext();
+        var tenantId = Guid.CreateVersion7();
+        currentTenant.SetTenant(tenantId);
+        await using var db = fixture.CreateAppContext(tenantId);
+
+        // Self-hosted short-circuits before any tenant lookup: never read-only, top tier.
+        var state = new BillingStateService(
+            currentTenant, db,
+            Microsoft.Extensions.Options.Options.Create(
+                new Numera.Platform.Entitlements.BillingOptions { SelfHosted = true }));
+
+        Assert.False(await state.IsDegradedAsync());
+        Assert.Equal(TenantPlan.XL, await state.EffectivePlanAsync());
+    }
 
     private sealed class ThrowingBillingState : IBillingState
     {

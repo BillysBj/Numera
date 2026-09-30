@@ -4,6 +4,7 @@
     "billing": "Plans & billing"
   },
   "page": {
+    "selfHosted": "Self-hosted — all features enabled",
     "title": "Plans & billing",
     "subtitle": "Manage your plan and open secure Stripe billing.",
     "currentPlan": "Current plan",

@@ -4,6 +4,7 @@ import { apiRequest } from '@/lib/api'
 import type { PlanName } from '@/lib/entitlements'
 
 export interface BillingStatus {
+  selfHosted: boolean
   plan: PlanName
   trialEndsAt: string | null
   subscriptionStatus: string | null

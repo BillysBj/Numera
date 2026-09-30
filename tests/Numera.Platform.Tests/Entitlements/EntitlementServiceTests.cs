@@ -49,7 +49,7 @@ public sealed class EntitlementServiceTests
         db.SaveChanges();
 
         currentTenant.SetTenant(tenant.Id);
-        return (new EntitlementService(currentTenant, db), currentTenant, tenant.Id);
+        return (new EntitlementService(currentTenant, db, Microsoft.Extensions.Options.Options.Create(new BillingOptions())), currentTenant, tenant.Id);
     }
 
     private static PlanFeatureFilter FilterFor(EntitlementService service) => new(service);
@@ -184,5 +184,29 @@ public sealed class EntitlementServiceTests
         var enabled = await filter.EvaluateAsync(GateContext("NotARealCapability"));
 
         Assert.False(enabled);
+    }
+
+    [Fact]
+    public async Task Self_hosted_grants_all_capabilities_even_on_free_plan()
+    {
+        var currentTenant = new FakeCurrentTenant();
+        var options = new DbContextOptionsBuilder<NumeraDbContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        await using var db = new NumeraDbContext(options, currentTenant);
+        var tenant = new Tenant { Name = "Self GmbH", Plan = TenantPlan.Free };
+        db.Tenants.Add(tenant);
+        db.SaveChanges();
+        currentTenant.SetTenant(tenant.Id);
+
+        // Free normally grants zero capabilities; self-hosted unlocks everything.
+        var service = new EntitlementService(
+            currentTenant, db,
+            Microsoft.Extensions.Options.Options.Create(new BillingOptions { SelfHosted = true }));
+
+        Assert.True(await service.HasCapabilityAsync(Capability.EInvoicing));
+        Assert.Equal(
+            Enum.GetValues<Capability>().Length,
+            (await service.CurrentCapabilitiesAsync()).Count);
     }
 }

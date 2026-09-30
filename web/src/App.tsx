@@ -52,6 +52,7 @@ import BankAccountsPage from './features/banking/BankAccountsPage'
 import ReconciliationQueuePage from './features/banking/ReconciliationQueuePage'
 import ReconciliationMatchPage from './features/banking/ReconciliationMatchPage'
 import BillingPage from './features/billing/BillingPage'
+import { useBillingStatus } from './features/billing/billingApi'
 import DegradationBanner from './features/billing/DegradationBanner'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
@@ -80,6 +81,7 @@ function useNavGroups(): NavGroup[] {
   const { t: tb } = useTranslation('belege')
   const { t: tbank } = useTranslation('banking')
   const { t: tbilling } = useTranslation('billing')
+  const billing = useBillingStatus()
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -125,7 +127,9 @@ function useNavGroups(): NavGroup[] {
       label: t('nav.sections.system'),
       items: [
         { to: '/settings', label: ts('nav'), icon: IconSettings },
-        { to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems },
+        ...(billing.data?.selfHosted
+          ? []
+          : [{ to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems }]),
         { to: '/team', label: tt('nav'), icon: IconTeam },
       ],
     },

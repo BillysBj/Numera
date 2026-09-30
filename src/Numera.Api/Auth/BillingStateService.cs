@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 using Numera.Platform.Db;
 using Numera.Platform.Db.Entities;
+using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Auth;
@@ -23,20 +25,22 @@ public interface IBillingState
 /// <remarks>
 /// Registered scoped. The RLS-scoped tenant billing row is loaded at most once per scope.
 /// The write guard is authoritative; the effective plan is advisory and must not replace
-/// the existing entitlement service's direct <c>tenants.plan</c> lookup.
+/// the entitlement service. Self-hosted deployments bypass both billing and plan checks.
 /// </remarks>
 public sealed class BillingStateService : IBillingState
 {
     private readonly ICurrentTenant _currentTenant;
     private readonly NumeraDbContext _db;
+    private readonly bool _selfHosted;
 
     private BillingStateSnapshot? _cached;
 
     /// <summary>Creates the scoped billing-state resolver.</summary>
-    public BillingStateService(ICurrentTenant currentTenant, NumeraDbContext db)
+    public BillingStateService(ICurrentTenant currentTenant, NumeraDbContext db, IOptions<BillingOptions> options)
     {
         _currentTenant = currentTenant;
         _db = db;
+        _selfHosted = options.Value.SelfHosted;
     }
 
     /// <inheritdoc />
@@ -52,6 +56,11 @@ public sealed class BillingStateService : IBillingState
 
     private async Task<BillingStateSnapshot> CurrentStateAsync(CancellationToken cancellationToken)
     {
+        if (_selfHosted)
+        {
+            return _cached ??= new BillingStateSnapshot(TenantPlan.XL, IsDegraded: false);
+        }
+
         if (_cached is not null)
         {
             return _cached;

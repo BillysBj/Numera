@@ -12,6 +12,7 @@ using Numera.Api.Services;
 
 using Numera.Modules.Banking;
 using Numera.Platform.Db;
+using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
 
 // Background worker host. Registers the same DbContext + tenancy seam as the Api so
@@ -31,6 +32,8 @@ var hangfireConnectionString = builder.Configuration.GetConnectionString("Hangfi
 // Tenancy + data access (mirror of the Api registrations; no HttpContext here — a
 // job sets the tenant explicitly from its arguments rather than from a request).
 builder.Services.AddScoped<ICurrentTenant, TenantContext>();
+builder.Services.Configure<BillingOptions>(
+    builder.Configuration.GetSection(BillingOptions.SectionName));
 builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(connectionString));
 
 // Shared capture closure only: scanner + audit + enqueue; no extractor or ledger services.

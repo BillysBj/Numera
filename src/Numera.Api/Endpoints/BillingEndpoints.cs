@@ -8,6 +8,7 @@ using Numera.Api.Services.Stripe;
 using Numera.Modules.Billing;
 using Numera.Platform.Db;
 using Numera.Platform.Db.Entities;
+using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Endpoints;
@@ -129,6 +130,7 @@ public static class BillingEndpoints
             ICurrentTenant currentTenant,
             NumeraDbContext db,
             IBillingState billingState,
+            IOptions<BillingOptions> billingOptions,
             CancellationToken ct) =>
         {
             var tenantId = currentTenant.TenantId;
@@ -156,6 +158,7 @@ public static class BillingEndpoints
             return Results.Ok(new
             {
                 plan = effectivePlan.ToString(),
+                selfHosted = billingOptions.Value.SelfHosted,
                 tenant.TrialEndsAt,
                 tenant.SubscriptionStatus,
                 tenant.CurrentPeriodEnd,

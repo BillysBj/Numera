@@ -69,6 +69,8 @@ builder.Services.AddScoped<ICurrentUserRole, CurrentUserRole>();
 builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(connectionString));
 
 // --- Audit + entitlements --------------------------------------------------
+builder.Services.Configure<BillingOptions>(
+    builder.Configuration.GetSection(BillingOptions.SectionName));
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 builder.Services.AddScoped<IBillingState, BillingStateService>();

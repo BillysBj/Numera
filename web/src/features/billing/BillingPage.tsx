@@ -61,6 +61,14 @@ export default function BillingPage() {
     }
   }
 
+  if (billing.data?.selfHosted) {
+    return (
+      <main className="app-main" style={{ maxWidth: '1200px' }}>
+        <p className="text-sm text-muted-foreground">{t('page.selfHosted')}</p>
+      </main>
+    )
+  }
+
   return (
     <main className="app-main" style={{ maxWidth: '1200px' }}>
       <div className="mb-6">

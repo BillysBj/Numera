@@ -4,6 +4,7 @@
     "billing": "Tarife & Abrechnung"
   },
   "page": {
+    "selfHosted": "Self-hosted — alle Funktionen freigeschaltet",
     "title": "Tarife & Abrechnung",
     "subtitle": "Verwalte deinen Tarif und öffne die sichere Stripe-Abrechnung.",
     "currentPlan": "Aktueller Tarif",
