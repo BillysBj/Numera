@@ -32,6 +32,8 @@ services:
       # Resolves the realm's ${NUMERA_DOMAIN} placeholder (used by the prod redirect
       # URIs) to a valid value so the dev realm import doesn't fail on an invalid URI.
       NUMERA_DOMAIN: ${NUMERA_DOMAIN:-localhost}
+      # Resolves the realm's ${KEYCLOAK_CLIENT_SECRET} placeholder on import.
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-numera-dev-secret}
     volumes:
       # Mount the realm export so --import-realm picks up realm-numera.json.
       - ./keycloak:/opt/keycloak/data/import:ro

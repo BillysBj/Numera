@@ -63,6 +63,9 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
       # Keycloak replaces this placeholder in the realm's production redirect URIs.
       NUMERA_DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+      # Resolves the realm's ${KEYCLOAK_CLIENT_SECRET} placeholder on import; must
+      # match the api/worker Keycloak__ClientSecret.
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
       - ./keycloak/themes:/opt/keycloak/themes:ro

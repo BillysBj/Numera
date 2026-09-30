@@ -524,7 +524,7 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
-      "secret": "numera-dev-secret",
+      "secret": "${KEYCLOAK_CLIENT_SECRET}",
       "redirectUris": [
         "http://localhost:5173/signin-oidc",
         "http://localhost:5080/signin-oidc",
