@@ -29,6 +29,9 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Resolves the realm's ${NUMERA_DOMAIN} placeholder (used by the prod redirect
+      # URIs) to a valid value so the dev realm import doesn't fail on an invalid URI.
+      NUMERA_DOMAIN: ${NUMERA_DOMAIN:-localhost}
     volumes:
       # Mount the realm export so --import-realm picks up realm-numera.json.
       - ./keycloak:/opt/keycloak/data/import:ro
@@ -83,3 +86,4 @@ services:
 
 volumes:
   numera-postgres-data:
+  numera-keycloak-data:
