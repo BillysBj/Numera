@@ -27,3 +27,6 @@ Thumbs.db
 # Test artifacts
 TestResults/
 coverage/
+
+# PostgreSQL disaster-recovery dumps (may contain production data)
+backups/

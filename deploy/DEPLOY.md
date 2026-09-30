@@ -92,3 +92,70 @@ OCR/Azure Document Intelligence, ClamAV, outbound e-mail, and the KoSIT validato
 may remain unconfigured/off; the repository's safe stubs or no-op adapters cover
 those optional integrations. Back up the `db_data`, `keys`, and
 `caddy_data` Docker volumes before upgrades.
+
+## Backups & Restore
+
+The `backup` service waits for PostgreSQL, takes a dump immediately on startup,
+then repeats every `BACKUP_INTERVAL_HOURS` (default `24`). PostgreSQL 18 `pg_dump -Fc`
+produces compressed custom-format dumps of the `numera` database in the host's
+`./backups/numera-YYYYMMDD-HHMMSS.dump` directory (UTC timestamps). Files are private
+to their owner; Docker may create them as root, so use `sudo` when needed to read or
+copy them. Watch successful backups, failures, and each prune with:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f backup
+```
+
+After each successful dump, retention sorts completed dumps by modification time
+and keeps the newest dump from each of the last `BACKUP_KEEP_DAILY` distinct UTC
+days (default `14`), plus the newest dump from each of the last
+`BACKUP_KEEP_WEEKLY` distinct ISO weeks (default `8`, Monday through Sunday).
+The two sets overlap, so defaults keep at most 22 dumps. These are days/weeks with
+available dumps, not strict age limits; older recovery points survive gaps in
+backups. A retention tier may be `0`, but not both. Failed dumps do not prune
+existing backups; only a successful dump is renamed from `.partial` to `.dump`.
+Interrupted containers may leave `.partial` files, which are not restore points
+and can be removed once the backup service is stopped.
+
+**Copy `./backups` offsite automatically, for example with rsync or rclone to
+another server or object storage. A backup on the same VM/disk does not survive
+VM loss, disk failure, or deletion.** Copy only completed `*.dump` files, preserve
+modification times, protect access to production data, and set independent offsite
+retention/versioning so local pruning does not erase all remote recovery points.
+Monitor backup logs and the age of the newest offsite dump.
+
+These dumps provide disaster recovery, separate from the in-app GoBD 10-year
+retention through the immutable ledger and WORM archive. A `numera` dump does not
+include the separate `keycloak` database, cluster roles, the `keys` volume, external
+document/archive storage, or `.env`; protect those separately for complete recovery.
+
+Run restores from the VM checkout using Bash and Docker Compose. The script mounts
+the selected dump read-only into a temporary PostgreSQL 18 container on the Compose
+network, obtains `DB_PASSWORD` from the Compose environment, and connects to `db`
+as `numera`. It requires `--yes` and runs `pg_restore --clean --if-exists` in one
+transaction, stopping on errors. **This overwrites current data. Stop the API and
+Worker throughout the restore.** Also stop scheduled backups to avoid capturing
+the database being recovered. Keep PostgreSQL running and select a completed dump:
+
+```bash
+docker compose -f docker-compose.prod.yml stop api worker backup
+bash deploy/restore.sh ./backups/numera-20260930-020000.dump --yes
+# Only after the restore succeeds:
+docker compose -f docker-compose.prod.yml start api worker backup
+```
+
+On a replacement VM, restore the checkout/configuration and install Docker first.
+Start `db` and provision the roles using the deployment migration service before
+restoring (`pg_dump` does not include roles):
+
+```bash
+docker compose -f docker-compose.prod.yml up -d db
+docker compose -f docker-compose.prod.yml run --rm migrate
+bash deploy/restore.sh /path/to/offsite/numera-20260930-020000.dump --yes
+# Only after restoring successfully and recovering the other required data:
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Test a restore periodically in an isolated environment, verify application data
+and tenant access, and record how long recovery takes. A successful dump alone
+does not prove that recovery works.
