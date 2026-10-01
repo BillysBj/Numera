@@ -111,39 +111,45 @@ public sealed class InvoiceDocument : IDocument
     {
         var issuer = _model.Issuer;
 
-        container.Row(row =>
+        container.Column(outer =>
         {
-            row.RelativeItem().AlignLeft().Column(col =>
+            outer.Item().Row(row =>
             {
-                if (_model.LogoBytes is { Length: > 0 } logo)
+                row.RelativeItem().AlignLeft().Column(col =>
                 {
-                    col.Item().Height(48).AlignLeft().Image(logo).FitHeight();
-                }
-                else
+                    if (_model.LogoBytes is { Length: > 0 } logo)
+                    {
+                        col.Item().Height(48).AlignLeft().Image(logo).FitHeight();
+                    }
+                    else
+                    {
+                        col.Item().Text(issuer.LegalName ?? string.Empty)
+                            .FontSize(15).Bold().FontColor(Colors.Black);
+                    }
+                });
+
+                row.ConstantItem(230).AlignRight().Column(col =>
                 {
-                    col.Item().Text(issuer.LegalName ?? string.Empty)
-                        .FontSize(15).Bold().FontColor(Colors.Black);
-                }
+                    col.Item().Text(issuer.LegalName ?? string.Empty).SemiBold();
+                    foreach (var line in AddressLines(issuer.Address))
+                    {
+                        col.Item().Text(line);
+                    }
+
+                    var contact = new[] { issuer.ContactEmail, issuer.ContactPhone }
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Select(s => s!)
+                        .ToList();
+                    for (var i = 0; i < contact.Count; i++)
+                    {
+                        var item = i == 0 ? col.Item().PaddingTop(4) : col.Item();
+                        item.Text(contact[i]);
+                    }
+                });
             });
 
-            row.ConstantItem(230).AlignRight().Column(col =>
-            {
-                col.Item().Text(issuer.LegalName ?? string.Empty).SemiBold();
-                foreach (var line in AddressLines(issuer.Address))
-                {
-                    col.Item().Text(line);
-                }
-
-                var contact = new[] { issuer.ContactEmail, issuer.ContactPhone }
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Select(s => s!)
-                    .ToList();
-                for (var i = 0; i < contact.Count; i++)
-                {
-                    var item = i == 0 ? col.Item().PaddingTop(4) : col.Item();
-                    item.Text(contact[i]);
-                }
-            });
+            // Separates the letterhead from the document body.
+            outer.Item().PaddingTop(8).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten1);
         });
     }
 
@@ -179,8 +185,15 @@ public sealed class InvoiceDocument : IDocument
             {
                 col.Item().Text(_labels.BillTo).FontSize(8).FontColor(Colors.Grey.Darken1);
 
-                var name = string.Join(" ", new[] { recipient.Name, recipient.LegalForm }
-                    .Where(s => !string.IsNullOrWhiteSpace(s)));
+                // Append the legal form only when the name does not already carry it
+                // (a partner named "Muster Handels GmbH" + legal form "GmbH" must not read
+                // "Muster Handels GmbH GmbH").
+                var legalForm = recipient.LegalForm?.Trim();
+                var baseName = recipient.Name ?? string.Empty;
+                var name = string.IsNullOrWhiteSpace(legalForm)
+                    || baseName.TrimEnd().EndsWith(legalForm, StringComparison.OrdinalIgnoreCase)
+                        ? baseName
+                        : $"{baseName} {legalForm}";
                 col.Item().PaddingTop(2).Text(name).SemiBold();
 
                 foreach (var line in AddressLines(recipient.BillingAddress))
@@ -265,7 +278,7 @@ public sealed class InvoiceDocument : IDocument
                 });
 
                 BodyCell(table).AlignRight().Text(
-                    $"{FormatNumber(line.Quantity, _culture)} {line.UnitCode}".Trim());
+                    $"{FormatNumber(line.Quantity, _culture)} {UnitDisplay(line.UnitCode)}".Trim());
                 BodyCell(table).AlignRight().Text(Money(line.NetUnitPrice));
                 BodyCell(table).AlignRight().Text(Money(line.LineNetAmount));
             }
@@ -282,7 +295,14 @@ public sealed class InvoiceDocument : IDocument
                 TotalLine(col, _labels.SubtotalNet, Money(_model.TotalNet), bold: false);
                 TotalLine(col, _labels.Vat, Money(_model.TotalTax), bold: false);
                 col.Item().PaddingVertical(2).LineHorizontal(0.75f).LineColor(Colors.Grey.Medium);
-                TotalLine(col, _labels.Total, Money(_model.TotalGross), bold: true);
+
+                // The grand total gets a subtle shaded band so it reads at a glance.
+                col.Item().Background(Colors.Grey.Lighten4).PaddingVertical(5).PaddingHorizontal(6).Row(row =>
+                {
+                    row.RelativeItem().Text(_labels.Total).Bold().FontSize(11).FontColor(Colors.Black);
+                    row.ConstantItem(120).AlignRight().Text(Money(_model.TotalGross))
+                        .Bold().FontSize(11).FontColor(Colors.Black);
+                });
 
                 if (_model.AmountDue != _model.TotalGross)
                 {
@@ -515,7 +535,7 @@ public sealed class InvoiceDocument : IDocument
     }
 
     private static IContainer BodyCell(TableDescriptor table) =>
-        table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(3);
+        table.Cell().BorderBottom(0.5f).BorderColor(Colors.Grey.Lighten2).PaddingVertical(4);
 
     private static void MetaLine(ColumnDescriptor col, string label, string? value)
     {
@@ -582,5 +602,47 @@ public sealed class InvoiceDocument : IDocument
         "GBP" => "£",
         "CHF" => "CHF",
         _ => currency,
+    };
+
+    // Human-readable unit label for the PDF only. The stored UN/ECE Rec 20 code (BT-130) is
+    // unchanged in the e-invoice XML — this maps the curated catalog units to the labels a
+    // customer expects on paper, falling back to the raw code for anything unmapped.
+    private string UnitDisplay(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return string.Empty;
+        }
+
+        var map = _model.Language == "en" ? UnitLabelsEn : UnitLabelsDe;
+        return map.TryGetValue(code, out var label) ? label : code;
+    }
+
+    private static readonly IReadOnlyDictionary<string, string> UnitLabelsDe = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["C62"] = "Stk.",
+        ["H87"] = "Stk.",
+        ["HUR"] = "Std.",
+        ["DAY"] = "Tage",
+        ["MON"] = "Monate",
+        ["KGM"] = "kg",
+        ["MTR"] = "m",
+        ["MTK"] = "m²",
+        ["LTR"] = "l",
+        ["KWH"] = "kWh",
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> UnitLabelsEn = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["C62"] = "pcs",
+        ["H87"] = "pcs",
+        ["HUR"] = "hrs",
+        ["DAY"] = "days",
+        ["MON"] = "months",
+        ["KGM"] = "kg",
+        ["MTR"] = "m",
+        ["MTK"] = "m²",
+        ["LTR"] = "l",
+        ["KWH"] = "kWh",
     };
 }
