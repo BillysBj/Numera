@@ -23,8 +23,15 @@ export default defineConfig({
       workbox: {
         // Precache the static app shell only.
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        // Never let SPA navigation fallback serve /api requests from the shell.
-        navigateFallbackDenylist: [/^\/api/],
+        // Never let the SPA navigation fallback serve the shell for server/IdP routes:
+        //   /api               — the BFF (financial reads/writes)
+        //   /auth              — Keycloak (login page lives here; must reach the IdP)
+        //   /signin-oidc       — the OIDC code-flow callback (must reach the BFF)
+        //   /signout-callback-oidc — the OIDC sign-out callback
+        // Without these, the service worker intercepts the top-level login navigation
+        // and returns index.html, so the callback never reaches the BFF (login loops
+        // back to the demo dashboard). In dev the SW is disabled so this never shows.
+        navigateFallbackDenylist: [/^\/api/, /^\/auth/, /^\/signin-oidc/, /^\/signout-callback-oidc/],
         runtimeCaching: [
           {
             // All financial reads/writes: always network, never cached.
