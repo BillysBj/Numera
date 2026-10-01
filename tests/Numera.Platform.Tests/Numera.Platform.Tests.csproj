@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.*" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
@@ -38,6 +39,8 @@
 
   <ItemGroup>
     <!-- Golden-file fixtures are copied next to the test assembly for reading at runtime. -->
+    <!-- Reuse the isolated PostgreSQL/RLS fixture for supplier-payment cash-recognition tests. -->
+    <Compile Include="..\Numera.IntegrationTests\PostgresFixture.cs" Link="Fixtures\PostgresFixture.cs" />
     <None Include="Money\goldenfiles\**\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>Money\goldenfiles\%(RecursiveDir)%(Filename)%(Extension)</Link>

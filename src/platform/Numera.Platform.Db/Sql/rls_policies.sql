@@ -221,3 +221,16 @@ CREATE POLICY tenant_isolation ON customer_files
 
 -- The CustomerFiles migration additionally revokes UPDATE/DELETE from numera_app
 -- and installs customer_file_immutable BEFORE UPDATE OR DELETE as a hard backstop.
+
+-- Supplier payments: append-only booked facts, mirroring payment/payment_allocation.
+ALTER TABLE supplier_payment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplier_payment FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON supplier_payment
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);
+
+ALTER TABLE supplier_payment_allocation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE supplier_payment_allocation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON supplier_payment_allocation
+    USING (tenant_id = current_setting('app.current_tenant')::uuid)
+    WITH CHECK (tenant_id = current_setting('app.current_tenant')::uuid);

@@ -573,6 +573,8 @@ public static class ReceiptEndpoints
         var before = Snapshot(receipt);
         receipt.Status = ReceiptStatus.Booked;
         receipt.JournalEntryId = header.Id;
+        receipt.OpenAmount = receipt.GrossAmount;
+        receipt.PaymentStatus = ReceiptPaymentStatus.Unpaid;
         await audit.RecordAsync(
             new ReceiptAuditEvent("receipt.booked", receipt.Id, before, Snapshot(receipt)), ct)
             .ConfigureAwait(false);
@@ -763,6 +765,8 @@ public static class ReceiptEndpoints
         receipt.ReviewedByUserId,
         receipt.ReviewedAt,
         receipt.JournalEntryId,
+        receipt.OpenAmount,
+        receipt.PaymentStatus,
     }, Json);
 
     private static async Task<Dictionary<Guid, OriginalMetadata>> LoadArchivesAsync(

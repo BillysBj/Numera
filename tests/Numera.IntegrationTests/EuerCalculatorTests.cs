@@ -115,15 +115,14 @@ public sealed class EuerCalculatorTests(PostgresFixture fixture)
     }
 
     [Fact]
-    public async Task Missing_expense_runtime_path_is_explicitly_flagged()
+    public async Task Configured_ledger_has_complete_expense_recognition_even_without_payments()
     {
         var tenant = await SetupTenantAsync();
 
         var report = await ComputeAsync(tenant, JanuaryFrom, FebruaryTo);
 
-        Assert.True(report.IsExpenseDataIncomplete);
-        Assert.False(string.IsNullOrWhiteSpace(report.Hinweis));
-        Assert.Equal(EuerCalculator.ExpenseIncompleteHinweis, report.Hinweis);
+        Assert.False(report.IsExpenseDataIncomplete);
+        Assert.Null(report.Hinweis);
         Assert.NotEmpty(report.Betriebsausgaben);
         Assert.All(report.Betriebsausgaben, line => Assert.Equal(0m, line.Betrag));
     }

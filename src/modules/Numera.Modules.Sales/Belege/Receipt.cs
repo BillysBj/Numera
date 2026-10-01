@@ -74,6 +74,13 @@ public sealed class Receipt : ITenantEntity
     [Precision(19, 4)]
     public decimal? GrossAmount { get; set; }
 
+    /// <summary>Remaining payable, initialized when the receipt is booked.</summary>
+    [Precision(19, 4)]
+    public decimal? OpenAmount { get; set; }
+
+    /// <summary>Settlement state; null for receipts booked before payable tracking.</summary>
+    public ReceiptPaymentStatus? PaymentStatus { get; set; }
+
     /// <summary>VAT rate for a single-rate receipt; multi-rate details come from the e-invoice.</summary>
     [Precision(19, 4)]
     public decimal? VatRatePercent { get; set; }

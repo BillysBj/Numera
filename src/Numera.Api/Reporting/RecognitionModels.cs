@@ -22,3 +22,11 @@ public record CashRecognitionRow(
     decimal NetAmount,
     decimal VatAmount,
     DateOnly RecognizedOn);
+
+/// <summary>A receipt's pro-rata expense and VAT recognized when its supplier is paid.</summary>
+public record ExpenseCashRecognitionRow(
+    decimal? VatRatePercent,
+    decimal NetAmount,
+    decimal VatAmount,
+    string AccountNumber,
+    DateOnly RecognizedOn);

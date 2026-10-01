@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Numera.Modules.Ledger;
 using Numera.Platform.Db;
 
 namespace Numera.Api.Reporting;
@@ -15,6 +16,40 @@ namespace Numera.Api.Reporting;
 /// </remarks>
 public sealed class RecognitionReader(NumeraDbContext db)
 {
+    /// <summary>Recognizes receipt totals pro rata on the supplier payment's value date.</summary>
+    public async Task<IReadOnlyList<ExpenseCashRecognitionRow>> ReadExpenseCashRecognitionAsync(
+        DateOnly from,
+        DateOnly to,
+        CancellationToken ct)
+    {
+        // Negative reversal allocations net out on the reversal's own value date.
+        // DISTINCT collapses per-rate legs on the same booked expense account; input
+        // VAT (Asset) and the creditor (Credit) never supply the EÜR expense mapping.
+        return await db.Database.SqlQuery<ExpenseCashRecognitionRow>(
+            $"""
+            SELECT r.vat_rate_percent AS "VatRatePercent",
+                   (spa.allocated_amount / NULLIF(r.gross_amount, 0)) * r.net_amount AS "NetAmount",
+                   (spa.allocated_amount / NULLIF(r.gross_amount, 0)) * r.vat_amount AS "VatAmount",
+                   expense.number AS "AccountNumber",
+                   sp.value_date AS "RecognizedOn"
+              FROM supplier_payment sp
+              JOIN supplier_payment_allocation spa ON spa.payment_id = sp.id
+              JOIN receipt r ON r.id = spa.receipt_id
+              JOIN (
+                  SELECT DISTINCT p.journal_entry_id, a.number
+                    FROM postings p
+                    JOIN accounts a ON a.id = p.account_id
+                   WHERE p.direction = {(int)PostingDirection.Debit}
+                     AND a.type = {(int)AccountType.Expense}
+              ) expense ON expense.journal_entry_id = r.journal_entry_id
+             WHERE sp.value_date >= {from}
+               AND sp.value_date <= {to}
+             ORDER BY sp.value_date, sp.id, spa.id, expense.number
+            """)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// Sums tax-bearing postings by USt-VA Kennziffer and frozen posting tax metadata
     /// for journal entries whose booking date falls in the inclusive range.

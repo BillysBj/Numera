@@ -128,7 +128,7 @@ public sealed class ReportEndpointsTests(PostgresFixture fixture)
         Assert.NotEmpty(report.Betriebseinnahmen);
         Assert.Equal(119m, report.SummeEinnahmen);
         Assert.Equal(119m, report.Gewinn);
-        Assert.True(report.IsExpenseDataIncomplete);
+        Assert.False(report.IsExpenseDataIncomplete);
     }
 
     [Fact]

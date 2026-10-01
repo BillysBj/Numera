@@ -190,6 +190,7 @@ builder.Services.AddScoped<ReceiptDeduplicator>();
 builder.Services.AddScoped<ReceiptIngestService>();
 builder.Services.AddTransient<ExtractReceiptJob>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<SupplierPaymentService>();
 builder.Services.AddScoped<DunningConfigService>();
 builder.Services.AddTransient<SendDunningNoticeJob>();
 // Scoped feature management: PlanFeatureFilter consumes the scoped IEntitlementService
@@ -281,6 +282,7 @@ app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();
 app.MapReceiptEndpoints();
+app.MapSupplierPaymentEndpoints();
 app.MapMailboxEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();

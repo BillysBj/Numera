@@ -11,6 +11,7 @@
          the finalize/Storno/concurrency suites drive the REAL production finalize core
          (not a parallel reimplementation) — regression-guards the GAP-1 db.Add fix. -->
     <InternalsVisibleTo Include="Numera.IntegrationTests" />
+    <InternalsVisibleTo Include="Numera.Platform.Tests" />
   </ItemGroup>
 
   <ItemGroup>

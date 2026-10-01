@@ -10,13 +10,6 @@ namespace Numera.Api.Reporting;
 /// <summary>Computes an EÜR from payment-date cash-recognition facts.</summary>
 public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recognitionReader)
 {
-    /// <summary>
-    /// The mandatory caveat while supplier receipts and outgoing supplier payments have
-    /// no runtime entry path.
-    /// </summary>
-    public const string ExpenseIncompleteHinweis =
-        "Betriebsausgaben unvollständig — Belegerfassung ab Phase 12.";
-
     /// <summary>Computes a cash-basis EÜR for an inclusive date range.</summary>
     public async Task<EuerReport> ComputeAsync(
         int jahr,
@@ -103,9 +96,26 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
                     : unroundedRevenueByLine[definition.Zeile])))
             .ToList();
 
-        // Phase 12 will supply supplier-payment recognition. Until then, these mapped
-        // lines are honest zeros from the absence of a runtime expense data path; no
-        // posting-derived or estimated amounts are fabricated here.
+        var expenseRows = await recognitionReader
+            .ReadExpenseCashRecognitionAsync(from, to, ct)
+            .ConfigureAwait(false);
+        var unroundedExpenseByLine = definitions
+            .Where(definition => definition.Section == EuerSection.Betriebsausgaben)
+            .ToDictionary(definition => definition.Zeile, _ => 0m, StringComparer.Ordinal);
+        foreach (var row in expenseRows)
+        {
+            var definition = EuerLineMap.ForAccount(chartVariant, row.AccountNumber)
+                .SingleOrDefault(candidate => candidate.AmountKind == EuerAmountKind.Expense)
+                ?? throw new InvalidOperationException(
+                    $"No EÜR expense mapping exists for account {row.AccountNumber}.");
+            unroundedExpenseByLine[definition.Zeile] +=
+                row.NetAmount + (isKleinunternehmer ? row.VatAmount : 0m);
+            if (!isKleinunternehmer)
+            {
+                unroundedExpenseByLine[EuerLineMap.PaidInputVatZeile] += row.VatAmount;
+            }
+        }
+
         var expenseLines = definitions
             .Where(definition =>
                 definition.Section == EuerSection.Betriebsausgaben
@@ -113,7 +123,7 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
             .Select(definition => new EuerLine(
                 definition.Zeile,
                 definition.Bezeichnung,
-                Betrag: 0m))
+                RoundingPolicy.RoundAmount(unroundedExpenseByLine[definition.Zeile])))
             .ToList();
 
         var summeEinnahmen = RoundingPolicy.RoundAmount(incomeLines.Sum(line => line.Betrag));
@@ -130,7 +140,7 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
             expenseLines,
             summeAusgaben,
             gewinn,
-            IsExpenseDataIncomplete: true,
-            Hinweis: ExpenseIncompleteHinweis);
+            IsExpenseDataIncomplete: false,
+            Hinweis: null);
     }
 }
