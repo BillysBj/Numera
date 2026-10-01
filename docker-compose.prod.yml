@@ -104,6 +104,15 @@ services:
       FinApi__ClientSecret: ${FinApi__ClientSecret:-}
       FinApi__BaseUrl: ${FinApi__BaseUrl:-}
       FinApi__WebFormBaseUrl: ${FinApi__WebFormBaseUrl:-}
+      # SMTP for outgoing mail (invoice + dunning sends). Set EMAIL_* in .env to enable;
+      # until then the send jobs queue but cannot deliver.
+      Email__Host: ${EMAIL_HOST:-}
+      Email__Port: ${EMAIL_PORT:-587}
+      Email__UseSsl: ${EMAIL_USESSL:-true}
+      Email__Username: ${EMAIL_USERNAME:-}
+      Email__Password: ${EMAIL_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM:-}
+      Email__FromName: ${EMAIL_FROMNAME:-Numera}
     volumes:
       - keys:/keys
     depends_on:
@@ -137,6 +146,14 @@ services:
       FinApi__ClientSecret: ${FinApi__ClientSecret:-}
       FinApi__BaseUrl: ${FinApi__BaseUrl:-}
       FinApi__WebFormBaseUrl: ${FinApi__WebFormBaseUrl:-}
+      # SMTP for outgoing mail (the worker runs the send jobs). Set EMAIL_* in .env.
+      Email__Host: ${EMAIL_HOST:-}
+      Email__Port: ${EMAIL_PORT:-587}
+      Email__UseSsl: ${EMAIL_USESSL:-true}
+      Email__Username: ${EMAIL_USERNAME:-}
+      Email__Password: ${EMAIL_PASSWORD:-}
+      Email__FromAddress: ${EMAIL_FROM:-}
+      Email__FromName: ${EMAIL_FROMNAME:-Numera}
     depends_on:
       migrate:
         condition: service_completed_successfully
