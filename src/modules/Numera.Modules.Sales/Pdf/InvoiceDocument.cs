@@ -114,7 +114,7 @@ public sealed class InvoiceDocument : IDocument
         });
     }
 
-    private void ComposeHeader(IContainer container)
+    internal void ComposeHeader(IContainer container)
     {
         var issuer = _model.Issuer;
 
@@ -163,7 +163,7 @@ public sealed class InvoiceDocument : IDocument
         });
     }
 
-    private void ComposeContent(IContainer container)
+    internal void ComposeContent(IContainer container)
     {
         container.PaddingVertical(12).Column(col =>
         {
@@ -533,7 +533,7 @@ public sealed class InvoiceDocument : IDocument
         });
     }
 
-    private void ComposeFooter(IContainer container)
+    internal void ComposeFooter(IContainer container)
     {
         var issuer = _model.Issuer;
         var parts = new List<string>();

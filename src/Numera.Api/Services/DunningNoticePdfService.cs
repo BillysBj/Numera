@@ -37,6 +37,8 @@ public sealed class DunningNoticePdfService(NumeraDbContext db)
     public async Task<byte[]> RenderAsync(DunningNotice notice, string language, CancellationToken ct)
     {
         var document = await db.Set<SalesDocument>().AsNoTracking()
+            .Include(x => x.Lines)
+            .Include(x => x.TaxBreakdown)
             .FirstAsync(x => x.Id == notice.DocumentId, ct).ConfigureAwait(false);
         var configs = await db.Set<DunningLevelConfig>().AsNoTracking()
             .ToListAsync(ct).ConfigureAwait(false);
@@ -54,6 +56,7 @@ public sealed class DunningNoticePdfService(NumeraDbContext db)
         var frozen = SnapshotReader.FromDocument(document, logo, null, language);
         return new DunningNoticeModel
         {
+            Invoice = frozen,
             Language = language,
             LogoBytes = logo,
             Issuer = frozen.Issuer,

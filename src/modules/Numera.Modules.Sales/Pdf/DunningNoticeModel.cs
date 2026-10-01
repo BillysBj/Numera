@@ -3,6 +3,7 @@ namespace Numera.Modules.Sales.Pdf;
 /// <summary>Flat, presentation-ready dunning notice projection built from frozen invoice data.</summary>
 public sealed record DunningNoticeModel
 {
+    public required InvoicePdfModel Invoice { get; init; }
     public string Language { get; init; } = "de";
     public byte[]? LogoBytes { get; init; }
     public required InvoicePdfModel.IssuerBlock Issuer { get; init; }

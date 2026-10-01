@@ -30,6 +30,26 @@ public sealed class DunningNoticeDocument : IDocument
 
     public void Compose(IDocumentContainer container)
     {
+        var invoice = new InvoiceDocument(_model.Invoice);
+        container.Page(page =>
+        {
+            page.Size(PageSizes.A4);
+            page.Margin(2, Unit.Centimetre);
+            page.DefaultTextStyle(x => x.FontSize(9).FontColor(Colors.Grey.Darken4));
+            page.Header().Element(invoice.ComposeHeader);
+            page.Content().Element(invoice.ComposeContent);
+            page.Footer().Column(col =>
+            {
+                col.Item().Element(invoice.ComposeFooter);
+                col.Item().AlignCenter().Text(x =>
+                {
+                    x.CurrentPageNumber();
+                    x.Span(" / ");
+                    x.TotalPages();
+                });
+            });
+        });
+
         container.Page(page =>
         {
             page.Size(PageSizes.A4);
