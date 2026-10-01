@@ -4,6 +4,10 @@
     <RootNamespace>Numera.Worker</RootNamespace>
     <AssemblyName>Numera.Worker</AssemblyName>
     <UserSecretsId>numera-worker</UserSecretsId>
+    <!-- The Worker references the Api project (shared Hangfire jobs); both ship an
+         appsettings.json, which collides on `dotnet publish` (NETSDK1152). Prod config
+         comes from environment variables (compose), so tolerating the duplicate is safe. -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
 
   <ItemGroup>
