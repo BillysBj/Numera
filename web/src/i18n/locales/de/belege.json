@@ -168,5 +168,54 @@
       "linked": "Verknüpfte Buchung",
       "hint": "Der Beleg ist gebucht; das unveränderte Original bleibt daneben dauerhaft einsehbar."
     }
+  },
+  "payments": {
+    "title": "Zahlungen",
+    "hint": "Erfasse hier, wann du diesen Beleg bezahlt hast. Erst die Zahlung lässt die EÜR die Betriebsausgabe am Zahlungsdatum erfassen (Abflussprinzip).",
+    "grossAmount": "Bruttobetrag",
+    "openAmount": "Offener Betrag",
+    "unknownSupplier": "Unbekannter Lieferant",
+    "loadError": "Die Zahlungen konnten nicht geladen werden.",
+    "reverseConfirm": "Diese Zahlung wirklich stornieren? Es wird eine Gegenbuchung erstellt.",
+    "reverseError": "Die Zahlung konnte nicht storniert werden.",
+    "reversalRow": "Storno",
+    "reversedRow": "Storniert",
+    "error": "Die Zahlung konnte nicht erfasst werden.",
+    "serverValidationError": "Bitte prüfe die Zahlungsangaben.",
+    "status": {
+      "0": "Offen",
+      "1": "Teilweise bezahlt",
+      "2": "Bezahlt"
+    },
+    "fields": {
+      "amount": "Betrag",
+      "valueDate": "Wertstellungsdatum",
+      "method": "Zahlungsart",
+      "reference": "Referenz"
+    },
+    "methods": {
+      "BankTransfer": "Überweisung",
+      "Cash": "Barzahlung",
+      "Card": "Kartenzahlung",
+      "Sepa": "SEPA",
+      "Other": "Sonstige"
+    },
+    "actions": {
+      "record": "Zahlung erfassen",
+      "saving": "Wird gespeichert …",
+      "cancel": "Abbrechen",
+      "reverse": "Stornieren",
+      "settled": "Vollständig bezahlt"
+    },
+    "dialog": {
+      "title": "Lieferantenzahlung erfassen",
+      "description": "Zahlung an {{supplier}} erfassen (offen: {{openAmount}})"
+    },
+    "validation": {
+      "amountPositive": "Der Betrag muss größer als 0 sein.",
+      "amountMax": "Der Betrag darf den offenen Betrag nicht überschreiten.",
+      "valueDateRequired": "Bitte gib ein Wertstellungsdatum an.",
+      "methodInvalid": "Bitte wähle eine gültige Zahlungsart."
+    }
   }
 }

@@ -168,5 +168,54 @@
       "linked": "Linked journal entry",
       "hint": "The receipt is posted; the unchanged original remains permanently viewable alongside it."
     }
+  },
+  "payments": {
+    "title": "Payments",
+    "hint": "Record here when you paid this receipt. Only the payment makes the EÜR recognize the expense on the payment date (cash basis).",
+    "grossAmount": "Gross amount",
+    "openAmount": "Open amount",
+    "unknownSupplier": "Unknown supplier",
+    "loadError": "The payments could not be loaded.",
+    "reverseConfirm": "Really reverse this payment? A reversing entry will be created.",
+    "reverseError": "The payment could not be reversed.",
+    "reversalRow": "Reversal",
+    "reversedRow": "Reversed",
+    "error": "The payment could not be recorded.",
+    "serverValidationError": "Please check the payment details.",
+    "status": {
+      "0": "Open",
+      "1": "Partially paid",
+      "2": "Paid"
+    },
+    "fields": {
+      "amount": "Amount",
+      "valueDate": "Value date",
+      "method": "Method",
+      "reference": "Reference"
+    },
+    "methods": {
+      "BankTransfer": "Bank transfer",
+      "Cash": "Cash",
+      "Card": "Card",
+      "Sepa": "SEPA",
+      "Other": "Other"
+    },
+    "actions": {
+      "record": "Record payment",
+      "saving": "Saving …",
+      "cancel": "Cancel",
+      "reverse": "Reverse",
+      "settled": "Fully paid"
+    },
+    "dialog": {
+      "title": "Record supplier payment",
+      "description": "Record a payment to {{supplier}} (open: {{openAmount}})"
+    },
+    "validation": {
+      "amountPositive": "The amount must be greater than 0.",
+      "amountMax": "The amount must not exceed the open amount.",
+      "valueDateRequired": "Please enter a value date.",
+      "methodInvalid": "Please choose a valid payment method."
+    }
   }
 }

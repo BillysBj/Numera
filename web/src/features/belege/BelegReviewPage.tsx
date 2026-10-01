@@ -21,17 +21,23 @@ import {
 import { cn } from '@/lib/utils'
 import {
   PostingDirection,
+  ReceiptPaymentStatus,
   ReceiptSource,
   ReceiptStatus,
+  SupplierPaymentMethod,
   useConfirmBookReceipt,
   useReceipt,
   useReceiptOriginal,
   useReceiptProposal,
+  useReverseSupplierPayment,
   useReviewReceipt,
+  useSupplierPayments,
   type ReceiptDetail,
   type ReceiptFieldConfidence,
   type ReviewReceiptRequest,
+  type SupplierPaymentListItem,
 } from './belegeApi'
+import RecordSupplierPaymentDialog from './RecordSupplierPaymentDialog'
 
 const money = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
 const number = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 })
@@ -272,6 +278,131 @@ function ProposalPreview({ id, currency, enabled, dirty }: { id: string; currenc
   )
 }
 
+const PAYMENT_METHOD_KEY: Record<number, keyof typeof SupplierPaymentMethod> = {
+  [SupplierPaymentMethod.BankTransfer]: 'BankTransfer',
+  [SupplierPaymentMethod.Cash]: 'Cash',
+  [SupplierPaymentMethod.Card]: 'Card',
+  [SupplierPaymentMethod.Sepa]: 'Sepa',
+  [SupplierPaymentMethod.Other]: 'Other',
+}
+
+function PaymentStatusBadge({ status }: { status: ReceiptPaymentStatus | null }) {
+  const { t } = useTranslation('belege')
+  const effective = status ?? ReceiptPaymentStatus.Unpaid
+  const variant = effective === ReceiptPaymentStatus.Paid ? 'default' : 'secondary'
+  return <Badge variant={variant}>{t(`payments.status.${effective}`)}</Badge>
+}
+
+function PaymentPanel({ receipt }: { receipt: ReceiptDetail }) {
+  const { t } = useTranslation('belege')
+  const currency = receipt.currency ?? 'EUR'
+  const gross = receipt.grossAmount ?? 0
+  const openAmount = receipt.openAmount ?? gross
+  const payments = useSupplierPayments(receipt.id, true)
+  const reverse = useReverseSupplierPayment(receipt.id)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const reversedIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const payment of payments.data?.items ?? []) {
+      if (payment.reversesPaymentId) set.add(payment.reversesPaymentId)
+    }
+    return set
+  }, [payments.data])
+
+  async function onReverse(payment: SupplierPaymentListItem) {
+    setError(null)
+    if (!window.confirm(t('payments.reverseConfirm'))) return
+    try {
+      await reverse.mutateAsync(payment.id)
+    } catch {
+      setError(t('payments.reverseError'))
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle>{t('payments.title')}</CardTitle>
+          <PaymentStatusBadge status={receipt.paymentStatus} />
+        </div>
+        <p className="text-sm text-muted-foreground">{t('payments.hint')}</p>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs text-muted-foreground">{t('payments.grossAmount')}</dt>
+            <dd className="font-medium tabular-nums">{formatMoney(gross, currency)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t('payments.openAmount')}</dt>
+            <dd className="font-medium tabular-nums">{formatMoney(openAmount, currency)}</dd>
+          </div>
+        </dl>
+
+        {payments.isError && (
+          <p role="alert" className="text-sm text-destructive">{t('payments.loadError')}</p>
+        )}
+        {payments.data && payments.data.items.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('payments.fields.valueDate')}</TableHead>
+                <TableHead>{t('payments.fields.method')}</TableHead>
+                <TableHead className="text-right">{t('payments.fields.amount')}</TableHead>
+                <TableHead>{t('payments.fields.reference')}</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.data.items.map((payment) => {
+                const isReversal = Boolean(payment.reversesPaymentId)
+                const isReversed = reversedIds.has(payment.id)
+                return (
+                  <TableRow key={payment.id} className={isReversal || isReversed ? 'text-muted-foreground' : undefined}>
+                    <TableCell>{formatDate(payment.valueDate)}</TableCell>
+                    <TableCell>{t(`payments.methods.${PAYMENT_METHOD_KEY[payment.method]}`)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatMoney(payment.amount, currency)}</TableCell>
+                    <TableCell>{payment.reference ?? '—'}</TableCell>
+                    <TableCell className="text-right">
+                      {isReversal ? (
+                        <Badge variant="outline">{t('payments.reversalRow')}</Badge>
+                      ) : isReversed ? (
+                        <Badge variant="outline">{t('payments.reversedRow')}</Badge>
+                      ) : (
+                        <Button variant="ghost" size="sm" disabled={reverse.isPending} onClick={() => void onReverse(payment)}>
+                          {t('payments.actions.reverse')}
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        )}
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
+        <Button className="w-full" disabled={openAmount <= 0} onClick={() => setDialogOpen(true)}>
+          {openAmount <= 0 ? t('payments.actions.settled') : t('payments.actions.record')}
+        </Button>
+      </CardContent>
+
+      <RecordSupplierPaymentDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        receiptId={receipt.id}
+        openAmount={openAmount}
+        currency={currency}
+        supplierName={receipt.supplierName}
+      />
+    </Card>
+  )
+}
+
 export default function BelegReviewPage() {
   const { t } = useTranslation('belege')
   const { id = '' } = useParams<{ id: string }>()
@@ -390,6 +521,8 @@ export default function BelegReviewPage() {
               </CardContent>
             </Card>
           )}
+
+          {item.status === ReceiptStatus.Booked && <PaymentPanel receipt={item} />}
 
           <Card>
             <CardHeader>
