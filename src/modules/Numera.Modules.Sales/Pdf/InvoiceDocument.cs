@@ -40,6 +40,13 @@ public sealed class InvoiceDocument : IDocument
     private readonly CultureInfo _culture;
     private readonly bool _pdfA;
 
+    // Design palette. Accent is the single brand tone — change this one value to
+    // re-skin the whole invoice in a company colour. Everything else is neutral.
+    private const string Accent = "#28374D";      // deep ink-navy: title, table head, total
+    private const string AccentSoft = "#5B6B82";  // muted accent: section labels
+    private const string Tint = "#EEF1F6";        // panel / total-band background
+    private const string Hairline = "#D7DDE6";    // light rules and borders
+
     /// <summary>Creates the document for a render model.</summary>
     /// <param name="model">The render model built from the frozen snapshot.</param>
     /// <param name="pdfA">When true, <see cref="GetSettings"/> targets PDF/A-3b (the ZUGFeRD base).</param>
@@ -113,6 +120,9 @@ public sealed class InvoiceDocument : IDocument
 
         container.Column(outer =>
         {
+            // Slim brand accent bar across the top of the letterhead.
+            outer.Item().PaddingBottom(10).Height(3).Background(Accent);
+
             outer.Item().Row(row =>
             {
                 row.RelativeItem().AlignLeft().Column(col =>
@@ -124,13 +134,13 @@ public sealed class InvoiceDocument : IDocument
                     else
                     {
                         col.Item().Text(issuer.LegalName ?? string.Empty)
-                            .FontSize(15).Bold().FontColor(Colors.Black);
+                            .FontSize(15).Bold().FontColor(Accent);
                     }
                 });
 
                 row.ConstantItem(230).AlignRight().Column(col =>
                 {
-                    col.Item().Text(issuer.LegalName ?? string.Empty).SemiBold();
+                    col.Item().Text(issuer.LegalName ?? string.Empty).SemiBold().FontColor(Accent);
                     foreach (var line in AddressLines(issuer.Address))
                     {
                         col.Item().Text(line);
@@ -149,7 +159,7 @@ public sealed class InvoiceDocument : IDocument
             });
 
             // Separates the letterhead from the document body.
-            outer.Item().PaddingTop(8).LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten1);
+            outer.Item().PaddingTop(8).LineHorizontal(0.75f).LineColor(Hairline);
         });
     }
 
@@ -183,7 +193,8 @@ public sealed class InvoiceDocument : IDocument
             // Recipient (Bill To) block.
             row.RelativeItem().Column(col =>
             {
-                col.Item().Text(_labels.BillTo).FontSize(8).FontColor(Colors.Grey.Darken1);
+                col.Item().Text(_labels.BillTo.ToUpperInvariant())
+                    .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
 
                 // Append the legal form only when the name does not already carry it
                 // (a partner named "Muster Handels GmbH" + legal form "GmbH" must not read
@@ -194,7 +205,7 @@ public sealed class InvoiceDocument : IDocument
                     || baseName.TrimEnd().EndsWith(legalForm, StringComparison.OrdinalIgnoreCase)
                         ? baseName
                         : $"{baseName} {legalForm}";
-                col.Item().PaddingTop(2).Text(name).SemiBold();
+                col.Item().PaddingTop(3).Text(name).FontSize(11).SemiBold();
 
                 foreach (var line in AddressLines(recipient.BillingAddress))
                 {
@@ -211,33 +222,38 @@ public sealed class InvoiceDocument : IDocument
                 }
             });
 
-            // Document meta band.
-            row.ConstantItem(220).Column(col =>
+            // Document title + meta card.
+            row.ConstantItem(232).Column(col =>
             {
-                col.Item().PaddingBottom(6).Text($"{_labels.Invoice} {_model.DocumentNumber}".Trim())
-                    .FontSize(16).Bold().FontColor(Colors.Black);
+                col.Item().PaddingBottom(8).AlignRight()
+                    .Text($"{_labels.Invoice} {_model.DocumentNumber}".Trim())
+                    .FontSize(20).Bold().FontColor(Accent);
 
-                MetaLine(col, _labels.InvoiceNo, _model.DocumentNumber);
-                MetaLine(col, _labels.Date, FormatDate(_model.DocumentDate));
+                col.Item().Background(Tint).Padding(10).Column(meta =>
+                {
+                    meta.Spacing(1);
+                    MetaLine(meta, _labels.InvoiceNo, _model.DocumentNumber);
+                    MetaLine(meta, _labels.Date, FormatDate(_model.DocumentDate));
 
-                if (_model.ServicePeriodEnd is { } periodEnd && _model.ServiceDate is { } periodStart)
-                {
-                    MetaLine(col, _labels.ServicePeriod, $"{FormatDate(periodStart)} – {FormatDate(periodEnd)}");
-                }
-                else if (_model.ServiceDate is { } svc)
-                {
-                    MetaLine(col, _labels.ServiceDate, FormatDate(svc));
-                }
+                    if (_model.ServicePeriodEnd is { } periodEnd && _model.ServiceDate is { } periodStart)
+                    {
+                        MetaLine(meta, _labels.ServicePeriod, $"{FormatDate(periodStart)} – {FormatDate(periodEnd)}");
+                    }
+                    else if (_model.ServiceDate is { } svc)
+                    {
+                        MetaLine(meta, _labels.ServiceDate, FormatDate(svc));
+                    }
 
-                if (_model.DueDate is { } due)
-                {
-                    MetaLine(col, _labels.Due, FormatDate(due));
-                }
+                    if (_model.DueDate is { } due)
+                    {
+                        MetaLine(meta, _labels.Due, FormatDate(due));
+                    }
 
-                if (!string.IsNullOrWhiteSpace(_model.BuyerReference))
-                {
-                    MetaLine(col, _labels.BuyerReference, _model.BuyerReference);
-                }
+                    if (!string.IsNullOrWhiteSpace(_model.BuyerReference))
+                    {
+                        MetaLine(meta, _labels.BuyerReference, _model.BuyerReference);
+                    }
+                });
             });
         });
     }
@@ -296,12 +312,12 @@ public sealed class InvoiceDocument : IDocument
                 TotalLine(col, _labels.Vat, Money(_model.TotalTax), bold: false);
                 col.Item().PaddingVertical(2).LineHorizontal(0.75f).LineColor(Colors.Grey.Medium);
 
-                // The grand total gets a subtle shaded band so it reads at a glance.
-                col.Item().Background(Colors.Grey.Lighten4).PaddingVertical(5).PaddingHorizontal(6).Row(row =>
+                // The grand total gets an accent-tinted band so it reads at a glance.
+                col.Item().PaddingTop(2).Background(Tint).PaddingVertical(6).PaddingHorizontal(8).Row(row =>
                 {
-                    row.RelativeItem().Text(_labels.Total).Bold().FontSize(11).FontColor(Colors.Black);
+                    row.RelativeItem().Text(_labels.Total).Bold().FontSize(12).FontColor(Accent);
                     row.ConstantItem(120).AlignRight().Text(Money(_model.TotalGross))
-                        .Bold().FontSize(11).FontColor(Colors.Black);
+                        .Bold().FontSize(12).FontColor(Accent);
                 });
 
                 if (_model.AmountDue != _model.TotalGross)
@@ -347,7 +363,8 @@ public sealed class InvoiceDocument : IDocument
 
         container.Column(outer =>
         {
-            outer.Item().Text(_labels.VatBreakdown).FontSize(8).FontColor(Colors.Grey.Darken1);
+            outer.Item().Text(_labels.VatBreakdown.ToUpperInvariant())
+                .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
             outer.Item().PaddingTop(3).Table(table =>
             {
                 table.ColumnsDefinition(c =>
@@ -388,8 +405,8 @@ public sealed class InvoiceDocument : IDocument
         var english = string.Equals(_model.Language, "en", StringComparison.OrdinalIgnoreCase);
         container.Column(outer =>
         {
-            outer.Item().Text(english ? "Deduction of advance invoices" : "Abzug geleisteter Abschläge")
-                .FontSize(8).FontColor(Colors.Grey.Darken1);
+            outer.Item().Text((english ? "Deduction of advance invoices" : "Abzug geleisteter Abschläge").ToUpperInvariant())
+                .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
             outer.Item().PaddingTop(3).Table(table =>
             {
                 table.ColumnsDefinition(c =>
@@ -471,12 +488,13 @@ public sealed class InvoiceDocument : IDocument
         {
             if (_model.DueDate is { } due && !_model.IsKleinunternehmer)
             {
-                col.Item().Text($"{_labels.PayableBy}: {FormatDate(due)}").SemiBold();
+                col.Item().Text($"{_labels.PayableBy}: {FormatDate(due)}").SemiBold().FontColor(Accent);
             }
 
             if (hasBank)
             {
-                col.Item().PaddingTop(4).Text(_labels.BankDetails).FontSize(8).FontColor(Colors.Grey.Darken1);
+                col.Item().PaddingTop(6).Text(_labels.BankDetails.ToUpperInvariant())
+                    .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
                 col.Item().Text(t =>
                 {
                     if (!string.IsNullOrWhiteSpace(issuer.BankName))
@@ -520,18 +538,18 @@ public sealed class InvoiceDocument : IDocument
                 .Where(s => !string.IsNullOrWhiteSpace(s))));
         }
 
-        container.BorderTop(0.5f).BorderColor(Colors.Grey.Lighten1).PaddingTop(4)
+        container.BorderTop(0.75f).BorderColor(Hairline).PaddingTop(5)
             .Text(string.Join("  •  ", parts))
-            .FontSize(7.5f).FontColor(Colors.Grey.Darken1).AlignCenter();
+            .FontSize(7.5f).FontColor(AccentSoft).AlignCenter();
     }
 
     // --- Small composition helpers -------------------------------------------
 
     private static void HeaderCell(TableCellDescriptor header, string text, bool right = false)
     {
-        var cell = header.Cell().BorderBottom(1).BorderColor(Colors.Grey.Darken1).PaddingVertical(3);
+        var cell = header.Cell().BorderBottom(1.5f).BorderColor(Accent).PaddingVertical(4);
         var content = right ? cell.AlignRight() : cell;
-        content.Text(text).SemiBold().FontSize(8.5f);
+        content.Text(text).SemiBold().FontSize(8.5f).FontColor(Accent);
     }
 
     private static IContainer BodyCell(TableDescriptor table) =>
@@ -541,8 +559,8 @@ public sealed class InvoiceDocument : IDocument
     {
         col.Item().Row(row =>
         {
-            row.ConstantItem(90).Text(label).FontColor(Colors.Grey.Darken1);
-            row.RelativeItem().Text(value ?? string.Empty).SemiBold();
+            row.ConstantItem(92).Text(label).FontSize(8.5f).FontColor(AccentSoft);
+            row.RelativeItem().AlignRight().Text(value ?? string.Empty).FontSize(8.5f).SemiBold();
         });
     }
 
