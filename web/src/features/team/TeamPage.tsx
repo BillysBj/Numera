@@ -47,6 +47,7 @@ export default function TeamPage() {
   const remove = useRemoveMember()
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [invited, setInvited] = useState<{ email: string; password: string } | null>(null)
 
   const schema = useMemo(() => z.object({
     email: z.email(t('errors.invalidEmail')),
@@ -80,9 +81,14 @@ export default function TeamPage() {
     setError(null)
     setStatus(null)
     try {
-      await invite.mutateAsync(values)
+      const result = await invite.mutateAsync(values)
       form.reset()
       setStatus(t('invite.success'))
+      setInvited(
+        result.temporaryPassword
+          ? { email: values.email, password: result.temporaryPassword }
+          : null,
+      )
     } catch (caught) {
       setError(messageFor(caught))
     }
@@ -157,6 +163,22 @@ export default function TeamPage() {
           {error && <p role="alert" className="mt-4 text-sm text-destructive">{error}</p>}
           {status && <p role="status" className="mt-4 text-sm text-emerald-600">{status}</p>}
 
+          {invited && (
+            <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+              <p className="font-medium">Zugang für {invited.email} erstellt.</p>
+              <p className="mt-1">
+                Temporäres Passwort (wird nur einmal angezeigt — bitte sicher weitergeben):
+              </p>
+              <code className="mt-1.5 inline-block select-all rounded bg-background px-2 py-1 font-mono text-base">
+                {invited.password}
+              </code>
+              <p className="mt-2 text-xs">
+                Die Person meldet sich mit E-Mail + diesem Passwort an und muss beim ersten Login ein
+                eigenes Passwort vergeben.
+              </p>
+            </div>
+          )}
+
           <Card className="mt-5">
             <CardHeader><CardTitle>{t('members.title')}</CardTitle></CardHeader>
             <CardContent>
@@ -178,7 +200,7 @@ export default function TeamPage() {
                         member.role === MembershipRole.Owner && ownerCount === 1
                       return (
                         <TableRow key={member.userId}>
-                          <TableCell className="font-mono text-xs">{member.userId}</TableCell>
+                          <TableCell className="text-sm">{member.email ?? member.userId}</TableCell>
                           <TableCell><Badge variant="secondary">{t(`roles.${member.role}`)}</Badge></TableCell>
                           <TableCell>
                             <Select

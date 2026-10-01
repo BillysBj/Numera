@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 using Microsoft.EntityFrameworkCore;
@@ -50,7 +52,7 @@ public sealed class InvitationService
     }
 
     /// <summary>Finds or creates a Keycloak user, adds it to the tenant, and mirrors the role.</summary>
-    public async Task<Guid> InviteAsync(string email, MembershipRole role, CancellationToken ct)
+    public async Task<InviteResult> InviteAsync(string email, MembershipRole role, CancellationToken ct)
     {
         var tenantId = RequireTenant();
         var realm = Require("Keycloak:Realm");
@@ -59,7 +61,18 @@ public sealed class InvitationService
             "Bearer",
             await GetAdminTokenAsync(http, ct).ConfigureAwait(false));
 
-        var userId = await FindOrCreateUserAsync(http, realm, email, ct).ConfigureAwait(false);
+        var (userId, created) = await FindOrCreateUserAsync(http, realm, email, ct).ConfigureAwait(false);
+
+        // A brand-new user has no password. With no SMTP wired for a Keycloak invite mail,
+        // set a one-time temporary password (must be changed at first login) and return it so
+        // the inviting owner can hand it to the new member out of band.
+        string? temporaryPassword = null;
+        if (created)
+        {
+            temporaryPassword = GenerateTemporaryPassword();
+            await SetTemporaryPasswordAsync(http, realm, userId, temporaryPassword, ct).ConfigureAwait(false);
+        }
+
         await AddMemberAsync(http, realm, tenantId, userId, ct).ConfigureAwait(false);
 
         var membership = await _db.Set<Membership>()
@@ -85,7 +98,50 @@ public sealed class InvitationService
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         _logger.LogInformation("Invited user {UserId} to tenant {TenantId} as {Role}.", userId, tenantId, role);
-        return userId;
+        return new InviteResult(userId, temporaryPassword);
+    }
+
+    /// <summary>Looks up the e-mail for each membership user id via the Keycloak admin API.</summary>
+    public async Task<IReadOnlyDictionary<Guid, string?>> GetUserEmailsAsync(
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, string?>();
+        if (userIds.Count == 0)
+        {
+            return result;
+        }
+
+        var realm = Require("Keycloak:Realm");
+        using var http = CreateAdminClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            await GetAdminTokenAsync(http, ct).ConfigureAwait(false));
+
+        foreach (var id in userIds.Distinct())
+        {
+            try
+            {
+                using var resp = await http.GetAsync($"admin/realms/{realm}/users/{id}", ct).ConfigureAwait(false);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var user = await resp.Content
+                        .ReadFromJsonAsync<KeycloakUser>(cancellationToken: ct)
+                        .ConfigureAwait(false);
+                    result[id] = user?.Email;
+                }
+                else
+                {
+                    result[id] = null;
+                }
+            }
+            catch (HttpRequestException)
+            {
+                result[id] = null;
+            }
+        }
+
+        return result;
     }
 
     /// <summary>Changes a member role unless that would demote the tenant's last owner.</summary>
@@ -174,7 +230,7 @@ public sealed class InvitationService
         return http;
     }
 
-    private async Task<Guid> FindOrCreateUserAsync(
+    private async Task<(Guid UserId, bool Created)> FindOrCreateUserAsync(
         HttpClient http,
         string realm,
         string email,
@@ -191,7 +247,7 @@ public sealed class InvitationService
             .ConfigureAwait(false);
         if (create.IsSuccessStatusCode)
         {
-            return ExtractIdFromLocation(create, "user");
+            return (ExtractIdFromLocation(create, "user"), true);
         }
 
         if (create.StatusCode != HttpStatusCode.Conflict)
@@ -209,7 +265,39 @@ public sealed class InvitationService
             throw new InvalidOperationException($"Keycloak could not resolve the existing user '{email}'.");
         }
 
-        return userId;
+        return (userId, false);
+    }
+
+    private async Task SetTemporaryPasswordAsync(
+        HttpClient http,
+        string realm,
+        Guid userId,
+        string password,
+        CancellationToken ct)
+    {
+        var body = new { type = "password", value = password, temporary = true };
+        using var resp = await http
+            .PutAsJsonAsync($"admin/realms/{realm}/users/{userId}/reset-password", body, ct)
+            .ConfigureAwait(false);
+        await EnsureSuccessAsync(resp, "set temporary password", ct).ConfigureAwait(false);
+    }
+
+    // A readable one-time password that satisfies common Keycloak policies (upper, lower,
+    // digit, symbol, length ≥ 12). Ambiguous characters (0/O, 1/l/I) are excluded.
+    private static string GenerateTemporaryPassword()
+    {
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+        Span<byte> bytes = stackalloc byte[12];
+        RandomNumberGenerator.Fill(bytes);
+        var sb = new StringBuilder(16);
+        foreach (var b in bytes)
+        {
+            sb.Append(alphabet[b % alphabet.Length]);
+        }
+
+        // Guarantee at least one symbol + digit regardless of the random draw above.
+        sb.Append("-7Az");
+        return sb.ToString();
     }
 
     private async Task AddMemberAsync(
@@ -281,8 +369,12 @@ public sealed class InvitationService
     private string Require(string key) =>
         _configuration[key] ?? throw new InvalidOperationException($"Configuration '{key}' is not set.");
 
-    private sealed record KeycloakUser(string Id);
+    private sealed record KeycloakUser(string Id, string? Email);
 }
+
+/// <summary>Result of inviting a team member; <see cref="TemporaryPassword"/> is set only when a
+/// brand-new Keycloak user was created (to be shared with the invitee out of band).</summary>
+public sealed record InviteResult(Guid UserId, string? TemporaryPassword);
 
 internal sealed record TeamMemberAuditEvent(
     string Action,

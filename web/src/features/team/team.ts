@@ -13,6 +13,7 @@ export type MembershipRoleValue =
 export interface TeamMember {
   userId: string
   role: MembershipRoleValue
+  email: string | null
 }
 
 export class TeamApiError extends Error {
@@ -60,7 +61,7 @@ export function useInvite() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { email: string; role: MembershipRoleValue }) =>
-      request<{ userId: string }>('/api/team/invite', {
+      request<{ userId: string; temporaryPassword: string | null }>('/api/team/invite', {
         method: 'POST',
         body: JSON.stringify(input),
       }),

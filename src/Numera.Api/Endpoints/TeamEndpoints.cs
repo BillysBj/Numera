@@ -15,15 +15,25 @@ public static class TeamEndpoints
     {
         var group = app.MapGroup("/api/team").RequireAuthorization("RequireOwner");
 
-        group.MapGet("/", async (NumeraDbContext db, CancellationToken ct) =>
+        group.MapGet("/", async (NumeraDbContext db, InvitationService service, CancellationToken ct) =>
         {
-            var members = await db.Set<Membership>()
+            var rows = await db.Set<Membership>()
                 .AsNoTracking()
                 .OrderBy(x => x.Role)
                 .ThenBy(x => x.UserId)
-                .Select(x => new TeamMemberResponse(x.UserId, x.Role))
+                .Select(x => new { x.UserId, x.Role })
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
+
+            // The e-mail lives in Keycloak, not the local Membership table — resolve it so the
+            // UI shows the address instead of the raw user id.
+            var emails = await service
+                .GetUserEmailsAsync(rows.Select(r => r.UserId).ToList(), ct)
+                .ConfigureAwait(false);
+
+            var members = rows
+                .Select(r => new TeamMemberResponse(r.UserId, r.Role, emails.GetValueOrDefault(r.UserId)))
+                .ToList();
             return Results.Ok(members);
         });
 
@@ -45,9 +55,11 @@ public static class TeamEndpoints
                 return Results.ValidationProblem(errors);
             }
 
-            var userId = await service.InviteAsync(request.Email.Trim(), request.Role, ct)
+            var result = await service.InviteAsync(request.Email.Trim(), request.Role, ct)
                 .ConfigureAwait(false);
-            return Results.Created($"/api/team/{userId}", new { userId });
+            return Results.Created(
+                $"/api/team/{result.UserId}",
+                new { userId = result.UserId, temporaryPassword = result.TemporaryPassword });
         });
 
         group.MapPut("/{userId:guid}/role", async (
@@ -141,6 +153,6 @@ public static class TeamEndpoints
     };
 }
 
-internal sealed record TeamMemberResponse(Guid UserId, MembershipRole Role);
+internal sealed record TeamMemberResponse(Guid UserId, MembershipRole Role, string? Email);
 internal sealed record InviteTeamMemberRequest(string Email, MembershipRole Role);
 internal sealed record ChangeTeamMemberRoleRequest(MembershipRole Role);
