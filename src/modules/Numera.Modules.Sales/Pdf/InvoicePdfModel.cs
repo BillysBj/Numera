@@ -178,6 +178,12 @@ public sealed record InvoicePdfModel
 
         /// <summary>Buyer email. Nullable.</summary>
         public string? Email { get; init; }
+
+        /// <summary>Frozen Skonto (early-payment discount) percentage. Nullable.</summary>
+        public decimal? SkontoPercent { get; init; }
+
+        /// <summary>Frozen Skonto period in days from the document date. Nullable.</summary>
+        public int? SkontoDays { get; init; }
     }
 
     /// <summary>A postal address (BG-5 / BG-8).</summary>

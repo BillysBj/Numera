@@ -491,6 +491,19 @@ public sealed class InvoiceDocument : IDocument
                 col.Item().Text($"{_labels.PayableBy}: {FormatDate(due)}").SemiBold().FontColor(Accent);
             }
 
+            // Early-payment discount (Skonto), frozen from the partner's terms at finalize.
+            if (_model.Recipient.SkontoPercent is { } skontoPct && skontoPct > 0m
+                && _model.Recipient.SkontoDays is { } skontoDays)
+            {
+                var skontoAmount = Math.Round(
+                    _model.AmountDue * skontoPct / 100m, 2, MidpointRounding.AwayFromZero);
+                var skontoDue = _model.DocumentDate.AddDays(skontoDays);
+                var text = _model.Language == "en"
+                    ? $"On payment by {FormatDate(skontoDue)}: {FormatPercent(skontoPct)} discount ({Money(skontoAmount)})"
+                    : $"Bei Zahlung bis {FormatDate(skontoDue)}: {FormatPercent(skontoPct)} Skonto ({Money(skontoAmount)})";
+                col.Item().PaddingTop(1).Text(text);
+            }
+
             if (hasBank)
             {
                 col.Item().PaddingTop(6).Text(_labels.BankDetails.ToUpperInvariant())

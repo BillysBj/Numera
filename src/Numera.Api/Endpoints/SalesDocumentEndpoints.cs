@@ -1509,6 +1509,9 @@ public static class SalesDocumentEndpoints
         b.VatId,
         b.TaxNumber,
         b.Email,
+        // Frozen payment terms (Skonto) so the PDF can print the early-payment discount.
+        b.SkontoPercent,
+        b.SkontoDays,
     }, AuditJson);
 
     // Reads the frozen recipient e-mail (BT-43) from the RecipientSnapshot jsonb (serialized with

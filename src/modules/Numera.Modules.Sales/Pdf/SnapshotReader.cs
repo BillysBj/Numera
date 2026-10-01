@@ -161,6 +161,8 @@ public static class SnapshotReader
             VatId = GetString(root, "vatId"),
             TaxNumber = GetString(root, "taxNumber"),
             Email = GetString(root, "email"),
+            SkontoPercent = GetDecimal(root, "skontoPercent"),
+            SkontoDays = GetInt(root, "skontoDays"),
         };
     }
 
@@ -217,6 +219,18 @@ public static class SnapshotReader
     {
         var prop = GetProperty(parent, name);
         return prop is { ValueKind: JsonValueKind.String } el ? el.GetString() : null;
+    }
+
+    private static decimal? GetDecimal(JsonElement? parent, string name)
+    {
+        var prop = GetProperty(parent, name);
+        return prop is { ValueKind: JsonValueKind.Number } el && el.TryGetDecimal(out var v) ? v : null;
+    }
+
+    private static int? GetInt(JsonElement? parent, string name)
+    {
+        var prop = GetProperty(parent, name);
+        return prop is { ValueKind: JsonValueKind.Number } el && el.TryGetInt32(out var v) ? v : null;
     }
 
     private static bool GetBool(JsonElement? parent, string name)
