@@ -241,6 +241,7 @@ public sealed class DunningRunTests(PostgresFixture fixture)
             x.FromName = "Numera";
         });
         services.AddScoped<IEmailSender, MailKitEmailSender>();
+        services.AddScoped<DunningNoticePdfService>();
         await using var provider = services.BuildServiceProvider();
         var job = new SendDunningNoticeJob(
             provider.GetRequiredService<IServiceScopeFactory>(),

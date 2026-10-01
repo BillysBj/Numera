@@ -46,6 +46,7 @@ import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFor
 import TeamPage from './features/team/TeamPage'
 import UstVaPruefansichtPage from './features/reports/UstVaPruefansichtPage'
 import EuerReportPage from './features/reports/EuerReportPage'
+import DatevExportPage from './features/reports/DatevExportPage'
 import BelegReviewQueuePage from './features/belege/BelegReviewQueuePage'
 import BelegCapturePage from './features/belege/BelegCapturePage'
 import BelegReviewPage from './features/belege/BelegReviewPage'
@@ -117,6 +118,7 @@ function useNavGroups(): NavGroup[] {
       items: [
         { to: '/reports/ustva', label: trep('nav.ustva'), icon: IconDocuments },
         { to: '/reports/euer', label: trep('nav.euer'), icon: IconDashboard },
+        { to: '/reports/datev', label: 'DATEV-Export', icon: IconDocuments },
       ],
     },
     {
@@ -376,6 +378,7 @@ function AppShell() {
             <Route path="/handbuch" element={<UserManualPage />} />
             <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
             <Route path="/reports/euer" element={<EuerReportPage />} />
+            <Route path="/reports/datev" element={<DatevExportPage />} />
             <Route path="/belege" element={<BelegReviewQueuePage />} />
             <Route path="/belege/capture" element={<BelegCapturePage />} />
             <Route path="/belege/:id" element={<BelegReviewPage />} />

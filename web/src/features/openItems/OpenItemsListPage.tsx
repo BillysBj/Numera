@@ -22,6 +22,7 @@ import { runDunning } from '@/lib/api/dunning'
 import { useEntitlements, hasCapability } from '@/lib/entitlements'
 import { UpgradeHint } from '@/features/shared/UpgradeHint'
 import { usePartnerNames } from '@/features/partners/usePartnerNames'
+import DunningNoticesList from '@/features/dunning/DunningNoticesList'
 
 // Amount display formatter — EUR, exactly 2 fraction digits. The wire value is a decimal
 // serialized as a JSON number; formatted for PRESENTATION only (no arithmetic) so there
@@ -100,6 +101,7 @@ export default function OpenItemsListPage() {
       setRunError(false)
       setRunResult(td('run.result', { issued, skipped }))
       await queryClient.invalidateQueries({ queryKey: ['open-items'] })
+      await queryClient.invalidateQueries({ queryKey: ['dunning-notices'] })
     },
     onError: () => {
       setRunResult(null)
@@ -280,6 +282,7 @@ export default function OpenItemsListPage() {
         isLoading={query.isLoading}
         translationNs="openItems"
       />
+      {canDunning && <DunningNoticesList />}
       <RecordPaymentDialog
         open={paymentItem !== null}
         onOpenChange={(open) => {

@@ -11,6 +11,7 @@ using Numera.Api.Jobs;
 using Numera.Api.Services;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Dunning;
+using Numera.Modules.Sales.Pdf;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
 using Numera.Platform.Entitlements;
@@ -58,6 +59,53 @@ public static class DunningEndpoints
         });
 
         group.MapPost("/run", RunAsync);
+        group.MapGet("/notices", async (
+            NumeraDbContext db, IEntitlementService entitlements, CancellationToken ct,
+            int page = 1, int pageSize = 25) =>
+        {
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
+            page = Math.Clamp(page, 1, 1_000_000);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            var query = from notice in db.Set<DunningNotice>().AsNoTracking()
+                        join document in db.Set<SalesDocument>().AsNoTracking()
+                            on notice.DocumentId equals document.Id
+                        select new { Notice = notice, Document = document };
+            var total = await query.CountAsync(ct).ConfigureAwait(false);
+            // Project only list fields: never load the stored PDF blobs into a list response.
+            var rows = await query.OrderByDescending(x => x.Notice.CreatedAt)
+                .ThenByDescending(x => x.Notice.Id).Skip((page - 1) * pageSize).Take(pageSize)
+                .Select(x => new
+                {
+                    x.Notice.Id, x.Document.DocumentNumber, x.Document.RecipientSnapshot,
+                    x.Notice.Level, x.Notice.IssuedOn, x.Notice.Fee, x.Notice.TotalToPay,
+                    x.Document.Currency, x.Notice.Status,
+                }).ToListAsync(ct).ConfigureAwait(false);
+            var items = rows.Select(x => new DunningNoticeListItem(
+                x.Id, x.DocumentNumber ?? x.Id.ToString(),
+                SnapshotReader.FromDocument(new SalesDocument
+                {
+                    RecipientSnapshot = x.RecipientSnapshot,
+                }).Recipient.Name,
+                x.Level, x.IssuedOn, x.Fee, x.TotalToPay, x.Currency, x.Status)).ToList();
+            return Results.Ok(new DunningNoticePage(items, total));
+        });
+        group.MapGet("/notices/{id:guid}/pdf", async (
+            Guid id, DunningNoticePdfService pdf, IEntitlementService entitlements,
+            CancellationToken ct) =>
+        {
+            if (!await HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
+            {
+                return UpgradeRequired();
+            }
+
+            var bytes = await pdf.GetOrRenderAsync(id, "de", ct).ConfigureAwait(false);
+            return bytes is null ? Results.NotFound()
+                : Results.File(bytes, "application/pdf", $"Mahnung-{id}.pdf");
+        });
         return app;
     }
 
@@ -115,6 +163,9 @@ public static class DunningEndpoints
                 Status = 0,
                 CreatedAt = DateTimeOffset.UtcNow,
             };
+            // Freeze the configured letter now, before it can change ahead of email delivery.
+            notice.RenderedPdf = await new DunningNoticePdfService(db)
+                .RenderAsync(notice, "de", ct).ConfigureAwait(false);
             db.Add(notice);
             notices.Add(notice);
 

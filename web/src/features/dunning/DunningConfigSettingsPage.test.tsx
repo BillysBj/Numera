@@ -25,6 +25,7 @@ vi.mock('@/lib/api/dunning', async (importOriginal) => {
     getConfig: vi.fn(),
     saveConfig: vi.fn(),
     runDunning: vi.fn(),
+    listDunningNotices: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   }
 })
 

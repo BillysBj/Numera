@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 export interface UpgradeHintProps {
   className?: string
   /** The tier that unlocks the feature. Drives the copy; defaults to 'L' for back-compat. */
-  requiredTier?: 'M' | 'L' | 'XL'
+  requiredTier?: 'S' | 'M' | 'L' | 'XL'
 }
 
 /** Informational cosmetic gate; it never replaces server-side authorization. */

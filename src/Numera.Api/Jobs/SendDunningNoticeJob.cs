@@ -61,43 +61,10 @@ public sealed class SendDunningNoticeJob
                 .AsNoTracking()
                 .FirstAsync(x => x.Level == notice.Level, cancellationToken)
                 .ConfigureAwait(false);
-            var maxLevel = await db.Set<DunningLevelConfig>()
-                .MaxAsync(x => x.Level, cancellationToken)
-                .ConfigureAwait(false);
-            var logo = await db.Set<CompanyProfile>()
-                .AsNoTracking()
-                .Select(x => x.LogoBytes)
-                .FirstOrDefaultAsync(cancellationToken)
-                .ConfigureAwait(false);
-            var frozen = SnapshotReader.FromDocument(document, logo, null, language);
-
-            if (notice.RenderedPdf is null)
-            {
-                notice.RenderedPdf = DunningNoticeDocument.Render(new DunningNoticeModel
-                {
-                    Language = language,
-                    LogoBytes = logo,
-                    Issuer = frozen.Issuer,
-                    Recipient = frozen.Recipient,
-                    InvoiceNumber = document.DocumentNumber ?? document.Id.ToString(),
-                    InvoiceDate = document.DocumentDate,
-                    Currency = document.Currency,
-                    OverdueAmount = notice.OverdueAmount,
-                    Fee = notice.Fee,
-                    Interest = notice.Interest,
-                    InterestRatePercent = notice.InterestRatePercent,
-                    DaysOverdue = notice.IssuedOn.DayNumber - document.DueDate!.Value.DayNumber,
-                    TotalToPay = notice.TotalToPay,
-                    NewDueDate = notice.NewDueDate,
-                    LevelName = config.Name,
-                    // The configured German legal/template prose is printed verbatim even when
-                    // the surrounding labels use English; only labels and formatting localize.
-                    TemplateText = config.TemplateTextDe,
-                    IsFinalNotice = notice.Level == maxLevel,
-                });
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-
+            var frozen = SnapshotReader.FromDocument(document, language: language);
+            var pdf = await services.GetRequiredService<DunningNoticePdfService>()
+                .GetOrRenderAsync(notice.Id, language, cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Dunning notice {notice.Id} no longer exists.");
             var partnerEmail = document.PartnerId is { } partnerId
                 ? await db.Set<BusinessPartner>()
                     .AsNoTracking()
@@ -128,7 +95,7 @@ public sealed class SendDunningNoticeJob
                     : $"<p>Anbei erhalten Sie die Mahnung zur Rechnung {document.DocumentNumber}.</p>",
                 Attachment = new EmailAttachment(
                     $"{config.Name}-{document.DocumentNumber}.pdf",
-                    notice.RenderedPdf,
+                    pdf,
                     "application/pdf"),
             }, cancellationToken).ConfigureAwait(false);
 

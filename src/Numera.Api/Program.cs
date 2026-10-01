@@ -100,6 +100,7 @@ builder.Services.AddScoped<IDomainEventPublisher, InProcessDomainEventPublisher>
 // frozen snapshot (+ live logo), and stores it idempotently in document_render. Used by the
 // on-demand GET /{id}/pdf download and (04-03 Task 2) the Hangfire render job.
 builder.Services.AddScoped<DocumentPdfService>();
+builder.Services.AddScoped<DunningNoticePdfService>();
 // Finalize → PDF hook: the publisher (fired after the finalize commit) resolves this handler
 // from scope; it ENQUEUES RenderDocumentPdfJob on the Api default queue (never renders inline,
 // so finalize is not blocked). The job re-establishes tenant context before any RLS-scoped work.

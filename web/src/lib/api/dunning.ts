@@ -1,4 +1,4 @@
-import { API_BASE, ApiError } from '../api'
+import { API_BASE, ApiError, apiBlob } from '../api'
 
 export { ApiError }
 
@@ -63,4 +63,26 @@ export async function saveConfig(
 
 export function runDunning(): Promise<DunningRunResult> {
   return request<DunningRunResult>('/dunning/run', { method: 'POST' })
+}
+
+export interface DunningNoticeListItem {
+  id: string
+  documentNumber: string
+  recipient: string | null
+  level: number
+  issuedOn: string
+  fee: number
+  totalToPay: number
+  currency: string
+  status: number
+}
+
+export function listDunningNotices(page = 1, pageSize = 25) {
+  return request<{ items: DunningNoticeListItem[]; total: number }>(
+    `/dunning/notices?page=${page}&pageSize=${pageSize}`,
+  )
+}
+
+export function downloadDunningNoticePdf(id: string): Promise<Blob> {
+  return apiBlob(`/dunning/notices/${encodeURIComponent(id)}/pdf`)
 }

@@ -4,6 +4,7 @@ using Numera.Api.Contracts;
 using Numera.Api.Services;
 using Numera.Modules.Ledger;
 using Numera.Platform.Db;
+using Numera.Platform.Entitlements;
 
 namespace Numera.Api.Endpoints;
 
@@ -14,6 +15,43 @@ public static class LedgerEndpoints
     public static IEndpointRouteBuilder MapLedgerEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/ledger").RequireAuthorization();
+
+        group.MapGet("/datev", async (
+            DateOnly from, DateOnly to, NumeraDbContext db,
+            IEntitlementService entitlements, CancellationToken ct) =>
+        {
+            if (!await ExportEndpoints.HasCapabilityAsync(entitlements, ct).ConfigureAwait(false))
+            {
+                return ExportEndpoints.UpgradeRequired();
+            }
+
+            var settings = await db.Set<LedgerSettings>().AsNoTracking()
+                .SingleOrDefaultAsync(ct).ConfigureAwait(false);
+            if (settings is null || settings.ChartVariant is not (ChartVariant.Skr03 or ChartVariant.Skr04)
+                || settings.FiscalYearStartMonth is < 1 or > 12
+                || !await db.Set<Account>().AnyAsync(x => x.ChartVariant == settings.ChartVariant, ct)
+                    .ConfigureAwait(false))
+            {
+                return Results.Problem(statusCode: StatusCodes.Status409Conflict,
+                    title: "Kontenrahmen ist nicht eingerichtet", detail: "Kontenrahmen ist nicht eingerichtet");
+            }
+
+            // A DATEV batch carries one fiscal-year start and DDMM dates without a year.
+            if (from > to || (from.Year == 1 && from.Month < settings.FiscalYearStartMonth)
+                || (to.Year == 1 && to.Month < settings.FiscalYearStartMonth)
+                || DatevExport.FiscalYearStart(from, settings.FiscalYearStartMonth)
+                    != DatevExport.FiscalYearStart(to, settings.FiscalYearStartMonth))
+            {
+                return Results.Problem(statusCode: StatusCodes.Status422UnprocessableEntity,
+                    title: "Ungültiger Zeitraum",
+                    detail: "Von darf nicht nach Bis liegen. Der Zeitraum muss innerhalb eines Wirtschaftsjahres liegen.");
+            }
+
+            var bytes = await new DatevExportService(db).ExportAsync(settings, from, to, ct)
+                .ConfigureAwait(false);
+            return Results.File(bytes, "text/csv; charset=windows-1252",
+                $"EXTF_Buchungsstapel_{from:yyyy-MM-dd}_{to:yyyy-MM-dd}.csv");
+        }).RequireAuthorization("RequireOwner");
 
         group.MapGet("/journal", async (
             NumeraDbContext db,

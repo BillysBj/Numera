@@ -19,3 +19,10 @@ public sealed record UpdateDunningConfigRequest(IReadOnlyList<DunningLevelConfig
 
 /// <summary>Summary of a manually initiated tenant dunning run.</summary>
 public sealed record DunningRunResponse(int Issued, int Skipped);
+
+/// <summary>Issued notice; monetary claims and numeric dispatch status are frozen facts.</summary>
+public sealed record DunningNoticeListItem(
+    Guid Id, string DocumentNumber, string? Recipient, int Level, DateOnly IssuedOn,
+    decimal Fee, decimal TotalToPay, string Currency, int Status);
+
+public sealed record DunningNoticePage(IReadOnlyList<DunningNoticeListItem> Items, int Total);

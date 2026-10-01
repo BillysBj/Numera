@@ -1,9 +1,13 @@
 // Ledger / chart-of-accounts setup BFF client. Same posture as the other api modules:
 // no tokens, HttpOnly session cookie, same-origin. Enums cross the wire as NUMBERS.
 
-import { apiRequest, ApiError } from '../api'
+import { apiRequest, apiBlob, ApiError } from '../api'
 
 export { ApiError }
+
+export function downloadDatev(from: string, to: string): Promise<Blob> {
+  return apiBlob(`/ledger/datev?${new URLSearchParams({ from, to })}`)
+}
 
 export const ChartVariant = { Skr03: 3, Skr04: 4 } as const
 export const Besteuerungsart = { Soll: 0, Ist: 1 } as const

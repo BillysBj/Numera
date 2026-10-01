@@ -31,7 +31,7 @@ public sealed class TeamManagementTests(PostgresFixture fixture)
         {
             var result = await CreateService(db, tenantId, invitedId)
                 .InviteAsync("berater@example.test", MembershipRole.TaxAdvisor, default);
-            Assert.Equal(invitedId, result);
+            Assert.Equal(invitedId, result.UserId);
         }
 
         await using (var read = fixture.CreateAppContext(tenantId))
