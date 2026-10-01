@@ -32,15 +32,36 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
                 "The EÜR start date must be on or before the end date.");
         }
 
-        var chartVariant = await db.Set<LedgerSettings>()
+        var chartVariantOrNull = await db.Set<LedgerSettings>()
             .AsNoTracking()
-            .Select(settings => settings.ChartVariant)
-            .SingleAsync(ct)
+            .Select(settings => (ChartVariant?)settings.ChartVariant)
+            .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
+        if (chartVariantOrNull is null)
+        {
+            // The chart of accounts / ledger has not been set up yet (no LedgerSettings
+            // row). Return a clean "setup required" report instead of throwing on
+            // SingleAsync (which previously surfaced as an HTTP 500).
+            return new EuerReport(
+                jahr,
+                from,
+                to,
+                IsKleinunternehmer: false,
+                Betriebseinnahmen: [],
+                SummeEinnahmen: 0m,
+                Betriebsausgaben: [],
+                SummeAusgaben: 0m,
+                Gewinn: 0m,
+                IsExpenseDataIncomplete: true,
+                Hinweis: "Der Kontenrahmen ist noch nicht eingerichtet — die EÜR kann erst "
+                    + "nach der einmaligen Ledger-Einrichtung berechnet werden.");
+        }
+
+        var chartVariant = chartVariantOrNull.Value;
         var isKleinunternehmer = await db.Set<CompanyProfile>()
             .AsNoTracking()
             .Select(profile => profile.IsKleinunternehmer)
-            .SingleAsync(ct)
+            .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
         var recognitionRows = await recognitionReader
             .ReadCashRecognitionAsync(from, to, ct)

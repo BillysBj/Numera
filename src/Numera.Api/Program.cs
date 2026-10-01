@@ -252,11 +252,15 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapBillingWebhook();
 
 app.UseAuthentication();
+
+// Map the organization claim -> tenant_id -> ICurrentTenant BEFORE authorization, so
+// tenant-scoped authorization handlers (e.g. RequireOwner, which reads the RLS-scoped
+// membership role) see the tenant. Running it after UseAuthorization left the tenant
+// unset during authorization, so every RequireOwner endpoint (Team, Export, Ledger)
+// wrongly returned 403. The middleware passes unauthenticated requests through untouched.
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
-// After authentication: map the organization claim -> tenant_id -> ICurrentTenant so
-// RLS receives the tenant on every request.
-app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseMiddleware<BillingDegradationWriteGuardMiddleware>();
 app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
 

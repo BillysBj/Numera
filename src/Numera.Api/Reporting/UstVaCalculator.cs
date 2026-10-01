@@ -19,15 +19,33 @@ public sealed class UstVaCalculator(NumeraDbContext db, RecognitionReader recogn
         var (from, to) = ResolvePeriod(jahr, zeitraum);
         var definitions = UstVaKennzifferMap.ForFiscalYear(jahr);
 
-        var besteuerungsart = await db.Set<LedgerSettings>()
+        var besteuerungsartOrNull = await db.Set<LedgerSettings>()
             .AsNoTracking()
-            .Select(settings => settings.Besteuerungsart)
-            .SingleAsync(ct)
+            .Select(settings => (Besteuerungsart?)settings.Besteuerungsart)
+            .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
+        if (besteuerungsartOrNull is null)
+        {
+            // The chart of accounts / ledger has not been set up yet (no LedgerSettings
+            // row). Return a clean "setup required" report instead of throwing on
+            // SingleAsync (which previously surfaced as an HTTP 500).
+            return new UstVaReport(
+                jahr,
+                zeitraum,
+                Besteuerungsart.Soll,
+                IsFestgeschrieben: false,
+                Lines: [],
+                Zahllast: 0m,
+                Hinweis: "Der Kontenrahmen ist noch nicht eingerichtet — die USt-Voranmeldung "
+                    + "kann erst nach der einmaligen Ledger-Einrichtung berechnet werden.",
+                IsKleinunternehmer: false);
+        }
+
+        var besteuerungsart = besteuerungsartOrNull.Value;
         var isKleinunternehmer = await db.Set<CompanyProfile>()
             .AsNoTracking()
             .Select(profile => profile.IsKleinunternehmer)
-            .SingleAsync(ct)
+            .SingleOrDefaultAsync(ct)
             .ConfigureAwait(false);
         var isFestgeschrieben = await IsPeriodLockedAsync(from, to, ct).ConfigureAwait(false);
 
