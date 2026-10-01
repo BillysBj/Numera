@@ -54,6 +54,7 @@ import ReconciliationQueuePage from './features/banking/ReconciliationQueuePage'
 import ReconciliationMatchPage from './features/banking/ReconciliationMatchPage'
 import BillingPage from './features/billing/BillingPage'
 import UserManualPage from './features/help/UserManualPage'
+import LedgerSetupPage from './features/ledger/LedgerSetupPage'
 import { useBillingStatus } from './features/billing/billingApi'
 import DegradationBanner from './features/billing/DegradationBanner'
 
@@ -132,6 +133,7 @@ function useNavGroups(): NavGroup[] {
         ...(billing.data?.selfHosted
           ? []
           : [{ to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems }]),
+        { to: '/settings/ledger', label: t('nav.ledger'), icon: IconSettings },
         { to: '/team', label: tt('nav'), icon: IconTeam },
         { to: '/handbuch', label: t('nav.handbuch'), icon: IconBook },
       ],
@@ -366,6 +368,7 @@ function AppShell() {
             <Route path="/inbound/:id" element={<InboundDetailPage />} />
             <Route path="/settings" element={<CompanyProfileSettingsPage />} />
             <Route path="/settings/dunning" element={<DunningConfigSettingsPage />} />
+            <Route path="/settings/ledger" element={<LedgerSetupPage />} />
             <Route path="/recurring" element={<RecurringTemplateListPage />} />
             <Route path="/recurring/new" element={<RecurringTemplateFormPage />} />
             <Route path="/recurring/:id/edit" element={<RecurringTemplateFormPage />} />

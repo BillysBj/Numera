@@ -12,7 +12,8 @@
       "sales": "Sales",
       "masterData": "Master data",
       "system": "System"
-    }
+    },
+    "ledger": "Chart of accounts"
   },
   "ui": {
     "openMenu": "Open menu",

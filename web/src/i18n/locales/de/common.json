@@ -12,7 +12,8 @@
       "sales": "Verkauf",
       "masterData": "Stammdaten",
       "system": "System"
-    }
+    },
+    "ledger": "Kontenrahmen"
   },
   "ui": {
     "openMenu": "Menü öffnen",
