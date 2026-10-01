@@ -67,7 +67,8 @@
       "title": "Ihr Tarif",
       "capabilities": "{{count}} Funktionen aktiv",
       "unknown": "Nicht angemeldet"
-    }
+    },
+    "emptyNotice": "Noch keine Daten – Kennzahlen erscheinen, sobald du Belege erstellst."
   },
   "entitlements": {
     "upgradeHint": "Diese Funktion ist ab Tarif {{tier}} verfügbar"

@@ -106,6 +106,21 @@ export function getEntitlements(): Promise<Entitlements> {
   return request<Entitlements>('/me/entitlements')
 }
 
+export interface Dashboard {
+  revenueYear: number
+  openItemsTotal: number
+  overdueTotal: number
+  documentsThisMonth: number
+  revenueByMonth: { month: string; net: number }[]
+  aging: { notDue: number; d1_30: number; d31_60: number; d60Plus: number }
+  docStatus: { draft: number; finalized: number; paid: number; cancelled: number }
+}
+
+/** Overview aggregates for the dashboard. `GET /api/dashboard`. */
+export function getDashboard(): Promise<Dashboard> {
+  return request<Dashboard>('/dashboard')
+}
+
 /** Register a new company + owner account. `POST /api/auth/register`. */
 export function registerCompany(body: RegisterCompanyRequest): Promise<void> {
   return request<void>('/auth/register', {

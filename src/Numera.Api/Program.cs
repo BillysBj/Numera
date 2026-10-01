@@ -271,6 +271,7 @@ app.MapCompanyProfileEndpoints();
 app.MapLedgerSetupEndpoints();
 app.MapLedgerEndpoints();
 app.MapReportEndpoints();
+app.MapDashboardEndpoints();
 app.MapSalesDocumentEndpoints();
 app.MapEInvoiceEndpoints();
 app.MapInboundDocumentEndpoints();

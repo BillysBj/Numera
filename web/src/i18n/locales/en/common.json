@@ -67,7 +67,8 @@
       "title": "Your plan",
       "capabilities": "{{count}} features active",
       "unknown": "Not signed in"
-    }
+    },
+    "emptyNotice": "No data yet – figures appear once you create documents."
   },
   "entitlements": {
     "upgradeHint": "This feature is available from plan {{tier}}"

@@ -1,18 +1,12 @@
 import type { ComponentType, SVGProps } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { getMe } from '../lib/api'
+import { getMe, getDashboard } from '../lib/api'
 import { useEntitlements } from '../lib/entitlements'
 import { useOnline } from '../lib/useOnline'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AreaChart, Donut, Legend, Sparkline, type Segment } from '../components/charts'
+import { AreaChart, Donut, Legend, type Segment } from '../components/charts'
 import { IconOpenItems, IconDocuments, IconDunning } from '../components/icons'
-
-// --- Illustrative sample data (clearly labelled in the UI) ------------------
-// Numera has no aggregate/stats endpoint yet; until real documents exist the
-// overview renders this sample set so the layout + charts are visible. The same
-// components consume real figures once an aggregates API is wired.
-const REVENUE = [4200, 3800, 5100, 4700, 6200, 5800, 7100, 6600, 8200, 7400, 9100, 9800]
 
 function lastMonths(count: number, loc: string): string[] {
   const fmt = new Intl.DateTimeFormat(loc, { month: 'short' })
@@ -30,6 +24,11 @@ export default function Dashboard() {
 
   const me = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: online })
   const caps = useEntitlements()
+  const dash = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: getDashboard,
+    enabled: online,
+  })
 
   const eur0 = new Intl.NumberFormat(loc, {
     style: 'currency',
@@ -38,22 +37,25 @@ export default function Dashboard() {
   })
   const money = (v: number) => eur0.format(v)
 
-  const revenueYear = REVENUE.reduce((a, b) => a + b, 0)
+  const d = dash.data
+  const revenue = d?.revenueByMonth.map((m) => m.net) ?? Array(12).fill(0)
+
   const aging: Segment[] = [
-    { label: t('dashboard.aging.notDue'), value: 6800, color: '#0c7c6d' },
-    { label: t('dashboard.aging.d1_30'), value: 3450, color: '#f59e0b' },
-    { label: t('dashboard.aging.d31_60'), value: 1400, color: '#fb7a45' },
-    { label: t('dashboard.aging.d60plus'), value: 800, color: '#ef4444' },
+    { label: t('dashboard.aging.notDue'), value: d?.aging.notDue ?? 0, color: '#0c7c6d' },
+    { label: t('dashboard.aging.d1_30'), value: d?.aging.d1_30 ?? 0, color: '#f59e0b' },
+    { label: t('dashboard.aging.d31_60'), value: d?.aging.d31_60 ?? 0, color: '#fb7a45' },
+    { label: t('dashboard.aging.d60plus'), value: d?.aging.d60Plus ?? 0, color: '#ef4444' },
   ]
-  const agingTotal = aging.reduce((a, s) => a + s.value, 0)
-  const overdue = agingTotal - aging[0].value
+  const agingTotal = d?.openItemsTotal ?? 0
+
   const docStatus: Segment[] = [
-    { label: t('dashboard.docStatus.paid'), value: 58, color: '#0c7c6d' },
-    { label: t('dashboard.docStatus.finalized'), value: 22, color: '#3b82f6' },
-    { label: t('dashboard.docStatus.draft'), value: 14, color: '#94a3b8' },
-    { label: t('dashboard.docStatus.cancelled'), value: 6, color: '#ef4444' },
+    { label: t('dashboard.docStatus.paid'), value: d?.docStatus.paid ?? 0, color: '#0c7c6d' },
+    { label: t('dashboard.docStatus.finalized'), value: d?.docStatus.finalized ?? 0, color: '#3b82f6' },
+    { label: t('dashboard.docStatus.draft'), value: d?.docStatus.draft ?? 0, color: '#94a3b8' },
+    { label: t('dashboard.docStatus.cancelled'), value: d?.docStatus.cancelled ?? 0, color: '#ef4444' },
   ]
   const docTotal = docStatus.reduce((a, s) => a + s.value, 0)
+  const isEmpty = dash.isSuccess && docTotal === 0 && agingTotal === 0 && (d?.revenueYear ?? 0) === 0
 
   const name = me.data?.user?.email?.split('@')[0]
   const plan = me.data?.tenant?.plan
@@ -76,45 +78,36 @@ export default function Dashboard() {
         </span>
       </div>
 
-      {/* Sample-data notice */}
-      <div className="mb-6 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" />
-        {t('dashboard.demoNotice')}
-      </div>
+      {/* Empty-state notice — only until the first documents exist. */}
+      {isEmpty && (
+        <div className="mb-6 flex items-center gap-2 rounded-lg border border-border bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/60" />
+          {t('dashboard.emptyNotice')}
+        </div>
+      )}
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label={t('dashboard.kpi.revenueYear')}
-          value={money(revenueYear)}
-          delta="+12,4 %"
-          up
+          value={money(d?.revenueYear ?? 0)}
           icon={IconDocuments}
-          spark={REVENUE}
         />
         <StatCard
           label={t('dashboard.kpi.openItems')}
           value={money(agingTotal)}
-          delta="+3,1 %"
-          up
           icon={IconOpenItems}
-          spark={[5, 6, 5.5, 7, 6.8, 8, 9, 8.6, 10, 11, 11.6, 12.4]}
         />
         <StatCard
           label={t('dashboard.kpi.overdue')}
-          value={money(overdue)}
-          delta="-8,0 %"
-          up={false}
+          value={money(d?.overdueTotal ?? 0)}
           icon={IconDunning}
-          spark={[6, 5.5, 6.2, 5, 5.4, 4.8, 5.2, 4.6, 4.9, 4.2, 4.6, 4.25]}
+          accentDestructive={(d?.overdueTotal ?? 0) > 0}
         />
         <StatCard
           label={t('dashboard.kpi.documentsMonth')}
-          value="24"
-          delta="+5"
-          up
+          value={String(d?.documentsThisMonth ?? 0)}
           icon={IconDocuments}
-          spark={[12, 14, 13, 16, 15, 18, 17, 19, 18, 21, 22, 24]}
         />
       </div>
 
@@ -125,7 +118,7 @@ export default function Dashboard() {
             <CardTitle>{t('dashboard.charts.revenue')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <AreaChart data={REVENUE} labels={lastMonths(12, loc)} formatValue={money} />
+            <AreaChart data={revenue} labels={lastMonths(12, loc)} formatValue={money} />
           </CardContent>
         </Card>
 
@@ -192,43 +185,29 @@ export default function Dashboard() {
 function StatCard({
   label,
   value,
-  delta,
-  up,
   icon: Icon,
-  spark,
+  accentDestructive,
 }: {
   label: string
   value: string
-  delta: string
-  up: boolean
   icon: ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
-  spark: number[]
+  accentDestructive?: boolean
 }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 pt-5">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Icon size={16} className="text-primary" />
-            {label}
-          </span>
-        </div>
-        <div className="flex items-end justify-between gap-2">
-          <div>
-            <p className="text-2xl font-bold tracking-tight text-foreground tnum">{value}</p>
-            <span
-              className={
-                'mt-1 inline-flex items-center gap-1 text-xs font-semibold ' +
-                (up ? 'text-primary' : 'text-destructive')
-              }
-            >
-              {up ? '▲' : '▼'} {delta}
-            </span>
-          </div>
-          <div className={'h-9 w-24 ' + (up ? 'text-primary' : 'text-destructive')}>
-            <Sparkline data={spark} className="h-full w-full" strokeClass="" />
-          </div>
-        </div>
+        <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <Icon size={16} className="text-primary" />
+          {label}
+        </span>
+        <p
+          className={
+            'text-2xl font-bold tracking-tight tnum ' +
+            (accentDestructive ? 'text-destructive' : 'text-foreground')
+          }
+        >
+          {value}
+        </p>
       </CardContent>
     </Card>
   )
