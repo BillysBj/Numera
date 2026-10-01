@@ -121,7 +121,7 @@
       "G": "Export supply (G)",
       "O": "Out of scope (O)"
     },
-    "partnerPlaceholder": "Partner id (optional)",
+    "partnerPlaceholder": "— Select customer (optional) —",
     "noLines": "No line items yet. Add a line to get started.",
     "totals": {
       "net": "Net total",

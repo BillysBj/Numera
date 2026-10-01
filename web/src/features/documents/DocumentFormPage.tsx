@@ -34,6 +34,7 @@ import {
   type SalesDocumentDetail,
   type SalesDocumentListItem,
 } from '@/lib/api/documents'
+import { listPartners } from '@/lib/api/partners'
 import { UNIT_CODES, unitLabel } from '../catalog/units'
 import {
   computePreviewTotals,
@@ -147,6 +148,12 @@ export default function DocumentFormPage() {
     queryKey: ['document', id],
     queryFn: () => getSalesDocument(id!),
     enabled: isEdit,
+  })
+
+  // Partners for the recipient dropdown (users pick by name, not by id).
+  const partnersQuery = useQuery({
+    queryKey: ['partners-select'],
+    queryFn: () => listPartners({ page: 1, pageSize: 100 }),
   })
 
   const isReadOnly = isEdit && existing.data && existing.data.status !== DocumentStatus.Draft
@@ -333,13 +340,22 @@ export default function DocumentFormPage() {
                   />
                 </>
               )}
-              <TextField
-                label={t('form.fields.partnerId')}
-                placeholder={t('form.partnerPlaceholder')}
-                disabled={isReadOnly}
-                error={errors.partnerId?.message}
-                {...register('partnerId')}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label>{t('form.fields.partnerId')}</Label>
+                <Select disabled={isReadOnly} {...register('partnerId')}>
+                  <option value="">{t('form.partnerPlaceholder')}</option>
+                  {(partnersQuery.data?.items ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.city ? `${p.name} · ${p.city}` : p.name}
+                    </option>
+                  ))}
+                </Select>
+                {errors.partnerId?.message && (
+                  <p className="text-sm text-destructive">
+                    {errors.partnerId.message}
+                  </p>
+                )}
+              </div>
               <TextField
                 label={t('form.fields.buyerReference')}
                 disabled={isReadOnly}

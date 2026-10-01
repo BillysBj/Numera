@@ -121,7 +121,7 @@
       "G": "Ausfuhrlieferung (G)",
       "O": "Nicht steuerbar (O)"
     },
-    "partnerPlaceholder": "Partner-ID (optional)",
+    "partnerPlaceholder": "— Kunde wählen (optional) —",
     "noLines": "Noch keine Positionen. Fügen Sie eine Position hinzu.",
     "totals": {
       "net": "Nettosumme",
