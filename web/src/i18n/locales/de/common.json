@@ -7,6 +7,7 @@
     "dashboard": "Übersicht",
     "login": "Anmelden",
     "logout": "Abmelden",
+    "handbuch": "Benutzerhandbuch",
     "sections": {
       "sales": "Verkauf",
       "masterData": "Stammdaten",

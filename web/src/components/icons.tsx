@@ -133,3 +133,10 @@ export const IconLogout = (p: IconProps) => (
     <path d="M16 17l5-5-5-5M21 12H9" />
   </Base>
 )
+
+export const IconBook = (p: IconProps) => (
+  <Base {...p}>
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+  </Base>
+)

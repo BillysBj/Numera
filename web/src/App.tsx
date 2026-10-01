@@ -19,6 +19,7 @@ import {
   IconCatalog,
   IconSettings,
   IconTeam,
+  IconBook,
   IconSun,
   IconMoon,
   IconMenu,
@@ -52,6 +53,7 @@ import BankAccountsPage from './features/banking/BankAccountsPage'
 import ReconciliationQueuePage from './features/banking/ReconciliationQueuePage'
 import ReconciliationMatchPage from './features/banking/ReconciliationMatchPage'
 import BillingPage from './features/billing/BillingPage'
+import UserManualPage from './features/help/UserManualPage'
 import { useBillingStatus } from './features/billing/billingApi'
 import DegradationBanner from './features/billing/DegradationBanner'
 
@@ -131,6 +133,7 @@ function useNavGroups(): NavGroup[] {
           ? []
           : [{ to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems }]),
         { to: '/team', label: tt('nav'), icon: IconTeam },
+        { to: '/handbuch', label: t('nav.handbuch'), icon: IconBook },
       ],
     },
   ]
@@ -367,6 +370,7 @@ function AppShell() {
             <Route path="/recurring/new" element={<RecurringTemplateFormPage />} />
             <Route path="/recurring/:id/edit" element={<RecurringTemplateFormPage />} />
             <Route path="/team" element={<TeamPage />} />
+            <Route path="/handbuch" element={<UserManualPage />} />
             <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
             <Route path="/reports/euer" element={<EuerReportPage />} />
             <Route path="/belege" element={<BelegReviewQueuePage />} />
