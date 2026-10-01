@@ -462,6 +462,11 @@ public static class SalesDocumentEndpoints
 
             doc.Lines.Clear();
             ReplaceLines(doc, req.Lines, doc.TenantId);
+            // The re-added lines carry client-assigned (Guid.CreateVersion7) keys. Added to an
+            // ALREADY-TRACKED parent, EF's store-generated-key heuristic mis-classifies them as
+            // Modified → it emits UPDATE … WHERE id = <brand-new id>, which affects 0 rows and
+            // throws DbUpdateConcurrencyException. Marking them Added forces the correct INSERT.
+            db.AddRange(doc.Lines);
             doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
 
             await audit.RecordAsync(
