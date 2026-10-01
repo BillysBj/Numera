@@ -171,7 +171,7 @@ export default function BankAccountsPage() {
   const accounts = useBankAccounts()
 
   return (
-    <main className="app-main" style={{ maxWidth: '1200px' }}>
+    <main className="app-main app-main--wide">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{t('accounts.title')}</h1>

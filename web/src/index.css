@@ -206,6 +206,10 @@ td {
   .app-main { padding: 1.25rem 1rem 3rem; }
 }
 
+/* Wide variant for data-table / list pages: fill the content column instead of
+   capping at the readable form width, so wide tables use the whole screen. */
+.app-main--wide { max-width: none; }
+
 .muted {
   color: var(--muted-foreground);
   font-size: 0.875rem;

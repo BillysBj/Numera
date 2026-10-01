@@ -169,7 +169,7 @@ export default function CatalogListPage() {
   )
 
   return (
-    <main className="app-main" style={{ maxWidth: '1024px' }}>
+    <main className="app-main app-main--wide">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <Link to="/catalog/new" className={cn(buttonVariants())}>

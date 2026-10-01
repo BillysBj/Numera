@@ -16,6 +16,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { hasCapability, useEntitlements } from '@/lib/entitlements'
 import { UpgradeHint } from '@/features/shared/UpgradeHint'
+import { usePartnerNames } from '@/features/partners/usePartnerNames'
 
 const dateFmt = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium' })
 const formatDate = (value: string) => {
@@ -36,6 +37,7 @@ export default function RecurringTemplateListPage() {
     pageSize: 25,
   })
   const [actionError, setActionError] = useState(false)
+  const { nameFor } = usePartnerNames()
   const query = useQuery({
     queryKey: ['recurring-templates'],
     queryFn: listTemplates,
@@ -67,9 +69,9 @@ export default function RecurringTemplateListPage() {
         ),
       },
       {
-        accessorKey: 'partnerId',
+        id: 'partner',
         header: t('columns.partner'),
-        cell: ({ row }) => row.original.partnerId ?? '—',
+        cell: ({ row }) => nameFor(row.original.partnerId) ?? '—',
       },
       {
         id: 'cadence',
@@ -122,7 +124,7 @@ export default function RecurringTemplateListPage() {
           ),
       },
     ],
-    [statusMutation, t],
+    [statusMutation, t, nameFor],
   )
 
   if (entitlements.isLoading) {
@@ -143,7 +145,7 @@ export default function RecurringTemplateListPage() {
     (pagination.pageIndex + 1) * pagination.pageSize,
   )
   return (
-    <main className="app-main" style={{ maxWidth: '1200px' }}>
+    <main className="app-main app-main--wide">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <Link

@@ -450,7 +450,7 @@ export default function DocumentDetailPage() {
           <>
             <div className="flex items-center gap-1">
               <Select
-                className="h-9 w-[5.5rem]"
+                className="h-9 w-36"
                 value={pdfLang}
                 disabled={actionsDisabled}
                 onChange={(e) => setPdfLang(e.target.value as 'de' | 'en')}

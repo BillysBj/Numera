@@ -21,6 +21,7 @@ import RecordPaymentDialog from '@/features/payments/RecordPaymentDialog'
 import { runDunning } from '@/lib/api/dunning'
 import { useEntitlements, hasCapability } from '@/lib/entitlements'
 import { UpgradeHint } from '@/features/shared/UpgradeHint'
+import { usePartnerNames } from '@/features/partners/usePartnerNames'
 
 // Amount display formatter — EUR, exactly 2 fraction digits. The wire value is a decimal
 // serialized as a JSON number; formatted for PRESENTATION only (no arithmetic) so there
@@ -61,6 +62,7 @@ export default function OpenItemsListPage() {
   const queryClient = useQueryClient()
   const caps = useEntitlements()
   const canDunning = hasCapability(caps.data?.capabilities, 'Dunning')
+  const { nameFor } = usePartnerNames()
 
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -122,7 +124,7 @@ export default function OpenItemsListPage() {
       {
         id: 'partner',
         header: t('columns.partner'),
-        cell: ({ row }) => row.original.partnerId ?? '—',
+        cell: ({ row }) => nameFor(row.original.partnerId) ?? '—',
       },
       {
         id: 'originalAmount',
@@ -207,11 +209,11 @@ export default function OpenItemsListPage() {
         },
       },
     ],
-    [t, td],
+    [t, td, nameFor],
   )
 
   return (
-    <main className="app-main" style={{ maxWidth: '1024px' }}>
+    <main className="app-main app-main--wide">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <Button

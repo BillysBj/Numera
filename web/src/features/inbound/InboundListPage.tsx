@@ -179,7 +179,7 @@ export default function InboundListPage() {
   )
 
   return (
-    <main className="app-main" style={{ maxWidth: '1100px' }}>
+    <main className="app-main app-main--wide">
       <div className="mb-1 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <div className="flex items-center gap-2">

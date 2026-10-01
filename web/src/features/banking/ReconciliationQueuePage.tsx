@@ -91,7 +91,7 @@ export default function ReconciliationQueuePage() {
   }
 
   return (
-    <main className="app-main" style={{ maxWidth: '1280px' }}>
+    <main className="app-main app-main--wide">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{t('queue.title')}</h1>
