@@ -35,6 +35,20 @@ public class InvoiceDocumentTests
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
+    [Theory]
+    [InlineData("de")]
+    [InlineData("en")]
+    public void Discounted_line_renders_without_changing_the_table_layout(string language)
+    {
+        var doc = BuildFixture();
+        doc.Lines[0].DiscountPercent = 12.5m;
+        doc.Lines[0].LineNetAmount = RoundingPolicy.LineNetAmount(doc.Lines[0].Quantity, doc.Lines[0].NetUnitPrice, 12.5m);
+        var model = SnapshotReader.FromDocument(doc, language: language);
+        Assert.Equal(12.5m, model.Lines[0].DiscountPercent);
+        var pdf = InvoiceDocument.Render(model);
+        Assert.True(pdf.Length > 1000);
+    }
+
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 
     // A realistic finalized invoice: one taxed (S 19%) line + one reverse-charge (AE) line

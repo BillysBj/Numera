@@ -385,6 +385,11 @@ public class NumeraDbContext : DbContext
 
             var builder = modelBuilder.Entity(entityType.ClrType);
             var pk = entityType.FindPrimaryKey()?.Properties[0].Name ?? "Id";
+            if (entityType.ClrType.FullName == "Numera.Modules.Sales.SalesDocumentLine")
+            {
+                builder.Property<decimal>("DiscountPercent").HasDefaultValue(0m);
+            }
+
             var hasTenantLeadingIndex = entityType.GetIndexes()
                 .Any(i => i.Properties.Count >= 1
                           && i.Properties[0].Name == nameof(ITenantEntity.TenantId));

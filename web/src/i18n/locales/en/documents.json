@@ -110,7 +110,8 @@
       "unitCode": "Unit",
       "netUnitPrice": "Unit price (net)",
       "taxCategory": "Tax category",
-      "vatRatePercent": "VAT rate (%)"
+      "vatRatePercent": "VAT rate (%)",
+      "discountPercent": "Discount %"
     },
     "taxCategory": {
       "S": "Standard rate (S)",
@@ -159,7 +160,8 @@
       "linesRequired": "At least one line is required.",
       "exchangeRatePositive": "The exchange rate must be greater than 0.",
       "conflict": "This document is no longer a draft and cannot be changed.",
-      "server": "Saving failed."
+      "server": "Saving failed.",
+      "discountRange": "Discount must be at least 0 and less than 100%."
     }
   },
   "detail": {
@@ -212,7 +214,8 @@
       "taxCategory": "Tax cat.",
       "vatRatePercent": "VAT rate",
       "lineNetAmount": "Net amount",
-      "empty": "No line items."
+      "empty": "No line items.",
+      "discount": "less {{percent}}% discount"
     },
     "breakdown": {
       "category": "Category",

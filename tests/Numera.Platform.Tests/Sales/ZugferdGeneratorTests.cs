@@ -47,7 +47,7 @@ public class ZugferdGeneratorTests
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public static TheoryData<string> Fixtures() => new() { "mixed", "kleinunternehmer" };
+    public static TheoryData<string> Fixtures() => new() { "mixed", "kleinunternehmer", "discount" };
 
     [Theory]
     [MemberData(nameof(Fixtures))]
@@ -265,6 +265,10 @@ public class ZugferdGeneratorTests
 
     private static InvoicePdfModel Model(string fixture) => fixture switch
     {
+        "discount" => Build(
+            lines: [Line(1, "Service", 1m, "HUR", 1000m, 876.5432m, TaxCategory.S, 19m) with { DiscountPercent = 12.345678m }],
+            rows: [Row(TaxCategory.S, 19m, 876.54m, 166.54m)],
+            net: 876.54m, tax: 166.54m, gross: 1043.08m, isKleinunternehmer: false),
         "mixed" => Build(
             lines:
             [

@@ -287,6 +287,14 @@ public sealed class InvoiceDocument : IDocument
                 BodyCell(table).Column(col =>
                 {
                     col.Item().Text(line.Name).SemiBold();
+                    if (line.DiscountPercent > 0m)
+                    {
+                        var percent = line.DiscountPercent.ToString("0.############################", _culture);
+                        var discount = _model.Language == "en"
+                            ? $"less {percent}% discount"
+                            : $"abzgl. {percent}% Rabatt";
+                        col.Item().Text(discount).FontSize(8).FontColor(Colors.Grey.Darken1);
+                    }
                     if (!string.IsNullOrWhiteSpace(line.Description))
                     {
                         col.Item().Text(line.Description!).FontSize(8).FontColor(Colors.Grey.Darken1);

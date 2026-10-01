@@ -55,7 +55,10 @@ public sealed class SalesDocumentLine : ITenantEntity
     [Precision(19, 6)]
     public decimal NetUnitPrice { get; set; }
 
-    /// <summary>Line net amount (BT-131) = qty × price (allowances are a Phase-7 seam).</summary>
+    /// <summary>Line allowance percentage (BT-138), from zero up to but excluding 100.</summary>
+    public decimal DiscountPercent { get; set; }
+
+    /// <summary>Line net amount (BT-131), after the line discount.</summary>
     [Precision(19, 4)]
     public decimal LineNetAmount { get; set; }
 

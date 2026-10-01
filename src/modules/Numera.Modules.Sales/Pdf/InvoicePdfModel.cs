@@ -229,6 +229,9 @@ public sealed record InvoicePdfModel
         /// <summary>Net unit price (BT-146).</summary>
         public decimal NetUnitPrice { get; init; }
 
+        /// <summary>Frozen line allowance percentage (BT-138).</summary>
+        public decimal DiscountPercent { get; init; }
+
         /// <summary>Line net amount (BT-131).</summary>
         public decimal LineNetAmount { get; init; }
 

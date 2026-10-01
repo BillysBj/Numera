@@ -68,7 +68,8 @@ public sealed record SalesLineRequest(
     string UnitCode,
     decimal NetUnitPrice,
     TaxCategory TaxCategory,
-    decimal VatRatePercent);
+    decimal VatRatePercent,
+    decimal DiscountPercent = 0);
 
 /// <summary>Body of <c>POST /api/documents/{id}/convert</c> — the target kind of the new draft.</summary>
 public sealed record ConvertDocumentRequest(DocumentType TargetType);
@@ -144,7 +145,8 @@ public sealed record SalesLineDto(
     decimal NetUnitPrice,
     decimal LineNetAmount,
     TaxCategory TaxCategory,
-    decimal VatRatePercent);
+    decimal VatRatePercent,
+    decimal DiscountPercent = 0);
 
 /// <summary>A VAT breakdown row of a document detail (BG-23).</summary>
 public sealed record SalesTaxBreakdownDto(

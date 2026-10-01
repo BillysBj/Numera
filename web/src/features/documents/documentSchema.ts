@@ -38,6 +38,10 @@ export function makeLineSchema(t: Translate) {
     netUnitPrice: numberField(t('form.errors.required'), (s) =>
       s.min(0, t('form.errors.netPriceMin')),
     ),
+    discountPercent: z.preprocess(
+      (v) => v === '' || v === undefined ? 0 : Number(v),
+      z.number().min(0, t('form.errors.discountRange')).lt(100, t('form.errors.discountRange')),
+    ),
     taxCategory: z.number().int(),
     vatRatePercent: numberField(t('form.errors.required'), (s) =>
       s.min(0, t('form.errors.vatRange')).max(100, t('form.errors.vatRange')),
@@ -96,6 +100,7 @@ export function emptyLine(): LineFormValues {
     netUnitPrice: undefined as unknown as number,
     taxCategory: TaxCategory.S,
     vatRatePercent: 19,
+    discountPercent: 0,
   }
 }
 
@@ -132,6 +137,7 @@ export function toCreateRequest(v: DocumentFormValues): CreateSalesDocumentReque
         quantity: l.quantity,
         unitCode: l.unitCode,
         netUnitPrice: l.netUnitPrice,
+        discountPercent: l.discountPercent ?? 0,
         taxCategory: l.taxCategory as TaxCategory,
         vatRatePercent: l.vatRatePercent,
       }),
@@ -161,6 +167,7 @@ function roundAway(value: number, dp: number): number {
 
 /** A line as it enters the preview (only the fields that drive the totals). */
 export interface PreviewLine {
+  discountPercent?: number
   quantity: number
   netUnitPrice: number
   taxCategory: number
@@ -186,6 +193,7 @@ export interface PreviewTotals {
  */
 export function computePreviewTotals(lines: PreviewLine[]): PreviewTotals {
   const buckets = new Map<string, number>()
+  const hasDiscount = lines.some((l) => Number(l.discountPercent ?? 0) > 0)
   let net = 0
 
   for (const l of lines) {
@@ -193,7 +201,10 @@ export function computePreviewTotals(lines: PreviewLine[]): PreviewTotals {
     const price = Number(l.netUnitPrice)
     if (!Number.isFinite(qty) || !Number.isFinite(price)) continue
 
-    const lineNet = roundAway(qty * price, 4)
+    const discount = Number(l.discountPercent ?? 0)
+    if (!Number.isFinite(discount) || discount < 0 || discount >= 100) continue
+    const storedNet = roundAway(qty * price * (1 - discount / 100), 4)
+    const lineNet = hasDiscount ? roundAway(storedNet, 2) : storedNet
     net += lineNet
 
     // Only standard-rated (S) lines carry tax; everything else is effectively rate 0.

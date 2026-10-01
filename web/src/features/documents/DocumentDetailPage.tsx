@@ -706,6 +706,11 @@ export default function DocumentDetailPage() {
                       <TableCell>{l.lineNumber}</TableCell>
                       <TableCell>
                         <div className="font-medium">{l.name}</div>
+                        {(l.discountPercent ?? 0) > 0 && (
+                          <div className="text-xs text-muted-foreground">
+                            {t('detail.lines.discount', { percent: l.discountPercent })}
+                          </div>
+                        )}
                         {l.description && (
                           <div className="text-xs text-muted-foreground">
                             {l.description}

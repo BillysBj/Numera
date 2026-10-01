@@ -339,11 +339,14 @@ public sealed class EInvoiceService
         CompanyProfile profile,
         BusinessPartner? partner)
     {
+        // BT-131 is serialized at two decimals; discounted totals must sum those same amounts.
+        var hasDiscount = doc.Lines.Any(l => l.DiscountPercent > 0m);
         var rows = VatCalculationService.Calculate(
-            doc.Lines.Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount)),
+            doc.Lines.Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent,
+                hasDiscount ? RoundingPolicy.RoundAmount(l.LineNetAmount) : l.LineNetAmount)),
             profile.IsKleinunternehmer);
 
-        var totalNet = doc.Lines.Sum(l => l.LineNetAmount);
+        var totalNet = rows.Sum(r => r.TaxableBase);
         var totalTax = VatCalculationService.DocumentVatTotal(rows);
         var totalGross = totalNet + totalTax;
 
@@ -394,7 +397,12 @@ public sealed class EInvoiceService
             DocumentDate = doc.DocumentDate,
             ServiceDate = doc.ServiceDate,
             ServicePeriodEnd = doc.ServicePeriodEnd,
-            DueDate = doc.DueDate,
+            // A draft has no due date yet (FinalizeCoreAsync computes it AFTER this pre-finalize
+            // dry-run). Mirror that computation here so the provisional XRechnung carries BT-9/BT-20
+            // and passes KoSIT BR-CO-25 — otherwise the dry-run rejects EVERY finalize once the
+            // validator is reachable. Keep this in sync with FinalizeCoreAsync's due-date rule.
+            DueDate = doc.DueDate
+                ?? doc.DocumentDate.AddDays(partner?.PaymentTermsNetDays ?? profile.DefaultPaymentTermsNetDays ?? 14),
             Currency = doc.Currency,
             BuyerReference = doc.BuyerReference,
             Notes = doc.Notes,
@@ -408,6 +416,7 @@ public sealed class EInvoiceService
                     Quantity = l.Quantity,
                     UnitCode = l.UnitCode,
                     NetUnitPrice = l.NetUnitPrice,
+                    DiscountPercent = l.DiscountPercent,
                     LineNetAmount = l.LineNetAmount,
                     TaxCategory = l.TaxCategory,
                     VatRatePercent = l.VatRatePercent,

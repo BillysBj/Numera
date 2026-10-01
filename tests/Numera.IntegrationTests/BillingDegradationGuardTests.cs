@@ -240,7 +240,11 @@ public sealed class BillingReadOnlyAccessPolicyTests
         var currentTenant = new TenantContext();
         var tenantId = Guid.CreateVersion7();
         currentTenant.SetTenant(tenantId);
-        await using var db = fixture.CreateAppContext(tenantId);
+        await using var db = new NumeraDbContext(
+            new DbContextOptionsBuilder<NumeraDbContext>()
+                .UseNpgsql("Host=localhost;Database=unused")
+                .Options,
+            currentTenant);
 
         // Self-hosted short-circuits before any tenant lookup: never read-only, top tier.
         var state = new BillingStateService(

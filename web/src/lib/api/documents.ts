@@ -92,6 +92,7 @@ export interface SalesLine {
   description?: string | null
   quantity: number
   unitCode: string
+  discountPercent?: number
   netUnitPrice: number
   lineNetAmount: number
   taxCategory: TaxCategory
@@ -203,6 +204,7 @@ export interface SalesLineRequest {
   description?: string | null
   quantity: number
   unitCode: string
+  discountPercent?: number
   netUnitPrice: number
   taxCategory: TaxCategory
   vatRatePercent: number

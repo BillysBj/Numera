@@ -82,15 +82,25 @@ public static class XRechnungGenerator
         using var stream = new MemoryStream();
         descriptor.Save(stream, Version, XRechnungProfile, format);
 
-        if (string.Equals(model.Currency, "EUR", StringComparison.OrdinalIgnoreCase)
-            || model.TotalTaxEur is not decimal totalTaxEur)
+        var hasDiscount = model.Lines.Any(l => l.DiscountPercent > 0m);
+        var hasAccountingTax = !string.Equals(model.Currency, "EUR", StringComparison.OrdinalIgnoreCase)
+            && model.TotalTaxEur is not null;
+        if (!hasDiscount && !hasAccountingTax)
         {
             return stream.ToArray();
         }
 
         stream.Position = 0;
         var document = XDocument.Load(stream);
-        InjectAccountingCurrencyTaxTotal(document, format, totalTaxEur);
+        if (hasDiscount)
+        {
+            PreserveDiscountPercentages(document, format, model);
+        }
+
+        if (hasAccountingTax)
+        {
+            InjectAccountingCurrencyTaxTotal(document, format, model.TotalTaxEur!.Value);
+        }
 
         using var output = new MemoryStream();
         using (var writer = XmlWriter.Create(output, new XmlWriterSettings
@@ -103,6 +113,31 @@ public static class XRechnungGenerator
         }
 
         return output.ToArray();
+    }
+
+    private static void PreserveDiscountPercentages(XDocument document, ZUGFeRDFormats format, InvoicePdfModel model)
+    {
+        // ZUGFeRD-csharp 18 formats percentages at two decimals. BT-138 has no such
+        // restriction: keep the frozen value so amount = basis * percentage stays valid.
+        var ubl = format == ZUGFeRDFormats.UBL;
+        XNamespace lineNamespace = ubl
+            ? "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+            : "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100";
+        XNamespace valueNamespace = ubl
+            ? "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+            : lineNamespace;
+        var lines = document.Descendants(lineNamespace + (ubl ? "InvoiceLine" : "IncludedSupplyChainTradeLineItem")).ToArray();
+        for (var i = 0; i < model.Lines.Count; i++)
+        {
+            if (model.Lines[i].DiscountPercent <= 0m)
+            {
+                continue;
+            }
+
+            var allowance = lines[i].Descendants(lineNamespace + (ubl ? "AllowanceCharge" : "SpecifiedTradeAllowanceCharge")).Single();
+            allowance.Element(valueNamespace + (ubl ? "MultiplierFactorNumeric" : "CalculationPercent"))!.Value =
+                XmlConvert.ToString(model.Lines[i].DiscountPercent);
+        }
     }
 
     private static void InjectAccountingCurrencyTaxTotal(

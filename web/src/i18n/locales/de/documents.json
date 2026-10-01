@@ -110,7 +110,8 @@
       "unitCode": "Einheit",
       "netUnitPrice": "Einzelpreis (netto)",
       "taxCategory": "Steuerkategorie",
-      "vatRatePercent": "USt-Satz (%)"
+      "vatRatePercent": "USt-Satz (%)",
+      "discountPercent": "Rabatt %"
     },
     "taxCategory": {
       "S": "Regelsteuersatz (S)",
@@ -159,7 +160,8 @@
       "linesRequired": "Mindestens eine Position ist erforderlich.",
       "exchangeRatePositive": "Der Wechselkurs muss größer als 0 sein.",
       "conflict": "Dieser Beleg ist kein Entwurf mehr und kann nicht geändert werden.",
-      "server": "Speichern fehlgeschlagen."
+      "server": "Speichern fehlgeschlagen.",
+      "discountRange": "Der Rabatt muss mindestens 0 und kleiner als 100 % sein."
     }
   },
   "detail": {
@@ -212,7 +214,8 @@
       "taxCategory": "Steuerkat.",
       "vatRatePercent": "USt-Satz",
       "lineNetAmount": "Nettobetrag",
-      "empty": "Keine Positionen."
+      "empty": "Keine Positionen.",
+      "discount": "abzgl. {{percent}}% Rabatt"
     },
     "breakdown": {
       "category": "Kategorie",

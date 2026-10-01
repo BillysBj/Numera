@@ -4,6 +4,7 @@ import {
   computePreviewTotals,
   emptyDocumentForm,
   emptyLine,
+  toCreateRequest,
   makeDocumentSchema,
   makeLineSchema,
   type PreviewLine,
@@ -140,5 +141,36 @@ describe('computePreviewTotals (per-category round-then-sum)', () => {
       { quantity: 1, netUnitPrice: NaN, taxCategory: TaxCategory.S, vatRatePercent: 19 },
     ]
     expect(computePreviewTotals(lines)).toEqual({ net: 100, tax: 19, gross: 119 })
+  })
+})
+
+
+describe('line discounts', () => {
+  it('defaults to zero and includes the percentage in the request', () => {
+    const form = emptyDocumentForm()
+    form.lines[0].name = 'Service'
+    form.lines[0].netUnitPrice = 100
+    expect(toCreateRequest(form).lines[0].discountPercent).toBe(0)
+    form.lines[0].discountPercent = 12.5
+    expect(toCreateRequest(form).lines[0].discountPercent).toBe(12.5)
+    const { discountPercent: _, ...legacyLine } = form.lines[0]
+    expect(lineSchema.parse(legacyLine).discountPercent).toBe(0)
+  })
+
+  it.each([-0.01, 100, 101])('rejects %s percent', (discountPercent) => {
+    expect(lineSchema.safeParse({ ...emptyLine(), name: 'Service', netUnitPrice: 100, discountPercent }).success).toBe(false)
+  })
+
+  it('reduces net and VAT separately in mixed-rate buckets', () => {
+    expect(computePreviewTotals([
+      { quantity: 3, netUnitPrice: 100, discountPercent: 12.5, taxCategory: TaxCategory.S, vatRatePercent: 19 },
+      { quantity: 10, netUnitPrice: 10, discountPercent: 10, taxCategory: TaxCategory.S, vatRatePercent: 7 },
+    ])).toEqual({ net: 352.5, tax: 56.18, gross: 408.68 })
+  })
+
+  it('sums cent-rounded discounted lines to match the invoice VAT base', () => {
+    expect(computePreviewTotals(Array.from({ length: 3 }, () => ({
+      quantity: 1, netUnitPrice: 19.99, discountPercent: 12.5, taxCategory: TaxCategory.S, vatRatePercent: 19,
+    })))).toEqual({ net: 52.47, tax: 9.97, gross: 62.44 })
   })
 })

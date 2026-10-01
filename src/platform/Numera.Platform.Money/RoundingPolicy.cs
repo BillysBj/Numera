@@ -18,6 +18,10 @@ public readonly record struct TaxBucket(decimal TaxableBase, decimal RatePercent
 /// </summary>
 public static class RoundingPolicy
 {
+    /// <summary>Computes a discounted line net at the persisted four-decimal precision.</summary>
+    public static decimal LineNetAmount(decimal quantity, decimal netUnitPrice, decimal discountPercent = 0m)
+        => Math.Round(quantity * netUnitPrice * (1m - discountPercent / 100m), 4, MidpointRounding.AwayFromZero);
+
     /// <summary>
     /// Rounds a non-VAT-rate monetary conversion (for example FX conversion of an
     /// already-rounded amount) to 2 decimal places using half-away-from-zero.

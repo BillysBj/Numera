@@ -556,6 +556,7 @@ public static class SalesDocumentEndpoints
                     Quantity = l.Quantity,
                     UnitCode = l.UnitCode,
                     NetUnitPrice = l.NetUnitPrice,
+                    DiscountPercent = l.DiscountPercent,
                     LineNetAmount = l.LineNetAmount,
                     TaxCategory = l.TaxCategory,
                     VatRatePercent = l.VatRatePercent,
@@ -806,6 +807,7 @@ public static class SalesDocumentEndpoints
                     Quantity = -l.Quantity,
                     UnitCode = l.UnitCode,
                     NetUnitPrice = l.NetUnitPrice,
+                    DiscountPercent = l.DiscountPercent,
                     LineNetAmount = -l.LineNetAmount,
                     TaxCategory = l.TaxCategory,
                     VatRatePercent = l.VatRatePercent,
@@ -945,6 +947,7 @@ public static class SalesDocumentEndpoints
                     Quantity = l.Quantity,
                     UnitCode = l.UnitCode,
                     NetUnitPrice = l.NetUnitPrice,
+                    DiscountPercent = l.DiscountPercent,
                     LineNetAmount = l.LineNetAmount,
                     TaxCategory = l.TaxCategory,
                     VatRatePercent = l.VatRatePercent,
@@ -1041,7 +1044,7 @@ public static class SalesDocumentEndpoints
     // --- Line building + mapping helpers -------------------------------------
 
     // Snapshots each request line onto a fresh SalesDocumentLine (1-based LineNumber,
-    // LineNetAmount = round(qty × price, 4) half-away-from-zero — kaufmännisch).
+    // LineNetAmount = round(qty × price × (1 - discount / 100), 4) half-away-from-zero — kaufmännisch).
     private static void ReplaceLines(SalesDocument doc, IReadOnlyList<SalesLineRequest> lines, Guid tenantId)
     {
         var lineNumber = 1;
@@ -1058,7 +1061,8 @@ public static class SalesDocumentEndpoints
                 Quantity = l.Quantity,
                 UnitCode = l.UnitCode,
                 NetUnitPrice = l.NetUnitPrice,
-                LineNetAmount = Math.Round(l.Quantity * l.NetUnitPrice, 4, MidpointRounding.AwayFromZero),
+                DiscountPercent = l.DiscountPercent,
+                LineNetAmount = RoundingPolicy.LineNetAmount(l.Quantity, l.NetUnitPrice, l.DiscountPercent),
                 TaxCategory = l.TaxCategory,
                 VatRatePercent = l.VatRatePercent,
             });
@@ -1105,7 +1109,7 @@ public static class SalesDocumentEndpoints
             .Select(l => new SalesLineDto(
                 l.Id, l.LineNumber, l.CatalogItemId, l.Name, l.Description,
                 l.Quantity, l.UnitCode, l.NetUnitPrice, l.LineNetAmount,
-                l.TaxCategory, l.VatRatePercent))
+                l.TaxCategory, l.VatRatePercent, l.DiscountPercent))
             .ToList(),
         d.TaxBreakdown
             .Select(b => new SalesTaxBreakdownDto(
@@ -1141,6 +1145,7 @@ public static class SalesDocumentEndpoints
                 l.UnitCode,
                 l.NetUnitPrice,
                 l.LineNetAmount,
+                l.DiscountPercent,
                 TaxCategory = l.TaxCategory.ToString(),
                 l.VatRatePercent,
             }),
@@ -1202,8 +1207,11 @@ public static class SalesDocumentEndpoints
         doc.IsKleinunternehmer = profile.IsKleinunternehmer;
 
         // VAT: bucket the lines into the BG-23 breakdown (negative lines → a negated breakdown).
+        // BT-131 is serialized at two decimals; discounted totals must sum those same amounts.
+        var hasDiscount = doc.Lines.Any(l => l.DiscountPercent > 0m);
         var vatInputs = doc.Lines
-            .Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent, l.LineNetAmount));
+            .Select(l => new VatLineInput(l.TaxCategory, l.VatRatePercent,
+                hasDiscount ? RoundingPolicy.RoundAmount(l.LineNetAmount) : l.LineNetAmount));
         var rows = VatCalculationService.Calculate(vatInputs, profile.IsKleinunternehmer);
         var breakdownRows = rows
             .Select(row => new SalesDocumentTaxBreakdown
@@ -1220,7 +1228,7 @@ public static class SalesDocumentEndpoints
             .ToList();
         db.AddRange(breakdownRows);
 
-        doc.TotalNet = doc.Lines.Sum(l => l.LineNetAmount);
+        doc.TotalNet = rows.Sum(r => r.TaxableBase);
         doc.TotalTax = VatCalculationService.DocumentVatTotal(rows);
         doc.TotalGross = doc.TotalNet + doc.TotalTax;
         if (IsForeignCurrency(doc.Currency))

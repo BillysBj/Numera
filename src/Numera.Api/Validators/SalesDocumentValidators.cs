@@ -167,6 +167,10 @@ public sealed class SalesLineRequestValidator : AbstractValidator<SalesLineReque
         RuleFor(x => x.NetUnitPrice)
             .GreaterThanOrEqualTo(0m).WithMessage("Net unit price must not be negative.");
 
+        RuleFor(x => x.DiscountPercent)
+            .GreaterThanOrEqualTo(0m).LessThan(100m)
+            .WithMessage("Discount must be at least 0 and less than 100 percent.");
+
         RuleFor(x => x.UnitCode)
             .NotEmpty().WithMessage("A unit code is required.")
             .MaximumLength(16);

@@ -31,6 +31,64 @@ public class EInvoiceMapperTests
     private const string KleinunternehmerPflichttext =
         "Kein Ausweis von Umsatzsteuer, da Kleinunternehmer gemäß §19 UStG";
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Discount_is_a_line_allowance_with_discounted_net_and_tax(bool cii)
+    {
+        var model = Model(
+            lines: [Line(1, "Beratung", 3m, "HUR", 100m, 262.50m, TaxCategory.S, 19m) with { DiscountPercent = 12.5m }],
+            rows: [Row(TaxCategory.S, 19m, 262.50m, 49.88m)],
+            net: 262.50m, tax: 49.88m, gross: 312.38m);
+        var xml = Parse(cii ? XRechnungGenerator.GenerateCiiForZugferd(model) : XRechnungGenerator.GenerateUbl(model));
+        var line = xml.Descendants().Single(e => e.Name.LocalName == (cii ? "IncludedSupplyChainTradeLineItem" : "InvoiceLine"));
+        var allowance = line.Descendants().Single(e => e.Name.LocalName == (cii ? "SpecifiedTradeAllowanceCharge" : "AllowanceCharge"));
+        Assert.Equal(cii ? "SpecifiedLineTradeSettlement" : "InvoiceLine", allowance.Parent!.Name.LocalName);
+        string Value(string name) => allowance.Descendants().Single(e => e.Name.LocalName == name).Value;
+        Assert.Equal("false", Value(cii ? "Indicator" : "ChargeIndicator"));
+        Assert.Equal("95", Value(cii ? "ReasonCode" : "AllowanceChargeReasonCode"));
+        Assert.Equal("Rabatt", Value(cii ? "Reason" : "AllowanceChargeReason"));
+        Assert.Equal(12.5m, Dec(Value(cii ? "CalculationPercent" : "MultiplierFactorNumeric")));
+        Assert.Equal(300m, Dec(Value(cii ? "BasisAmount" : "BaseAmount")));
+        Assert.Equal(37.5m, Dec(Value(cii ? "ActualAmount" : "Amount")));
+        Assert.Equal(262.5m, Dec(line.Descendants().Single(e => e.Name.LocalName == (cii ? "LineTotalAmount" : "LineExtensionAmount")).Value));
+        Assert.Equal(49.88m, Dec(cii ? CiiSummation(xml, "TaxTotalAmount") : UblDocumentTaxAmount(xml)));
+        Assert.Equal(312.38m, Dec(cii ? CiiSummation(xml, "GrandTotalAmount") : MonetaryChild(xml, "TaxInclusiveAmount")));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Fractional_discount_preserves_percentage_and_balances_cent_totals(bool cii)
+    {
+        const decimal percent = 12.345678m;
+        var net = RoundingPolicy.LineNetAmount(1m, 1000m, percent);
+        var total = 3m * RoundingPolicy.RoundAmount(net);
+        var tax = RoundingPolicy.RoundTax(total, 19m);
+        var model = Model(
+            lines: Enumerable.Range(1, 3).Select(i => Line(i, "Service", 1m, "HUR", 1000m, net, TaxCategory.S, 19m)
+                with { DiscountPercent = percent }).ToArray(),
+            rows: [Row(TaxCategory.S, 19m, total, tax)], net: total, tax: tax, gross: total + tax);
+        var xml = Parse(cii ? XRechnungGenerator.GenerateCii(model) : XRechnungGenerator.GenerateUbl(model));
+        var lines = xml.Descendants().Where(e => e.Name.LocalName == (cii ? "IncludedSupplyChainTradeLineItem" : "InvoiceLine")).ToArray();
+        Assert.Equal(total, lines.Sum(line => Dec(line.Descendants().Single(e => e.Name.LocalName == (cii ? "LineTotalAmount" : "LineExtensionAmount")).Value)));
+        foreach (var line in lines)
+        {
+            Assert.Equal(percent, Dec(line.Descendants().Single(e => e.Name.LocalName == (cii ? "CalculationPercent" : "MultiplierFactorNumeric")).Value));
+        }
+        Assert.Equal(total, Dec(cii ? CiiSummation(xml, "TaxBasisTotalAmount") : MonetaryChild(xml, "TaxExclusiveAmount")));
+    }
+
+    [Fact]
+    public void Zero_discount_does_not_emit_an_allowance()
+    {
+        var model = Model(
+            lines: [Line(1, "Beratung", 1m, "HUR", 100m, 100m, TaxCategory.S, 19m)],
+            rows: [Row(TaxCategory.S, 19m, 100m, 19m)], net: 100m, tax: 19m, gross: 119m);
+        Assert.DoesNotContain(Parse(XRechnungGenerator.GenerateUbl(model)).Descendants(), e => e.Name.LocalName == "AllowanceCharge");
+        Assert.DoesNotContain(Parse(XRechnungGenerator.GenerateCii(model)).Descendants(), e => e.Name.LocalName == "SpecifiedTradeAllowanceCharge");
+    }
+
     // ---------------------------------------------------------------- Scenario 1: standard rate
 
     [Fact]

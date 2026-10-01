@@ -106,6 +106,7 @@ function toFormValues(d: SalesDocumentDetail): DocumentFormValues {
       quantity: l.quantity,
       unitCode: l.unitCode,
       netUnitPrice: l.netUnitPrice,
+      discountPercent: l.discountPercent ?? 0,
       taxCategory: l.taxCategory,
       vatRatePercent: l.vatRatePercent,
     })),
@@ -173,6 +174,7 @@ export default function DocumentFormPage() {
         (watchedLines ?? []).map((l) => ({
           quantity: Number(l.quantity),
           netUnitPrice: Number(l.netUnitPrice),
+          discountPercent: Number(l.discountPercent ?? 0),
           taxCategory: Number(l.taxCategory),
           vatRatePercent: Number(l.vatRatePercent),
         })),
@@ -226,6 +228,7 @@ export default function DocumentFormPage() {
         ? item.unitCode
         : 'C62',
       netUnitPrice: item.netPrice,
+      discountPercent: 0,
       taxCategory: item.taxCategory,
       vatRatePercent: item.vatRatePercent ?? 0,
     })
@@ -518,6 +521,22 @@ export default function DocumentFormPage() {
                       disabled={isReadOnly}
                       {...register(`lines.${i}.vatRatePercent` as const)}
                     />
+                  </div>
+                  <div className="col-span-4 flex flex-col gap-1.5 md:col-span-2">
+                    <Label htmlFor={`line-discount-${i}`}>{t('form.fields.discountPercent')}</Label>
+                    <Input
+                      id={`line-discount-${i}`}
+                      type="number"
+                      min="0"
+                      step="any"
+                      disabled={isReadOnly}
+                      {...register(`lines.${i}.discountPercent` as const)}
+                    />
+                    {errors.lines?.[i]?.discountPercent?.message && (
+                      <p className="text-xs text-destructive">
+                        {errors.lines[i]?.discountPercent?.message}
+                      </p>
+                    )}
                   </div>
                   {!isReadOnly && (
                     <div className="col-span-2 md:col-span-12 md:flex md:justify-end">

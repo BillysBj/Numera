@@ -41,6 +41,9 @@ public sealed class KoSitConformanceTests
     public static IEnumerable<object[]> Scenarios() =>
     [
         ["S", "ubl"], ["S", "cii"],
+        ["discount", "ubl"], ["discount", "cii"],
+        ["discount-rounding", "ubl"], ["discount-rounding", "cii"],
+        ["discount-precision", "ubl"], ["discount-precision", "cii"],
         ["AE", "ubl"], ["AE", "cii"],
         ["E", "ubl"], ["E", "cii"],
         ["K", "ubl"], ["K", "cii"],
@@ -83,6 +86,24 @@ public sealed class KoSitConformanceTests
 
     private static InvoicePdfModel BuildScenario(string scenario) => scenario switch
     {
+        "discount" => Model(
+            lines:
+            [
+                Line(1, "Beratung", 3m, "HUR", 100m, 262.5m, TaxCategory.S, 19m) with { DiscountPercent = 12.5m },
+                Line(2, "Buch", 10m, "C62", 10m, 90m, TaxCategory.S, 7m) with { DiscountPercent = 10m },
+            ],
+            rows: [Row(TaxCategory.S, 19m, 262.5m, 49.88m), Row(TaxCategory.S, 7m, 90m, 6.3m)],
+            net: 352.5m, tax: 56.18m, gross: 408.68m),
+        "discount-precision" => Model(
+            lines: [Line(1, "Service", 1m, "HUR", 1000m, 876.5432m, TaxCategory.S, 19m) with { DiscountPercent = 12.345678m }],
+            rows: [Row(TaxCategory.S, 19m, 876.54m, 166.54m)],
+            net: 876.54m, tax: 166.54m, gross: 1043.08m),
+        "discount-rounding" => Model(
+            lines: Enumerable.Range(1, 3).Select(i =>
+                Line(i, "Material", 1m, "C62", 19.99m, 17.4913m, TaxCategory.S, 19m) with { DiscountPercent = 12.5m }).ToArray(),
+            rows: [Row(TaxCategory.S, 19m, 52.47m, 9.97m)],
+            net: 52.47m, tax: 9.97m, gross: 62.44m),
+
         // Standard rate: two taxed buckets (19 % + 7 %).
         "S" => Model(
             lines:

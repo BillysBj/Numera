@@ -78,6 +78,7 @@ public static class SnapshotReader
                     Quantity = l.Quantity,
                     UnitCode = l.UnitCode,
                     NetUnitPrice = l.NetUnitPrice,
+                    DiscountPercent = l.DiscountPercent,
                     LineNetAmount = l.LineNetAmount,
                     TaxCategory = l.TaxCategory,
                     VatRatePercent = l.VatRatePercent,

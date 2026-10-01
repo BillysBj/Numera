@@ -80,7 +80,7 @@ public static class EInvoiceMapper
         MapBuyer(desc, model.Recipient);
         MapDelivery(desc, model);
         MapDates(desc, model);
-        MapLines(desc, model.Lines);
+        MapLines(desc, model.Lines, model.Currency);
         MapVatBreakdown(desc, model.BreakdownRows);
 
         // Totals — transcribed from the frozen persisted values, NEVER recomputed
@@ -255,13 +255,13 @@ public static class EInvoiceMapper
         }
     }
 
-    private static void MapLines(InvoiceDescriptor desc, IReadOnlyList<InvoicePdfModel.LineRow> lines)
+    private static void MapLines(InvoiceDescriptor desc, IReadOnlyList<InvoicePdfModel.LineRow> lines, string currency)
     {
         foreach (var line in lines)
         {
             // BG-25: name BT-153, quantity BT-129, unit BT-130, net unit price BT-146,
             // line net amount BT-131, category BT-151, rate BT-152.
-            desc.AddTradeLineItem(
+            var item = desc.AddTradeLineItem(
                 name: line.Name,
                 netUnitPrice: line.NetUnitPrice,
                 unitCode: ParseUnit(line.UnitCode),
@@ -271,6 +271,18 @@ public static class EInvoiceMapper
                 taxType: TaxTypes.VAT,
                 categoryCode: MapCategory(line.TaxCategory),
                 taxPercent: line.VatRatePercent);
+
+            if (line.DiscountPercent > 0m)
+            {
+                var basis = line.Quantity * line.NetUnitPrice;
+                item.AddSpecifiedTradeAllowance(
+                    currency: ParseCurrency(currency),
+                    basisAmount: RoundingPolicy.RoundAmount(basis),
+                    actualAmount: RoundingPolicy.RoundAmount(basis - line.LineNetAmount),
+                    chargePercentage: line.DiscountPercent,
+                    reason: "Rabatt",
+                    reasonCode: AllowanceReasonCodes.Discount);
+            }
         }
     }
 
