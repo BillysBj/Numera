@@ -102,12 +102,20 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
         var unroundedExpenseByLine = definitions
             .Where(definition => definition.Section == EuerSection.Betriebsausgaben)
             .ToDictionary(definition => definition.Zeile, _ => 0m, StringComparer.Ordinal);
+        // Accounts outside the explicit SKR→Zeile map (e.g. a manual expense-account
+        // override on a receipt) are routed to the catch-all "Sonstige Betriebsausgaben"
+        // line so the report never 500s and the profit/total stay correct — the booked
+        // default accounts (4980/6300) already resolve to that same line. Line-level
+        // granularity for other accounts is a Steuerberater refinement.
+        var otherExpenseDefinition = definitions.Single(definition =>
+            definition.Section == EuerSection.Betriebsausgaben
+            && definition.AmountKind == EuerAmountKind.Expense
+            && definition.Zeile == EuerLineMap.OtherExpenseZeile);
         foreach (var row in expenseRows)
         {
             var definition = EuerLineMap.ForAccount(chartVariant, row.AccountNumber)
                 .SingleOrDefault(candidate => candidate.AmountKind == EuerAmountKind.Expense)
-                ?? throw new InvalidOperationException(
-                    $"No EÜR expense mapping exists for account {row.AccountNumber}.");
+                ?? otherExpenseDefinition;
             unroundedExpenseByLine[definition.Zeile] +=
                 row.NetAmount + (isKleinunternehmer ? row.VatAmount : 0m);
             if (!isKleinunternehmer)

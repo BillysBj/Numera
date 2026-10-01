@@ -112,6 +112,24 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Euer_routes_an_unmapped_expense_account_to_sonstige_without_throwing()
+    {
+        // 4210 exists in the chart but has no explicit EuerLineMap entry. The report must
+        // fold it into "Sonstige Betriebsausgaben" (Zeile 57) and never 500.
+        var (tenant, receiptId) = await SetupAsync(expenseAccount: "4210", extraExpenseAccount: "4210");
+        await PayAsync(tenant, receiptId, 119m);
+        await using var db = fixture.CreateAppContext(tenant);
+
+        var report = await new EuerCalculator(db, new RecognitionReader(db))
+            .ComputeAsync(2026, PaymentDate, PaymentDate, default);
+
+        Assert.Equal(100m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "57").Betrag);
+        Assert.Equal(19m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "55").Betrag);
+        Assert.Equal(119m, report.SummeAusgaben);
+        Assert.False(report.IsExpenseDataIncomplete);
+    }
+
+    [Fact]
     public async Task Partial_payments_and_reversal_recognize_pro_rata_on_their_own_dates()
     {
         var (tenant, receiptId) = await SetupAsync();
@@ -185,12 +203,23 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
     }
 
     private async Task<(Guid Tenant, Guid Receipt)> SetupAsync(
-        bool smallBusiness = false, ChartVariant chart = ChartVariant.Skr03, string? expenseAccount = null)
+        bool smallBusiness = false, ChartVariant chart = ChartVariant.Skr03, string? expenseAccount = null,
+        string? extraExpenseAccount = null)
     {
         var tenant = Guid.CreateVersion7();
         await using var db = fixture.CreateAppContext(tenant);
         await new ChartSeeder(db).SeedAsync(chart, tenant);
         db.Add(new LedgerSettings { TenantId = tenant, ChartVariant = chart });
+        if (extraExpenseAccount is not null)
+        {
+            // A real expense account that exists in the chart (so booking succeeds) but
+            // is NOT in EuerLineMap — models the Steuerberater extending the chart.
+            db.Add(new Account
+            {
+                TenantId = tenant, ChartVariant = chart, Number = extraExpenseAccount,
+                Name = "Zusatzaufwand", Type = AccountType.Expense, IsActive = true,
+            });
+        }
         db.Add(new CompanyProfile
         {
             TenantId = tenant, LegalName = "Supplier payment test", IsKleinunternehmer = smallBusiness,
