@@ -52,6 +52,12 @@ cd "$build_dir"
 dotnet tool install --global dotnet-ef --version '10.0.*'
 export PATH="$PATH:/root/.dotnet/tools"
 
+# `dotnet ef` does not restore implicitly, and this is a fresh copy with no obj/.
+# Restore the startup project (pulls every referenced module, incl. Platform.Db).
+echo "Restoring NuGet packages..."
+dotnet restore src/Numera.Api/Numera.Api.csproj
+dotnet restore src/platform/Numera.Platform.Db/Numera.Platform.Db.csproj
+
 echo "Applying EF migrations as numera_migrator..."
 dotnet ef database update \
     --project src/platform/Numera.Platform.Db \
