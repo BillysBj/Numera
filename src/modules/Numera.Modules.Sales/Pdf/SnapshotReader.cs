@@ -55,6 +55,7 @@ public static class SnapshotReader
             Issuer = ParseIssuer(doc.IssuerSnapshot),
             Recipient = ParseRecipient(doc.RecipientSnapshot),
 
+            DocumentType = doc.DocumentType,
             DocumentNumber = doc.DocumentNumber,
             DocumentDate = doc.DocumentDate,
             ServiceDate = doc.ServiceDate,

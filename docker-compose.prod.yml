@@ -83,6 +83,8 @@ services:
       Billing__SelfHosted: ${BILLING_SELF_HOSTED:-true}
       ReverseProxy__Enabled: "true"
       DataProtection__KeyPath: /keys
+      # KoSIT e-invoice validator sidecar (internal; container port 8080).
+      EInvoiceValidation__BaseUrl: http://kosit-validator:8080
       ConnectionStrings__Default: Host=db;Port=5432;Database=numera;Username=numera_app;Password=${DB_PASSWORD}
       ConnectionStrings__Hangfire: Host=db;Port=5432;Database=numera;Username=numera;Password=${DB_PASSWORD}
       Keycloak__Authority: https://${DOMAIN}/auth/realms/numera
@@ -109,8 +111,17 @@ services:
         condition: service_completed_successfully
       keycloak:
         condition: service_started
+      kosit-validator:
+        condition: service_started
     expose:
       - "8080"
+    restart: unless-stopped
+
+  # Government-authoritative KoSIT e-invoice validator (XRechnung 3.0.2), internal-only.
+  # The api POSTs each outbound/inbound e-invoice XML here; its verdict gates the send.
+  # Pinned image (never :latest — a rebuilt tag would silently change verdicts).
+  kosit-validator:
+    image: easybill/kosit-validator-xrechnung_3.0.2:v0.2.7
     restart: unless-stopped
 
   worker:

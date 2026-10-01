@@ -39,6 +39,9 @@ public sealed record InvoicePdfModel
 
     // --- Header (persisted on the document row) ------------------------------
 
+    /// <summary>The kind of document — drives the printed title (Angebot/Rechnung/…).</summary>
+    public DocumentType DocumentType { get; init; } = DocumentType.Rechnung;
+
     /// <summary>Legal document number (BT-1).</summary>
     public string? DocumentNumber { get; init; }
 

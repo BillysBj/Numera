@@ -72,7 +72,7 @@ public sealed class InvoiceDocument : IDocument
     /// <inheritdoc />
     public DocumentMetadata GetMetadata() => new()
     {
-        Title = $"{_labels.Invoice} {_model.DocumentNumber}".Trim(),
+        Title = $"{DocumentTitle()} {_model.DocumentNumber}".Trim(),
         Author = _model.Issuer.LegalName ?? string.Empty,
     };
 
@@ -226,13 +226,13 @@ public sealed class InvoiceDocument : IDocument
             row.ConstantItem(232).Column(col =>
             {
                 col.Item().PaddingBottom(8).AlignRight()
-                    .Text($"{_labels.Invoice} {_model.DocumentNumber}".Trim())
+                    .Text($"{DocumentTitle()} {_model.DocumentNumber}".Trim())
                     .FontSize(20).Bold().FontColor(Accent);
 
                 col.Item().Background(Tint).Padding(10).Column(meta =>
                 {
                     meta.Spacing(1);
-                    MetaLine(meta, _labels.InvoiceNo, _model.DocumentNumber);
+                    MetaLine(meta, DocumentNoLabel(), _model.DocumentNumber);
                     MetaLine(meta, _labels.Date, FormatDate(_model.DocumentDate));
 
                     if (_model.ServicePeriodEnd is { } periodEnd && _model.ServiceDate is { } periodStart)
@@ -662,5 +662,42 @@ public sealed class InvoiceDocument : IDocument
         ["MTK"] = "m²",
         ["LTR"] = "l",
         ["KWH"] = "kWh",
+    };
+
+    // The printed document title and number label, by document type and language. The
+    // PDF renders every document kind (Angebot, Lieferschein, …), not only invoices, so
+    // the title must reflect the actual type instead of always reading "Rechnung".
+    private string DocumentTitle()
+    {
+        var map = _model.Language == "en" ? DocTitlesEn : DocTitlesDe;
+        return map.TryGetValue(_model.DocumentType, out var title)
+            ? title
+            : (_model.Language == "en" ? "Document" : "Beleg");
+    }
+
+    private string DocumentNoLabel() => _model.Language == "en" ? "Document no." : "Belegnummer";
+
+    private static readonly IReadOnlyDictionary<DocumentType, string> DocTitlesDe = new Dictionary<DocumentType, string>
+    {
+        [DocumentType.Angebot] = "Angebot",
+        [DocumentType.Auftragsbestaetigung] = "Auftragsbestätigung",
+        [DocumentType.Lieferschein] = "Lieferschein",
+        [DocumentType.Rechnung] = "Rechnung",
+        [DocumentType.Storno] = "Stornorechnung",
+        [DocumentType.Gutschrift] = "Gutschrift",
+        [DocumentType.Abschlagsrechnung] = "Abschlagsrechnung",
+        [DocumentType.Schlussrechnung] = "Schlussrechnung",
+    };
+
+    private static readonly IReadOnlyDictionary<DocumentType, string> DocTitlesEn = new Dictionary<DocumentType, string>
+    {
+        [DocumentType.Angebot] = "Quote",
+        [DocumentType.Auftragsbestaetigung] = "Order Confirmation",
+        [DocumentType.Lieferschein] = "Delivery Note",
+        [DocumentType.Rechnung] = "Invoice",
+        [DocumentType.Storno] = "Cancellation",
+        [DocumentType.Gutschrift] = "Credit Note",
+        [DocumentType.Abschlagsrechnung] = "Down Payment Invoice",
+        [DocumentType.Schlussrechnung] = "Final Invoice",
     };
 }
