@@ -54,6 +54,11 @@ public sealed record InvoicePdfModel
     /// <summary>Service period end (BG-14). Nullable.</summary>
     public DateOnly? ServicePeriodEnd { get; init; }
 
+    /// <summary>Use the invoice date as the supply date when no service date or period was entered.</summary>
+    public bool UsesInvoiceDateAsSupplyDate => ServiceDate is null && ServicePeriodEnd is null
+        && DocumentType is DocumentType.Rechnung or DocumentType.Abschlagsrechnung
+            or DocumentType.Schlussrechnung or DocumentType.Gutschrift or DocumentType.Storno;
+
     /// <summary>Payment due date (BT-9). Nullable.</summary>
     public DateOnly? DueDate { get; init; }
 

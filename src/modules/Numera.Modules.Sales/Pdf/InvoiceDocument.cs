@@ -246,6 +246,10 @@ public sealed class InvoiceDocument : IDocument
                     {
                         MetaLine(meta, _labels.ServiceDate, FormatDate(svc));
                     }
+                    else if (_model.UsesInvoiceDateAsSupplyDate)
+                    {
+                        meta.Item().Text(_labels.ServiceDateMatchesInvoiceDate).FontSize(8.5f).SemiBold();
+                    }
 
                     if (_model.DueDate is { } due)
                     {

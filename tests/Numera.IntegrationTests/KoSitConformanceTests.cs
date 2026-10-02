@@ -84,6 +84,22 @@ public sealed class KoSitConformanceTests
 
     // ---------------------------------------------------------------- scenario builders
 
+    [KositTheory]
+    [MemberData(nameof(Scenarios))]
+    public async Task Invoice_date_supply_fallback_is_accepted_without_findings(string scenario, string syntax)
+    {
+        var model = BuildScenario(scenario) with { ServiceDate = null, ServicePeriodEnd = null };
+        var xml = syntax == "cii"
+            ? XRechnungGenerator.GenerateCii(model)
+            : XRechnungGenerator.GenerateUbl(model);
+
+        var result = await KoSitProbe.CreateClient().ValidateAsync(xml, CancellationToken.None);
+
+        Assert.True(result.Status == EInvoiceValidationStatus.Accepted && result.Findings.Count == 0,
+            $"Supply-date fallback {scenario}/{syntax}: {result.Status}\n"
+            + string.Join("\n", result.Findings.Select(f => $"[{f.Severity}/{f.RuleId}] {f.Message}")));
+    }
+
     private static InvoicePdfModel BuildScenario(string scenario) => scenario switch
     {
         "discount" => Model(

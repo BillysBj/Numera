@@ -7,6 +7,8 @@ using Numera.Platform.Money;
 
 using QuestPDF.Infrastructure;
 
+using UglyToad.PdfPig;
+
 using Xunit;
 
 namespace Numera.Platform.Tests.Sales;
@@ -50,6 +52,61 @@ public class InvoiceDocumentTests
     }
 
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+
+    public static IEnumerable<object[]> SupplyDateDocumentTypes() =>
+        from language in new[] { "de", "en" }
+        from type in Enum.GetValues<DocumentType>()
+        select new object[] { language, type, type is DocumentType.Rechnung or DocumentType.Abschlagsrechnung
+            or DocumentType.Schlussrechnung or DocumentType.Gutschrift or DocumentType.Storno };
+
+    [Theory]
+    [MemberData(nameof(SupplyDateDocumentTypes))]
+    public void Missing_service_date_renders_invoice_date_note_only_for_invoice_types(
+        string language, DocumentType type, bool expectsNote)
+    {
+        var document = BuildFixture();
+        document.DocumentType = type;
+        document.ServiceDate = null;
+        var model = SnapshotReader.FromDocument(document, language: language);
+
+        var text = RenderText(model);
+        var note = WithoutWhitespace(language == "en"
+            ? "Date of supply is the invoice date"
+            : "Leistungsdatum entspricht dem Rechnungsdatum");
+
+        Assert.Equal(expectsNote, text.Contains(note, StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("de", false)]
+    [InlineData("en", false)]
+    [InlineData("de", true)]
+    [InlineData("en", true)]
+    public void Explicit_service_date_or_period_is_rendered_without_fallback(string language, bool hasPeriod)
+    {
+        var document = BuildFixture();
+        document.ServicePeriodEnd = hasPeriod ? new DateOnly(2026, 7, 10) : null;
+        var model = SnapshotReader.FromDocument(document, language: language);
+        var labels = PdfLabels.For(language);
+
+        var text = RenderText(model);
+
+        Assert.DoesNotContain(WithoutWhitespace(labels.ServiceDateMatchesInvoiceDate), text);
+        Assert.Contains(WithoutWhitespace(hasPeriod ? labels.ServicePeriod : labels.ServiceDate), text);
+        Assert.Contains(document.ServiceDate!.Value.ToString("d", labels.Culture), text);
+        if (hasPeriod)
+        {
+            Assert.Contains(document.ServicePeriodEnd!.Value.ToString("d", labels.Culture), text);
+        }
+    }
+
+    private static string RenderText(InvoicePdfModel model)
+    {
+        using var pdf = PdfDocument.Open(InvoiceDocument.Render(model));
+        return WithoutWhitespace(string.Concat(pdf.GetPages().Select(page => page.Text)));
+    }
+
+    private static string WithoutWhitespace(string value) => new(value.Where(c => !char.IsWhiteSpace(c)).ToArray());
 
     // A realistic finalized invoice: one taxed (S 19%) line + one reverse-charge (AE) line
     // whose breakdown row carries a non-empty, legally-frozen German Pflichttext.

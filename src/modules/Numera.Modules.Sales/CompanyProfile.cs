@@ -72,10 +72,10 @@ public sealed class CompanyProfile : ITenantEntity
 
     // --- Tax identity --------------------------------------------------------
 
-    /// <summary>USt-IdNr / VAT identifier (BT-31). Exactly one of this or <see cref="TaxNumber"/> is required.</summary>
+    /// <summary>USt-IdNr / VAT identifier (BT-31). At least one of this or <see cref="TaxNumber"/> is required.</summary>
     public string? VatId { get; set; }
 
-    /// <summary>National tax number (Steuernummer, BT-32). Exactly one of this or <see cref="VatId"/> is required.</summary>
+    /// <summary>National tax number (Steuernummer, BT-32). At least one of this or <see cref="VatId"/> is required.</summary>
     public string? TaxNumber { get; set; }
 
     /// <summary>

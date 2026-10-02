@@ -31,6 +31,9 @@ public sealed record PdfLabels
     /// <summary>"Leistungsdatum" / "Service Date".</summary>
     public required string ServiceDate { get; init; }
 
+    /// <summary>Supply-date note when the invoice date is used as the default.</summary>
+    public required string ServiceDateMatchesInvoiceDate { get; init; }
+
     /// <summary>"Leistungszeitraum" / "Service Period".</summary>
     public required string ServicePeriod { get; init; }
 
@@ -109,6 +112,7 @@ public sealed record PdfLabels
         InvoiceNo = "Rechnungsnummer",
         Date = "Datum",
         ServiceDate = "Leistungsdatum",
+        ServiceDateMatchesInvoiceDate = "Leistungsdatum entspricht dem Rechnungsdatum",
         ServicePeriod = "Leistungszeitraum",
         Due = "Fällig am",
         BuyerReference = "Leitweg-ID / Referenz",
@@ -141,6 +145,7 @@ public sealed record PdfLabels
         InvoiceNo = "Invoice No.",
         Date = "Date",
         ServiceDate = "Service Date",
+        ServiceDateMatchesInvoiceDate = "Date of supply is the invoice date",
         ServicePeriod = "Service Period",
         Due = "Due",
         BuyerReference = "Buyer Reference",

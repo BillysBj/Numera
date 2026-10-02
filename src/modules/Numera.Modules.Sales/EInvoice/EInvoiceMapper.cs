@@ -253,6 +253,11 @@ public static class EInvoiceMapper
                 desc.ActualDeliveryDate = start.ToDateTime(TimeOnly.MinValue);
             }
         }
+        else if (model.UsesInvoiceDateAsSupplyDate)
+        {
+            // BT-72 matches the human-readable supply-date fallback in the PDF.
+            desc.ActualDeliveryDate = model.DocumentDate.ToDateTime(TimeOnly.MinValue);
+        }
     }
 
     private static void MapLines(InvoiceDescriptor desc, IReadOnlyList<InvoicePdfModel.LineRow> lines, string currency)

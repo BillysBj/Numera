@@ -229,7 +229,7 @@ internal static class SalesTestData
 
     /// <summary>
     /// The §14 UStG completeness gate — a faithful mirror of the Api-internal
-    /// <c>FinalizeValidation.Check</c>: an issuer profile with a legal name, exactly one of
+    /// <c>FinalizeValidation.Check</c>: an issuer profile with a legal name, at least one of
     /// VAT ID / tax number and a complete address; at least one line; a recipient with a
     /// complete billing address; and AE/K lines require the recipient VAT ID. Returns the
     /// failures keyed by field group (empty = finalizable).
@@ -264,9 +264,9 @@ internal static class SalesTestData
 
             var hasVatId = !string.IsNullOrWhiteSpace(profile.VatId);
             var hasTaxNumber = !string.IsNullOrWhiteSpace(profile.TaxNumber);
-            if (hasVatId == hasTaxNumber)
+            if (!hasVatId && !hasTaxNumber)
             {
-                Add("Issuer", "Exactly one of the issuer VAT ID or tax number is required (§14 UStG, BT-31/BT-32).");
+                Add("Issuer", "At least one of the issuer VAT ID or tax number is required (§14 UStG, BT-31/BT-32).");
             }
 
             if (!AddressComplete(profile.Address?.Street, profile.Address?.PostalCode, profile.Address?.City))

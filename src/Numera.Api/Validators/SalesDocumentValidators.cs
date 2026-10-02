@@ -56,9 +56,9 @@ internal static class FinalizeValidation
 
             var hasVatId = !string.IsNullOrWhiteSpace(profile.VatId);
             var hasTaxNumber = !string.IsNullOrWhiteSpace(profile.TaxNumber);
-            if (hasVatId == hasTaxNumber)
+            if (!hasVatId && !hasTaxNumber)
             {
-                Add("Issuer", "Exactly one of the issuer VAT ID or tax number is required (§14 UStG, BT-31/BT-32).");
+                Add("Issuer", "At least one of the issuer VAT ID or tax number is required (§14 UStG, BT-31/BT-32).");
             }
 
             if (!IsAddressComplete(profile.Address?.Street, profile.Address?.PostalCode, profile.Address?.City))

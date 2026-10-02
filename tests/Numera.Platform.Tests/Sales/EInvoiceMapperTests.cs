@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
 
+using Numera.Modules.Sales;
 using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.Pdf;
 using Numera.Platform.Money;
@@ -417,6 +418,71 @@ public class EInvoiceMapperTests
         Assert.Equal("EUR", Vals(cii, "TaxCurrencyCode").Single());
         Assert.Equal(19m, TaxTotalForCurrency(cii, "USD"));
         Assert.Equal(frozenTaxEur, TaxTotalForCurrency(cii, "EUR"));
+    }
+
+    [Theory]
+    [InlineData(DocumentType.Rechnung, true)]
+    [InlineData(DocumentType.Abschlagsrechnung, true)]
+    [InlineData(DocumentType.Schlussrechnung, true)]
+    [InlineData(DocumentType.Gutschrift, true)]
+    [InlineData(DocumentType.Storno, true)]
+    [InlineData(DocumentType.Angebot, false)]
+    [InlineData(DocumentType.Auftragsbestaetigung, false)]
+    [InlineData(DocumentType.Lieferschein, false)]
+    public void Missing_service_date_defaults_BT72_only_for_invoice_types(DocumentType type, bool expectsDate)
+    {
+        var model = SupplyDateModel() with { DocumentType = type, ServiceDate = null };
+
+        AssertDeliveryDate(model, expectsDate ? model.DocumentDate : null);
+    }
+
+    [Fact]
+    public void Explicit_service_date_is_preserved_in_both_syntaxes()
+    {
+        var model = SupplyDateModel();
+
+        AssertDeliveryDate(model, model.ServiceDate);
+    }
+
+    [Fact]
+    public void Service_period_is_preserved_without_default_delivery_date_in_both_syntaxes()
+    {
+        var model = SupplyDateModel() with { ServicePeriodEnd = new DateOnly(2026, 7, 10) };
+        var ubl = Parse(XRechnungGenerator.GenerateUbl(model));
+        var cii = Parse(XRechnungGenerator.GenerateCii(model));
+
+        AssertDeliveryDate(model, null);
+        var ublPeriod = Local(ubl, "InvoicePeriod").Single();
+        Assert.Equal("2026-07-01", Child(ublPeriod, "StartDate"));
+        Assert.Equal("2026-07-10", Child(ublPeriod, "EndDate"));
+        var ciiPeriod = Local(cii, "BillingSpecifiedPeriod").Single();
+        Assert.Equal(new[] { "20260701", "20260710" }, ciiPeriod.Descendants()
+            .Where(e => e.Name.LocalName == "DateTimeString").Select(e => e.Value));
+    }
+
+    private static InvoicePdfModel SupplyDateModel() => Model(
+        lines: [Line(1, "Leistung", 1m, "C62", 100m, 100m, TaxCategory.S, 19m)],
+        rows: [Row(TaxCategory.S, 19m, 100m, 19m)],
+        net: 100m, tax: 19m, gross: 119m);
+
+    private static void AssertDeliveryDate(InvoicePdfModel model, DateOnly? expected)
+    {
+        var ubl = Parse(XRechnungGenerator.GenerateUbl(model));
+        var cii = Parse(XRechnungGenerator.GenerateCii(model));
+        var ublDates = Vals(ubl, "ActualDeliveryDate").ToArray();
+        var ciiDates = Local(cii, "ActualDeliverySupplyChainEvent").SelectMany(e => e.Descendants())
+            .Where(e => e.Name.LocalName == "DateTimeString").Select(e => e.Value).ToArray();
+
+        if (expected is { } date)
+        {
+            Assert.Equal(date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), Assert.Single(ublDates));
+            Assert.Equal(date.ToString("yyyyMMdd", CultureInfo.InvariantCulture), Assert.Single(ciiDates));
+        }
+        else
+        {
+            Assert.Empty(ublDates);
+            Assert.Empty(ciiDates);
+        }
     }
 
     // ================================================================ Fixture builders
