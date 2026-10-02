@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { getMe } from './lib/api'
+import { getLedgerSettings, Gewinnermittlungsart } from './lib/api/ledger'
 import { useTheme } from './lib/useTheme'
 import { cn } from './lib/utils'
 import markLight from './assets/numera-mark.png'
@@ -86,6 +87,12 @@ function useNavGroups(): NavGroup[] {
   const { t: tbank } = useTranslation('banking')
   const { t: tbilling } = useTranslation('billing')
   const billing = useBillingStatus()
+  // The EÜR is one profit-determination method (§4 Abs. 3 EStG). It only applies to
+  // tenants whose ledger is set up for EÜR (Kleingewerbe/Freiberufler) — a
+  // Kapitalgesellschaft (UG/GmbH) bilanziert and never files an Anlage EÜR, so the
+  // report is hidden for them. Driven generically by the tenant's own ledger setting.
+  const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
+  const showEuer = ledger.data?.gewinnermittlungsart === Gewinnermittlungsart.Euer
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -117,7 +124,9 @@ function useNavGroups(): NavGroup[] {
       label: trep('nav.group'),
       items: [
         { to: '/reports/ustva', label: trep('nav.ustva'), icon: IconDocuments },
-        { to: '/reports/euer', label: trep('nav.euer'), icon: IconDashboard },
+        ...(showEuer
+          ? [{ to: '/reports/euer', label: trep('nav.euer'), icon: IconDashboard }]
+          : []),
         { to: '/reports/datev', label: 'DATEV-Export', icon: IconDocuments },
       ],
     },
@@ -141,6 +150,18 @@ function useNavGroups(): NavGroup[] {
       ],
     },
   ]
+}
+
+// Deep-link guard: the EÜR view is only for tenants whose ledger uses EÜR as the
+// profit-determination method. A bilanzierender tenant (UG/GmbH) reaching the URL
+// directly is sent back to the USt-VA instead of computing an inapplicable EÜR.
+function EuerRoute() {
+  const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
+  if (ledger.isLoading) return null
+  if (ledger.data?.gewinnermittlungsart !== Gewinnermittlungsart.Euer) {
+    return <Navigate to="/reports/ustva" replace />
+  }
+  return <EuerReportPage />
 }
 
 // The nav item whose path is the longest prefix of the current route (so
@@ -377,7 +398,7 @@ function AppShell() {
             <Route path="/team" element={<TeamPage />} />
             <Route path="/handbuch" element={<UserManualPage />} />
             <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
-            <Route path="/reports/euer" element={<EuerReportPage />} />
+            <Route path="/reports/euer" element={<EuerRoute />} />
             <Route path="/reports/datev" element={<DatevExportPage />} />
             <Route path="/belege" element={<BelegReviewQueuePage />} />
             <Route path="/belege/capture" element={<BelegCapturePage />} />
