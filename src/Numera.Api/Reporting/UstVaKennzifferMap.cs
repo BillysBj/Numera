@@ -60,7 +60,7 @@ public static class UstVaKennzifferMap
                     IsComputed: false),
                 new(
                     "66",
-                    "VorsteuerbetrÃ¤ge aus Rechnungen von anderen Unternehmern",
+                    "Vorsteuerbeträge aus Rechnungen von anderen Unternehmern",
                     UstVaFigureKind.Steuer,
                     new UstVaRecognitionSelector(
                         TaxCategory.S,

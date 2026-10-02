@@ -35,6 +35,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { calculateDraftPreview } from './draftPreview'
 
 // Status → shadcn Badge variant (mirrors DocumentListPage).
 const STATUS_VARIANT: Record<number, BadgeProps['variant']> = {
@@ -340,6 +341,8 @@ export default function DocumentDetailPage() {
 
   const d = doc.data
   const isDraft = d.status === DocumentStatus.Draft
+  const totals = isDraft ? calculateDraftPreview(d.lines) : d
+  const taxBreakdown = totals.taxBreakdown
   const isCancelled = d.status === DocumentStatus.Cancelled
   const isRechnung = d.documentType === DocumentType.Rechnung
   const canCorrect =
@@ -742,10 +745,13 @@ export default function DocumentDetailPage() {
         {/* VAT breakdown + totals */}
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>{t('detail.sections.vatBreakdown')}</CardTitle>
+            <CardTitle>
+              {t('detail.sections.vatBreakdown')}
+              {isDraft && <Badge variant="secondary" className="ml-2">{t('preview')}</Badge>}
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            {d.taxBreakdown.length === 0 ? (
+            {taxBreakdown.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 {t('detail.breakdown.empty')}
               </p>
@@ -767,7 +773,7 @@ export default function DocumentDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {d.taxBreakdown.map((r) => (
+                    {taxBreakdown.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell>
                           {TAX_CODE[r.taxCategory] ?? r.taxCategory}
@@ -812,8 +818,8 @@ export default function DocumentDetailPage() {
 
             {/* Totals */}
             <div className="ml-auto flex w-full max-w-xs flex-col gap-1 border-t border-border pt-3 text-sm">
-              <TotalRow label={t('detail.fields.net')} value={money(d.totalNet)} />
-              <TotalRow label={t('detail.fields.tax')} value={money(d.totalTax)} />
+              <TotalRow label={t('detail.fields.net')} value={money(totals.totalNet)} />
+              <TotalRow label={t('detail.fields.tax')} value={money(totals.totalTax)} />
               {d.currency !== 'EUR' && d.totalTaxEur != null && (
                 <TotalRow
                   label={t('detail.fields.taxEur')}
@@ -822,13 +828,15 @@ export default function DocumentDetailPage() {
               )}
               <TotalRow
                 label={t('detail.fields.gross')}
-                value={money(d.totalGross)}
+                value={money(totals.totalGross)}
                 strong
               />
-              <TotalRow
-                label={t('detail.fields.amountDue')}
-                value={money(d.amountDue)}
-              />
+              {!isDraft && (
+                <TotalRow
+                  label={t('detail.fields.amountDue')}
+                  value={money(d.amountDue)}
+                />
+              )}
               {d.currency !== 'EUR' && d.exchangeRate && (
                 <p className="pt-1 text-xs text-muted-foreground">
                   {t('detail.fields.exchangeRateNote', {

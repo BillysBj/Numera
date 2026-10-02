@@ -1,7 +1,12 @@
+using System.Text.Json;
+
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 using Npgsql;
 
+using Numera.Api.Contracts;
+using Numera.Api.Endpoints;
 using Numera.Modules.Sales;
 using Numera.Platform.Money;
 
@@ -63,6 +68,16 @@ public sealed class SalesFinalizeTests
         // (d) number matches the configured RE-YYYY-##### format, first in the series.
         Assert.Equal("RE-2026-00001", doc.DocumentNumber);
         Assert.Equal(DocumentStatus.Finalized, doc.Status);
+        Assert.NotNull(doc.FinalizedAt);
+
+        // Exercise the GET detail handler and its camelCase wire projection after reload.
+        var result = await SalesDocumentEndpoints.GetAsync(docId, read, CancellationToken.None);
+        var ok = Assert.IsType<Microsoft.AspNetCore.Http.HttpResults.Ok<SalesDocumentDetail>>(result);
+        Assert.Equal(StatusCodes.Status200OK, ok.StatusCode);
+        Assert.NotNull(ok.Value);
+        Assert.Equal(doc.FinalizedAt, ok.Value.FinalizedAt);
+        var json = JsonSerializer.SerializeToElement(ok.Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        Assert.Equal(doc.FinalizedAt, json.GetProperty("finalizedAt").GetDateTimeOffset());
 
         // Totals: per-category rounded tax summed (19.00 + 14.00 = 33.00), gross = 333.00.
         Assert.Equal(300.00m, doc.TotalNet);

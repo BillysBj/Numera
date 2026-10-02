@@ -179,9 +179,11 @@ export default function UstVaPruefansichtPage() {
             </div>
           </section>
 
-          <p className="mt-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-            {report.data.hinweis ?? t('ustva.inputVatNote')}
-          </p>
+          {report.data.hinweis && (
+            <p className="mt-4 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              {report.data.hinweis}
+            </p>
+          )}
         </>
       ) : null}
     </main>

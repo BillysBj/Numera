@@ -50,7 +50,6 @@
       "1": "Cash taxation"
     },
     "provisional": "provisional",
-    "inputVatNote": "Without input VAT deduction (receipt entry from phase 12).",
     "columns": {
       "kz": "Code",
       "description": "Description",
@@ -90,7 +89,6 @@
     "result": "Result",
     "profit": "Profit",
     "incompleteTitle": "Operating expenses incomplete",
-    "incompleteFallback": "Operating expenses incomplete — receipt entry from phase 12.",
     "columns": {
       "line": "Line",
       "description": "Description",

@@ -115,6 +115,7 @@ public sealed record SalesDocumentDetail(
     bool ReverseCharge,
     string? BuyerReference,
     string? Notes,
+    DateTimeOffset? FinalizedAt,
     Guid? SourceDocumentId,
     Guid? CorrectsDocumentId,
     Guid? CancelledByDocumentId,

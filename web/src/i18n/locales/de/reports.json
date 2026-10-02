@@ -50,7 +50,6 @@
       "1": "Ist-Versteuerung"
     },
     "provisional": "vorläufig",
-    "inputVatNote": "Ohne Vorsteuerabzug (Belegerfassung ab Phase 12).",
     "columns": {
       "kz": "Kz",
       "description": "Bezeichnung",
@@ -90,7 +89,6 @@
     "result": "Ergebnis",
     "profit": "Gewinn",
     "incompleteTitle": "Betriebsausgaben unvollständig",
-    "incompleteFallback": "Betriebsausgaben unvollständig — Belegerfassung ab Phase 12.",
     "columns": {
       "line": "Zeile",
       "description": "Bezeichnung",

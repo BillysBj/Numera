@@ -1102,6 +1102,7 @@ public static class SalesDocumentEndpoints
         d.Currency, d.ExchangeRate, d.ExchangeRateDate, d.TotalTaxEur,
         d.TotalNet, d.TotalTax, d.TotalGross, d.AmountDue,
         d.IsKleinunternehmer, d.ReverseCharge, d.BuyerReference, d.Notes,
+        d.FinalizedAt,
         d.SourceDocumentId, d.CorrectsDocumentId, d.CancelledByDocumentId,
         d.IssuerSnapshot, d.RecipientSnapshot,
         d.Lines

@@ -1,6 +1,7 @@
 {
   "title": "Belege",
   "nav": "Belege",
+  "preview": "Vorschau",
   "loadError": "Beleg konnte nicht geladen werden.",
   "actions": {
     "create": "Beleg anlegen",

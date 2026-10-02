@@ -1,6 +1,7 @@
 {
   "title": "Documents",
   "nav": "Documents",
+  "preview": "Preview",
   "loadError": "Could not load the document.",
   "actions": {
     "create": "New document",

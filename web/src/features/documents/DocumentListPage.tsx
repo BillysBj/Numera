@@ -126,7 +126,7 @@ export default function DocumentListPage() {
         header: t('columns.gross'),
         cell: ({ row }) => (
           <span className="tabular-nums">
-            {grossFmt.format(row.original.totalGross)}
+            {row.original.status === DocumentStatus.Draft ? '—' : grossFmt.format(row.original.totalGross)}
           </span>
         ),
       },

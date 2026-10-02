@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/table'
 import { Dialog, DialogFooter } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import PartnerDocumentsSection from './PartnerDocumentsSection'
 import {
   PartnerTaskStatus,
   useCreateTask,
@@ -438,17 +439,7 @@ export default function PartnerDetailPage() {
         {/* Kundenakte files (CRM-05) */}
         <PartnerFilesSection partnerId={id} />
 
-        {/* Documents placeholder (Phase 3) */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('detail.documents')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {t('detail.documentsHint')}
-            </p>
-          </CardContent>
-        </Card>
+        <PartnerDocumentsSection key={id} partnerId={id} />
       </div>
 
       {/* Contact add/edit dialog */}
