@@ -81,11 +81,11 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
     }
 
     [Theory]
-    [InlineData(false, ChartVariant.Skr03, "3400", "25", 100, 19)]
-    [InlineData(true, ChartVariant.Skr03, "3400", "25", 119, 0)]
-    [InlineData(false, ChartVariant.Skr03, "4980", "57", 100, 19)]
-    [InlineData(false, ChartVariant.Skr04, "5400", "25", 100, 19)]
-    [InlineData(true, ChartVariant.Skr04, "6300", "57", 119, 0)]
+    [InlineData(false, ChartVariant.Skr03, "3400", "27", 100, 19)]
+    [InlineData(true, ChartVariant.Skr03, "3400", "27", 119, 0)]
+    [InlineData(false, ChartVariant.Skr03, "4980", "60", 100, 19)]
+    [InlineData(false, ChartVariant.Skr04, "5400", "27", 100, 19)]
+    [InlineData(true, ChartVariant.Skr04, "6300", "60", 119, 0)]
     public async Task Euer_recognizes_booked_account_and_input_vat_only_when_paid(
         bool smallBusiness, ChartVariant chart, string account, string line, decimal expense, decimal inputVat)
     {
@@ -103,11 +103,11 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
         Assert.Null(report.Hinweis);
         if (smallBusiness)
         {
-            Assert.DoesNotContain(report.Betriebsausgaben, row => row.Zeile == "55");
+            Assert.DoesNotContain(report.Betriebsausgaben, row => row.Zeile == "57");
         }
         else
         {
-            Assert.Equal(inputVat, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "55").Betrag);
+            Assert.Equal(inputVat, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "57").Betrag);
         }
     }
 
@@ -115,7 +115,7 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
     public async Task Euer_routes_an_unmapped_expense_account_to_sonstige_without_throwing()
     {
         // 4210 exists in the chart but has no explicit EuerLineMap entry. The report must
-        // fold it into "Sonstige Betriebsausgaben" (Zeile 57) and never 500.
+        // fold it into "Übrige unbeschränkt abziehbare Betriebsausgaben" (Zeile 60) and never 500.
         var (tenant, receiptId) = await SetupAsync(expenseAccount: "4210", extraExpenseAccount: "4210");
         await PayAsync(tenant, receiptId, 119m);
         await using var db = fixture.CreateAppContext(tenant);
@@ -123,8 +123,8 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
         var report = await new EuerCalculator(db, new RecognitionReader(db))
             .ComputeAsync(2026, PaymentDate, PaymentDate, default);
 
-        Assert.Equal(100m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "57").Betrag);
-        Assert.Equal(19m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "55").Betrag);
+        Assert.Equal(100m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "60").Betrag);
+        Assert.Equal(19m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "57").Betrag);
         Assert.Equal(119m, report.SummeAusgaben);
         Assert.False(report.IsExpenseDataIncomplete);
     }
@@ -138,8 +138,8 @@ public sealed class SupplierPaymentTests(PostgresFixture fixture)
         {
             var report = await new EuerCalculator(db, new RecognitionReader(db))
                 .ComputeAsync(2026, PaymentDate, PaymentDate, default);
-            Assert.Equal(50m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "57").Betrag);
-            Assert.Equal(9.5m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "55").Betrag);
+            Assert.Equal(50m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "60").Betrag);
+            Assert.Equal(9.5m, Assert.Single(report.Betriebsausgaben, row => row.Zeile == "57").Betrag);
             Assert.Equal(PaymentOperationStatus.Success,
                 (await Service(db, tenant).ReverseAsync(receiptId, paymentId)).Status);
         }

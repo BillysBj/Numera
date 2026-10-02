@@ -60,7 +60,7 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
             .ReadCashRecognitionAsync(from, to, ct)
             .ConfigureAwait(false);
 
-        var definitions = EuerLineMap.ForChart(chartVariant);
+        var definitions = EuerLineMap.ForFiscalYear(chartVariant, jahr);
         var unroundedRevenueByLine = definitions
             .Where(definition =>
                 definition.Section == EuerSection.Betriebseinnahmen
@@ -71,6 +71,7 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
         {
             var definition = EuerLineMap.RevenueLineFor(
                 chartVariant,
+                jahr,
                 row.TaxCategory,
                 row.VatRatePercent,
                 isKleinunternehmer);
@@ -103,24 +104,23 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
             .Where(definition => definition.Section == EuerSection.Betriebsausgaben)
             .ToDictionary(definition => definition.Zeile, _ => 0m, StringComparer.Ordinal);
         // Accounts outside the explicit SKR→Zeile map (e.g. a manual expense-account
-        // override on a receipt) are routed to the catch-all "Sonstige Betriebsausgaben"
+        // override on a receipt) are routed to the catch-all "Übrige Betriebsausgaben"
         // line so the report never 500s and the profit/total stay correct — the booked
         // default accounts (4980/6300) already resolve to that same line. Line-level
         // granularity for other accounts is a Steuerberater refinement.
-        var otherExpenseDefinition = definitions.Single(definition =>
-            definition.Section == EuerSection.Betriebsausgaben
-            && definition.AmountKind == EuerAmountKind.Expense
-            && definition.Zeile == EuerLineMap.OtherExpenseZeile);
+        var otherExpenseDefinition = EuerLineMap.OtherExpenseLineFor(chartVariant, jahr);
+        var paidInputVatDefinition = definitions.Single(definition =>
+            definition.AmountKind == EuerAmountKind.PaidInputVat);
         foreach (var row in expenseRows)
         {
-            var definition = EuerLineMap.ForAccount(chartVariant, row.AccountNumber)
+            var definition = EuerLineMap.ForAccount(chartVariant, jahr, row.AccountNumber)
                 .SingleOrDefault(candidate => candidate.AmountKind == EuerAmountKind.Expense)
                 ?? otherExpenseDefinition;
             unroundedExpenseByLine[definition.Zeile] +=
                 row.NetAmount + (isKleinunternehmer ? row.VatAmount : 0m);
             if (!isKleinunternehmer)
             {
-                unroundedExpenseByLine[EuerLineMap.PaidInputVatZeile] += row.VatAmount;
+                unroundedExpenseByLine[paidInputVatDefinition.Zeile] += row.VatAmount;
             }
         }
 

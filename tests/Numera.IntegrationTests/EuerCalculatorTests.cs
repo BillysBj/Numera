@@ -75,23 +75,35 @@ public sealed class EuerCalculatorTests(PostgresFixture fixture)
         var report = await ComputeAsync(tenant, FebruaryFrom, FebruaryTo);
 
         Assert.False(report.IsKleinunternehmer);
-        Assert.Equal(200m, FindIncomeLine(report, EuerLineMap.TaxableRevenueZeile).Betrag);
-        Assert.Equal(14m, FindIncomeLine(report, EuerLineMap.CollectedVatZeile).Betrag);
+        Assert.Equal(200m, FindIncomeLine(report, "15").Betrag);
+        Assert.Equal(14m, FindIncomeLine(report, "17").Betrag);
+        Assert.Equal(0m, FindIncomeLine(report, "12").Betrag);
         Assert.Contains(report.Betriebsausgaben, line => line.Zeile == EuerLineMap.PaidInputVatZeile);
     }
 
-    [Fact]
-    public async Task Kleinunternehmer_reports_gross_receipts_without_a_collected_vat_split()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Kleinunternehmer_reports_gross_receipts_without_a_collected_vat_split(bool invoiceIssuedAsKleinunternehmer)
     {
-        var tenant = await SetupTenantAsync(isKleinunternehmer: true);
+        var tenant = await SetupTenantAsync(isKleinunternehmer: invoiceIssuedAsKleinunternehmer);
         var invoice = await CreateInvoiceAsync(tenant, 125m, 19m);
         await RecordPaymentAsync(tenant, invoice.OpenItemId, invoice.GrossAmount);
+
+        // Also cover frozen receipts containing VAT: the §19 report must fold net + VAT.
+        await using (var db = fixture.CreateAppContext(tenant))
+        {
+            var profile = await db.Set<CompanyProfile>().SingleAsync();
+            profile.IsKleinunternehmer = true;
+            await db.SaveChangesAsync();
+        }
 
         var report = await ComputeAsync(tenant, FebruaryFrom, FebruaryTo);
 
         Assert.True(report.IsKleinunternehmer);
-        Assert.Equal(125m, FindIncomeLine(report, EuerLineMap.TaxFreeRevenueZeile).Betrag);
-        Assert.Equal(125m, report.SummeEinnahmen);
+        Assert.Equal(invoice.GrossAmount, FindIncomeLine(report, "12").Betrag);
+        Assert.Equal(0m, FindIncomeLine(report, "16").Betrag);
+        Assert.Equal(invoiceIssuedAsKleinunternehmer ? 125m : 148.75m, report.SummeEinnahmen);
         Assert.DoesNotContain(
             report.Betriebseinnahmen,
             line => line.Zeile == EuerLineMap.CollectedVatZeile);

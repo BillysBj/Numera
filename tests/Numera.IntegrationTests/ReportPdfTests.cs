@@ -40,7 +40,9 @@ public sealed class ReportPdfTests
         var euerText = ExtractText(EuerDocument.Render(BuildEuerReport()));
 
         Assert.Contains("81", ustVaText, StringComparison.Ordinal);
+        Assert.Contains("Zeile 15", euerText, StringComparison.Ordinal);
         Assert.Contains("Zeile 17", euerText, StringComparison.Ordinal);
+        Assert.Contains("Zeile 57", euerText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -82,13 +84,13 @@ public sealed class ReportPdfTests
         IsKleinunternehmer: false,
         Betriebseinnahmen:
         [
-            new EuerLine("14", "Umsatzerlöse", 1_250m),
+            new EuerLine("15", "Umsatzsteuerpflichtige Betriebseinnahmen (netto)", 1_250m),
             new EuerLine("17", "Vereinnahmte Umsatzsteuer", 237.50m),
         ],
         SummeEinnahmen: 1_487.50m,
         Betriebsausgaben:
         [
-            new EuerLine("55", "Gezahlte Umsatzsteuer", 50m),
+            new EuerLine("57", "Gezahlte Vorsteuerbeträge", 50m),
         ],
         SummeAusgaben: 50m,
         Gewinn: 1_437.50m,
