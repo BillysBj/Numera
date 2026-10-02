@@ -146,7 +146,10 @@ public sealed class InvoiceDocument : IDocument
                         col.Item().Text(line);
                     }
 
-                    var contact = new[] { issuer.ContactEmail, issuer.ContactPhone }
+                    // Phone is intentionally NOT shown on the letterhead (optional under
+                    // §14 UStG / §35a GmbHG). It is still carried in the company profile and
+                    // the XRechnung seller contact (BT-42, mandatory via BR-DE-6).
+                    var contact = new[] { issuer.ContactEmail }
                         .Where(s => !string.IsNullOrWhiteSpace(s))
                         .Select(s => s!)
                         .ToList();
