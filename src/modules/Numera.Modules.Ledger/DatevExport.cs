@@ -78,8 +78,14 @@ public static class DatevExport
             row[2] = Quote("EUR");
             row[6] = line.Account;
             row[7] = line.CounterAccount;
-            row[8] = line.TaxKey is null or Steuerschluessel.None
-                ? string.Empty : ((int)line.TaxKey.Value).ToString(CultureInfo.InvariantCulture);
+            // Only emit BU-Schlüssel that are verified DATEV standard automatic-VAT keys
+            // (1 steuerfrei m. Vorsteuerabzug, 2/3 USt 7/19 %, 8/9 Vorsteuer 7/19 %).
+            // Non-standard/edge cases (e.g. §13b reverse charge) are NOT written as an
+            // automatic key — a wrong key would misbook; the Buchhaltungsbüro assigns the
+            // correct §13b/EU key manually on those lines. See DATEV Steuerschlüssel-Tabelle.
+            row[8] = line.TaxKey is { } taxKey && IsStandardBuKey((int)taxKey)
+                ? ((int)taxKey).ToString(CultureInfo.InvariantCulture)
+                : string.Empty;
             row[9] = line.EntryDate.ToString("ddMM", CultureInfo.InvariantCulture);
             row[10] = Quote(line.DocumentNumber);
             row[13] = Quote(line.Description);
@@ -88,6 +94,10 @@ public static class DatevExport
 
         return Windows1252.GetBytes(csv.ToString());
     }
+
+    // Verified DATEV standard automatic-VAT BU-Schlüssel (SKR03/SKR04): 1 = steuerfrei
+    // mit Vorsteuerabzug, 2/3 = Umsatzsteuer 7/19 %, 8/9 = Vorsteuer 7/19 %.
+    private static bool IsStandardBuKey(int key) => key is 1 or 2 or 3 or 8 or 9;
 
     private static void AppendRow(StringBuilder csv, IEnumerable<string> fields) =>
         csv.AppendJoin(';', fields).Append("\r\n");

@@ -92,7 +92,9 @@ public sealed class DatevBookingMappingTests
     [Theory]
     [InlineData(TaxCategory.E, false, "")]
     [InlineData(TaxCategory.S, true, "")]
-    [InlineData(TaxCategory.AE, false, "20")]
+    // §13b reverse charge: no automatic BU-Schlüssel is emitted (20 is not a valid DATEV
+    // key); the Buchhaltungsbüro assigns the correct §13b key manually on that line.
+    [InlineData(TaxCategory.AE, false, "")]
     public async Task Exempt_small_business_and_reverse_charge_do_not_invent_vat(
         TaxCategory category, bool smallBusiness, string key)
     {
