@@ -84,6 +84,7 @@ public sealed class PostgresFixture : IAsyncLifetime
             GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO numera_app;
             GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO numera_app;
             REVOKE UPDATE, DELETE ON audit_events FROM numera_app;
+            REVOKE UPDATE, DELETE ON vat_payment FROM numera_app;
             """);
 
         AppConnectionString = new NpgsqlConnectionStringBuilder(_adminConnectionString)

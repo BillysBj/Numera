@@ -124,10 +124,17 @@ public sealed class EuerCalculator(NumeraDbContext db, RecognitionReader recogni
             }
         }
 
+        if (!isKleinunternehmer)
+        {
+            unroundedExpenseByLine[EuerLineMap.PaidOutputVatZeile] = await recognitionReader
+                .ReadVatFinanzamtRecognitionAsync(from, to, ct).ConfigureAwait(false);
+        }
+
         var expenseLines = definitions
             .Where(definition =>
                 definition.Section == EuerSection.Betriebsausgaben
-                && (!isKleinunternehmer || definition.AmountKind != EuerAmountKind.PaidInputVat))
+                && (!isKleinunternehmer || definition.AmountKind is not
+                    (EuerAmountKind.PaidInputVat or EuerAmountKind.PaidOutputVat)))
             .Select(definition => new EuerLine(
                 definition.Zeile,
                 definition.Bezeichnung,

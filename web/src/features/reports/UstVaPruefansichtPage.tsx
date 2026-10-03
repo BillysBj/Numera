@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import VatPaymentsSection from './VatPaymentsSection'
 import {
   downloadUstVaPdf,
   downloadUstVaXml,
@@ -186,6 +187,7 @@ export default function UstVaPruefansichtPage() {
           )}
         </>
       ) : null}
+      {report.data && !report.data.isKleinunternehmer && <VatPaymentsSection />}
     </main>
   )
 }

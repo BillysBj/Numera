@@ -1,4 +1,26 @@
 {
+  "vatPayments": {
+    "title": "Finanzamt-Zahlungen (USt)",
+    "description": "Alle erfassten USt-Zahlungen und Erstattungen/Verrechnungen. Die EÜR berücksichtigt sie in Zeile 58 zum Wertstellungsdatum.",
+    "record": "Zahlung / Erstattung erfassen",
+    "amount": "Betrag (EUR)",
+    "valueDate": "Wertstellungsdatum",
+    "kind": "Art",
+    "payment": "Zahlung an das Finanzamt",
+    "refund": "Erstattung / Verrechnung vom Finanzamt",
+    "reference": "Referenz",
+    "status": "Status / Aktion",
+    "empty": "Noch keine Finanzamt-Zahlungen erfasst.",
+    "reverse": "Stornieren",
+    "reversal": "Stornobuchung",
+    "reversed": "Storniert",
+    "reverseDescription": "Die Gegenbuchung wird mit dem heutigen Wertstellungsdatum erfasst. Der ursprüngliche Eintrag bleibt erhalten.",
+    "cancel": "Abbrechen",
+    "saving": "Wird gespeichert …",
+    "error": "Die Zahlung konnte nicht gespeichert werden. Bitte prüfe die Angaben und versuche es erneut.",
+    "amountPositive": "Der Betrag muss größer als 0 sein.",
+    "dateRequired": "Bitte gib ein Wertstellungsdatum an."
+  },
   "nav": {
     "group": "Berichte",
     "ustva": "USt-Voranmeldung",

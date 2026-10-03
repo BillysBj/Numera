@@ -30,3 +30,6 @@ coverage/
 
 # PostgreSQL disaster-recovery dumps (may contain production data)
 backups/
+
+# Codex/agent report output
+artifacts/

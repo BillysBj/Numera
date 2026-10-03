@@ -8,6 +8,7 @@ using Numera.Api.Reporting;
 using Numera.Api.Services;
 using Numera.Modules.Ledger;
 using Numera.Modules.Ledger.Seed;
+using Numera.Modules.Ledger.Tax;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Payments;
 using Numera.Platform.Db;
@@ -28,6 +29,34 @@ public sealed class EuerCalculatorTests(PostgresFixture fixture)
     private static readonly DateOnly JanuaryTo = new(2026, 1, 31);
     private static readonly DateOnly FebruaryFrom = new(2026, 2, 1);
     private static readonly DateOnly FebruaryTo = new(2026, 2, 28);
+
+    [Fact]
+    public async Task Remitted_vat_makes_bruttomethode_profit_vat_neutral()
+    {
+        var tenant = await SetupTenantAsync();
+        var invoice = await CreateInvoiceAsync(tenant, 100m, 19m);
+        await RecordPaymentAsync(tenant, invoice.OpenItemId, invoice.GrossAmount);
+        var before = await ComputeAsync(tenant, FebruaryFrom, FebruaryTo);
+        Assert.Equal(119m, before.Gewinn);
+
+        await using (var db = fixture.CreateAppContext(tenant))
+        {
+            var currentTenant = new TenantContext();
+            currentTenant.SetTenant(tenant);
+            var entriesBefore = await db.Set<JournalEntry>().CountAsync();
+            var result = await new VatPaymentService(db, currentTenant, new NoOpAuditWriter())
+                .RecordAsync(19m, VatPaymentKind.Payment, FebruaryDate, "USt-Vorauszahlung");
+            Assert.Equal(PaymentOperationStatus.Success, result.Status);
+            Assert.Equal(entriesBefore, await db.Set<JournalEntry>().CountAsync());
+        }
+
+        var after = await ComputeAsync(tenant, FebruaryFrom, FebruaryTo);
+        Assert.Equal(119m, after.SummeEinnahmen);
+        Assert.Equal(19m, FindIncomeLine(after, EuerLineMap.CollectedVatZeile).Betrag);
+        Assert.Equal(19m, Assert.Single(after.Betriebsausgaben, line => line.Zeile == EuerLineMap.PaidOutputVatZeile).Betrag);
+        Assert.Equal(19m, after.SummeAusgaben);
+        Assert.Equal(100m, after.Gewinn);
+    }
 
     [Fact]
     public async Task Zufluss_timing_recognizes_income_only_in_the_payment_window()

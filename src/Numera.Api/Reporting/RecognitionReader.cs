@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Modules.Ledger;
+using Numera.Modules.Ledger.Tax;
 using Numera.Platform.Db;
 
 namespace Numera.Api.Reporting;
@@ -16,6 +17,15 @@ namespace Numera.Api.Reporting;
 /// </remarks>
 public sealed class RecognitionReader(NumeraDbContext db)
 {
+    /// <summary>Net VAT paid to the Finanzamt, including refunds and reversals on their own value dates.</summary>
+    public Task<decimal> ReadVatFinanzamtRecognitionAsync(DateOnly from, DateOnly to, CancellationToken ct) =>
+        db.Database.SqlQuery<decimal>(
+            $"""
+            SELECT COALESCE(SUM(CASE WHEN kind = {(int)VatPaymentKind.Payment} THEN amount ELSE -amount END), 0) AS "Value"
+              FROM vat_payment
+             WHERE value_date >= {from} AND value_date <= {to}
+            """).SingleAsync(ct);
+
     /// <summary>Recognizes receipt totals pro rata on the supplier payment's value date.</summary>
     public async Task<IReadOnlyList<ExpenseCashRecognitionRow>> ReadExpenseCashRecognitionAsync(
         DateOnly from,

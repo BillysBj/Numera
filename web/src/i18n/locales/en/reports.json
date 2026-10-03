@@ -1,4 +1,26 @@
 {
+  "vatPayments": {
+    "title": "Tax office payments (VAT)",
+    "description": "All recorded VAT payments and refunds/offsets. The EÜR includes them in line 58 on their value date.",
+    "record": "Record payment / refund",
+    "amount": "Amount (EUR)",
+    "valueDate": "Value date",
+    "kind": "Type",
+    "payment": "Payment to the tax office",
+    "refund": "Refund / offset from the tax office",
+    "reference": "Reference",
+    "status": "Status / action",
+    "empty": "No tax office payments recorded yet.",
+    "reverse": "Reverse",
+    "reversal": "Reversal entry",
+    "reversed": "Reversed",
+    "reverseDescription": "A reversing entry will be recorded with today's value date. The original entry is retained.",
+    "cancel": "Cancel",
+    "saving": "Saving …",
+    "error": "The payment could not be saved. Please check the details and try again.",
+    "amountPositive": "The amount must be greater than 0.",
+    "dateRequired": "Please enter a value date."
+  },
   "nav": {
     "group": "Reports",
     "ustva": "VAT return",
