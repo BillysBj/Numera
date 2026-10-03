@@ -39,6 +39,7 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 
 var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+builder.Services.AddDataProtection().SetApplicationName("Numera");
 if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
 {
     builder.Services
@@ -114,6 +115,8 @@ builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailO
 builder.Services.Configure<BelegeMailboxOptions>(
     builder.Configuration.GetSection(BelegeMailboxOptions.SectionName));
 builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
+builder.Services.AddScoped<SmtpPasswordProtector>();
+builder.Services.AddScoped<ITenantEmailConfigResolver, TenantEmailConfigResolver>();
 builder.Services.AddTransient<SendDocumentEmailJob>();
 // --- E-invoice validation (plan 05-02, EINV-03) ----------------------------
 // The IEInvoiceValidator seam over the KoSIT validator sidecar. A typed HttpClient POSTs the
@@ -275,6 +278,7 @@ app.MapPartnerTaskEndpoints();
 app.MapCustomerFileEndpoints();
 app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
+app.MapEmailSettingsEndpoints();
 app.MapLedgerSetupEndpoints();
 app.MapLedgerEndpoints();
 app.MapReportEndpoints();

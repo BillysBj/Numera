@@ -21,13 +21,14 @@ public static class DocumentEmailTemplates
     public static Content Build(string language, string documentNumber)
     {
         var isEnglish = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase);
+        var htmlNumber = System.Net.WebUtility.HtmlEncode(documentNumber);
         if (isEnglish)
         {
             return new Content(
                 Subject: $"Invoice {documentNumber}",
                 HtmlBody:
                     $"<p>Dear Sir or Madam,</p>"
-                    + $"<p>please find attached your invoice <strong>{documentNumber}</strong> as a PDF.</p>"
+                    + $"<p>please find attached your invoice <strong>{htmlNumber}</strong> as a PDF.</p>"
                     + "<p>Kind regards,<br/>Numera</p>",
                 TextBody:
                     "Dear Sir or Madam,\r\n\r\n"
@@ -39,7 +40,7 @@ public static class DocumentEmailTemplates
             Subject: $"Rechnung {documentNumber}",
             HtmlBody:
                 "<p>Sehr geehrte Damen und Herren,</p>"
-                + $"<p>anbei erhalten Sie Ihre Rechnung <strong>{documentNumber}</strong> als PDF.</p>"
+                + $"<p>anbei erhalten Sie Ihre Rechnung <strong>{htmlNumber}</strong> als PDF.</p>"
                 + "<p>Mit freundlichen Grüßen<br/>Numera</p>",
             TextBody:
                 "Sehr geehrte Damen und Herren,\r\n\r\n"

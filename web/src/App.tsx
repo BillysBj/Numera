@@ -41,6 +41,7 @@ import OpenItemsListPage from './features/openItems/OpenItemsListPage'
 import InboundListPage from './features/inbound/InboundListPage'
 import InboundDetailPage from './features/inbound/InboundDetailPage'
 import CompanyProfileSettingsPage from './features/settings/CompanyProfileSettingsPage'
+import EmailSettingsPage from './features/settings/EmailSettingsPage'
 import DunningConfigSettingsPage from './features/dunning/DunningConfigSettingsPage'
 import RecurringTemplateListPage from './features/recurring/RecurringTemplateListPage'
 import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFormPage'
@@ -79,6 +80,8 @@ function useNavGroups(): NavGroup[] {
   const { t: to } = useTranslation('openItems')
   const { t: ti } = useTranslation('inbound')
   const { t: ts } = useTranslation('settings')
+  const { t: te } = useTranslation('emailSettings')
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe })
   const { t: tdu } = useTranslation('dunning')
   const { t: tr } = useTranslation('recurring')
   const { t: tt } = useTranslation('team')
@@ -141,6 +144,9 @@ function useNavGroups(): NavGroup[] {
       label: t('nav.sections.system'),
       items: [
         { to: '/settings', label: ts('nav'), icon: IconSettings },
+        ...(me.data?.role === 'Owner'
+          ? [{ to: '/settings/email', label: te('title'), icon: IconSettings }]
+          : []),
         ...(billing.data?.selfHosted
           ? []
           : [{ to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems }]),
@@ -391,6 +397,7 @@ function AppShell() {
             <Route path="/inbound/:id" element={<InboundDetailPage />} />
             <Route path="/settings" element={<CompanyProfileSettingsPage />} />
             <Route path="/settings/dunning" element={<DunningConfigSettingsPage />} />
+            <Route path="/settings/email" element={<EmailSettingsPage />} />
             <Route path="/settings/ledger" element={<LedgerSetupPage />} />
             <Route path="/recurring" element={<RecurringTemplateListPage />} />
             <Route path="/recurring/new" element={<RecurringTemplateFormPage />} />

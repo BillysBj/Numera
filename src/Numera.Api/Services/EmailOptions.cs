@@ -16,7 +16,7 @@ public sealed class EmailOptions
     /// <summary>The SMTP port (Mailpit: <c>1025</c>).</summary>
     public int Port { get; set; } = 1025;
 
-    /// <summary>Whether to negotiate TLS (StartTls). Mailpit dev/test = false (plain).</summary>
+    /// <summary>Require TLS: implicit TLS on port 465, STARTTLS otherwise. False = plain (Mailpit).</summary>
     public bool UseSsl { get; set; }
 
     /// <summary>The envelope + header From address.</summary>

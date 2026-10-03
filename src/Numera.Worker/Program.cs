@@ -2,6 +2,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,6 +20,19 @@ using Numera.Platform.Tenancy;
 // that a background job re-establishes tenant context (ICurrentTenant.SetTenant) and
 // the TenantConnectionInterceptor sets app.current_tenant for RLS inside the job.
 var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddDataProtection().SetApplicationName("Numera");
+var dataProtectionKeyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(dataProtectionKeyPath))
+{
+    builder.Services.AddDataProtection()
+        .SetApplicationName("Numera")
+        .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeyPath));
+}
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddScoped<SmtpPasswordProtector>();
+builder.Services.AddScoped<ITenantEmailConfigResolver, TenantEmailConfigResolver>();
+builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");

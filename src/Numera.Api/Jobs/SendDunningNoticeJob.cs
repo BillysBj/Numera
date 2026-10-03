@@ -6,6 +6,7 @@ using Numera.Api.Services;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
 using Numera.Modules.Sales.Dunning;
+using Numera.Modules.Sales.Email;
 using Numera.Modules.Sales.Pdf;
 using Numera.Platform.Tenancy;
 
@@ -82,17 +83,15 @@ public sealed class SendDunningNoticeJob
                     $"No recipient e-mail is available for dunning notice {notice.Id}.");
             }
 
-            var english = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase);
+            var settings = await db.Set<TenantEmailSettings>().AsNoTracking()
+                .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            var content = TenantEmailTemplates.Dunning(settings, document, language, config.Name, notice.Fee);
             await sender.SendAsync(new EmailMessage
             {
                 To = recipient,
-                Subject = $"{config.Name} – {document.DocumentNumber}",
-                TextBody = english
-                    ? $"Please find the dunning notice for invoice {document.DocumentNumber} attached."
-                    : $"Anbei erhalten Sie die Mahnung zur Rechnung {document.DocumentNumber}.",
-                HtmlBody = english
-                    ? $"<p>Please find the dunning notice for invoice {document.DocumentNumber} attached.</p>"
-                    : $"<p>Anbei erhalten Sie die Mahnung zur Rechnung {document.DocumentNumber}.</p>",
+                Subject = content.Subject,
+                TextBody = content.TextBody,
+                HtmlBody = content.HtmlBody,
                 Attachment = new EmailAttachment(
                     $"{config.Name}-{document.DocumentNumber}.pdf",
                     pdf,

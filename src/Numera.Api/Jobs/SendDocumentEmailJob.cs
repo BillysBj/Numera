@@ -119,13 +119,17 @@ public sealed class SendDocumentEmailJob
                 attachment = new EmailAttachment($"{documentNumber}.pdf", render.PdfBytes!, "application/pdf");
             }
 
-            var content = DocumentEmailTemplates.Build(language, documentNumber);
+            var document = await db.Set<SalesDocument>().AsNoTracking()
+                .FirstAsync(d => d.Id == email.DocumentId, cancellationToken).ConfigureAwait(false);
+            var settings = await db.Set<TenantEmailSettings>().AsNoTracking()
+                .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            var content = TenantEmailTemplates.Invoice(settings, document, language, documentNumber);
 
             await sender.SendAsync(
                 new EmailMessage
                 {
                     To = email.ToAddress,
-                    Subject = email.Subject ?? content.Subject,
+                    Subject = content.Subject,
                     HtmlBody = content.HtmlBody,
                     TextBody = content.TextBody,
                     Attachment = attachment,
@@ -138,6 +142,7 @@ public sealed class SendDocumentEmailJob
             email.SentAt = now;
             email.AttemptCount++;
             email.LastError = null;
+            email.Subject = content.Subject;
 
             var doc = await db.Set<SalesDocument>()
                 .FirstOrDefaultAsync(d => d.Id == email.DocumentId, cancellationToken)

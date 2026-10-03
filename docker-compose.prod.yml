@@ -138,6 +138,7 @@ services:
       context: .
       dockerfile: src/Numera.Worker/Dockerfile
     environment:
+      DataProtection__KeyPath: /keys
       ASPNETCORE_ENVIRONMENT: Production
       Billing__SelfHosted: ${BILLING_SELF_HOSTED:-true}
       ConnectionStrings__Default: Host=db;Port=5432;Database=numera;Username=numera_app;Password=${DB_PASSWORD}
@@ -154,6 +155,8 @@ services:
       Email__Password: ${EMAIL_PASSWORD:-}
       Email__FromAddress: ${EMAIL_FROM:-}
       Email__FromName: ${EMAIL_FROMNAME:-Numera}
+    volumes:
+      - keys:/keys
     depends_on:
       migrate:
         condition: service_completed_successfully

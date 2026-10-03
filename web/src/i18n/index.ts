@@ -16,6 +16,8 @@ import deOpenItems from './locales/de/openItems.json'
 import enOpenItems from './locales/en/openItems.json'
 import deSettings from './locales/de/settings.json'
 import enSettings from './locales/en/settings.json'
+import deEmailSettings from './locales/de/emailSettings.json'
+import enEmailSettings from './locales/en/emailSettings.json'
 import deInbound from './locales/de/inbound.json'
 import enInbound from './locales/en/inbound.json'
 import dePayments from './locales/de/payments.json'
@@ -54,6 +56,7 @@ export const resources = {
     documents: deDocuments,
     openItems: deOpenItems,
     settings: deSettings,
+    emailSettings: deEmailSettings,
     inbound: deInbound,
     payments: dePayments,
     dunning: deDunning,
@@ -74,6 +77,7 @@ export const resources = {
     documents: enDocuments,
     openItems: enOpenItems,
     settings: enSettings,
+    emailSettings: enEmailSettings,
     inbound: enInbound,
     payments: enPayments,
     dunning: enDunning,
