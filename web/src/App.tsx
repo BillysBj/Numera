@@ -264,6 +264,9 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </div>
       ))}
+      <p className="mt-auto px-3 pt-2 text-[0.68rem] text-sidebar-muted">
+        powered by NOEMA Essentials
+      </p>
     </nav>
   )
 }

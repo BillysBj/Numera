@@ -366,7 +366,10 @@ export default function Landing() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <Logo />
-          <p>© {new Date().getFullYear()} Numera · Rechnungen &amp; E-Rechnung für deutsche Unternehmen</p>
+          <div className="text-center sm:text-left">
+            <p>© {new Date().getFullYear()} Numera · Rechnungen &amp; E-Rechnung für deutsche Unternehmen</p>
+            <p className="mt-0.5 text-xs text-muted-foreground/80">powered by NOEMA Essentials</p>
+          </div>
           <div className="flex items-center gap-5">
             <span>GoBD-konform</span>
             <span>EN 16931</span>
