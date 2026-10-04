@@ -236,6 +236,10 @@ public sealed class InvoiceDocument : IDocument
                 {
                     meta.Spacing(1);
                     MetaLine(meta, DocumentNoLabel(), _model.DocumentNumber);
+                    if (!string.IsNullOrWhiteSpace(recipient.CustomerNumber))
+                    {
+                        MetaLine(meta, $"{_labels.CustomerNumber}:", recipient.CustomerNumber);
+                    }
                     MetaLine(meta, _labels.Date, FormatDate(_model.DocumentDate));
 
                     if (_model.ServicePeriodEnd is { } periodEnd && _model.ServiceDate is { } periodStart)

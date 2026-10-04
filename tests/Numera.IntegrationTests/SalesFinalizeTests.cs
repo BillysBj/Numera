@@ -9,6 +9,7 @@ using Numera.Api.Contracts;
 using Numera.Api.Endpoints;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.Pdf;
 using Numera.Platform.Money;
 
 using Xunit;
@@ -62,10 +63,12 @@ public sealed class SalesFinalizeTests
         {
             var recipient = await db.Set<BusinessPartner>().SingleAsync(b => b.Id == partner.Id);
             recipient.Language = language;
+            recipient.CustomerNumber = "K-00042";
             await db.SaveChangesAsync();
             await SalesTestData.FinalizeAsync(db, docId);
-            // Later master-data edits must not change the finalized document's language.
+            // Later master-data edits must not change the frozen recipient values.
             recipient.Language = language == PartnerLanguage.En ? PartnerLanguage.De : PartnerLanguage.En;
+            recipient.CustomerNumber = "K-99999";
             await db.SaveChangesAsync();
         }
 
@@ -92,6 +95,15 @@ public sealed class SalesFinalizeTests
         Assert.Equal(expectedLanguage, json.GetProperty("recipientLanguage").GetString());
         using var recipientSnapshot = JsonDocument.Parse(doc.RecipientSnapshot!);
         Assert.Equal(expectedLanguage, recipientSnapshot.RootElement.GetProperty("language").GetString());
+        Assert.Equal("K-00042", recipientSnapshot.RootElement.GetProperty("customerNumber").GetString());
+        var pdfModel = SnapshotReader.FromDocument(doc, language: expectedLanguage);
+        Assert.Equal("K-00042", pdfModel.Recipient.CustomerNumber);
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        using var pdf = UglyToad.PdfPig.PdfDocument.Open(InvoiceDocument.Render(pdfModel));
+        var pdfText = new string(string.Concat(pdf.GetPages().Select(p => p.Text))
+            .Where(c => !char.IsWhiteSpace(c)).ToArray());
+        Assert.Contains(expectedLanguage == "en" ? "Customerno.:K-00042" : "Kundennummer:K-00042", pdfText);
+        Assert.DoesNotContain("K-99999", pdfText);
 
         // Totals: per-category rounded tax summed (19.00 + 14.00 = 33.00), gross = 333.00.
         Assert.Equal(300.00m, doc.TotalNet);

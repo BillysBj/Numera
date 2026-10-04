@@ -25,6 +25,9 @@ public sealed record PdfLabels
     /// <summary>"Rechnungsnummer" / "Invoice No.".</summary>
     public required string InvoiceNo { get; init; }
 
+    /// <summary>"Kundennummer" / "Customer no.".</summary>
+    public required string CustomerNumber { get; init; }
+
     /// <summary>"Datum" / "Date".</summary>
     public required string Date { get; init; }
 
@@ -110,6 +113,7 @@ public sealed record PdfLabels
         Culture = CultureInfo.GetCultureInfo("de-DE"),
         Invoice = "Rechnung",
         InvoiceNo = "Rechnungsnummer",
+        CustomerNumber = "Kundennummer",
         Date = "Datum",
         ServiceDate = "Leistungsdatum",
         ServiceDateMatchesInvoiceDate = "Leistungsdatum entspricht dem Rechnungsdatum",
@@ -143,6 +147,7 @@ public sealed record PdfLabels
         Culture = CultureInfo.GetCultureInfo("en-GB"),
         Invoice = "Invoice",
         InvoiceNo = "Invoice No.",
+        CustomerNumber = "Customer no.",
         Date = "Date",
         ServiceDate = "Service Date",
         ServiceDateMatchesInvoiceDate = "Date of supply is the invoice date",

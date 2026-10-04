@@ -166,6 +166,9 @@ public sealed record InvoicePdfModel
     /// <summary>Frozen recipient block (BG-7/BG-8 + tax identity).</summary>
     public sealed record RecipientBlock
     {
+        /// <summary>Frozen customer number; null for legacy snapshots.</summary>
+        public string? CustomerNumber { get; init; }
+
         /// <summary>Buyer name (BT-44).</summary>
         public string? Name { get; init; }
 

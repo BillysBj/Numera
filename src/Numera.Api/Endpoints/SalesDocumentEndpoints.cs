@@ -1507,6 +1507,7 @@ public static class SalesDocumentEndpoints
     private static string SerializeRecipient(BusinessPartner b) => JsonSerializer.Serialize(new
     {
         b.Name,
+        b.CustomerNumber,
         b.LegalForm,
         BillingAddress = new
         {

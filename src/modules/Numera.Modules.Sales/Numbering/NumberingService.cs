@@ -35,6 +35,11 @@ namespace Numera.Modules.Sales.Numbering;
 /// </remarks>
 public sealed class NumberingService
 {
+    // Reserved partner series outside DocumentType (0–7), sharing number_sequences
+    // without a schema change. Year 0 makes these tenant-scoped counters continuous.
+    private const int PartnerCustomerSeriesDocType = 1001;
+    private const int PartnerSupplierSeriesDocType = 1002;
+
     private readonly NumeraDbContext _db;
 
     /// <summary>Creates the service over the request-scoped <see cref="NumeraDbContext"/>.</summary>
@@ -71,6 +76,17 @@ public sealed class NumberingService
         return $"{prefix}{yearPart}{seq}";
     }
 
+    /// <summary>
+    /// Claims a continuous customer (K-00001) or supplier (L-00001) number.
+    /// Without an ambient transaction the claim autocommits; failed partner saves may leave gaps.
+    /// </summary>
+    public async Task<string> AssignPartnerNumberAsync(bool customer, CancellationToken ct)
+    {
+        var docType = customer ? PartnerCustomerSeriesDocType : PartnerSupplierSeriesDocType;
+        var assigned = await ClaimAsync(docType, 0, ct).ConfigureAwait(false);
+        return (customer ? "K-" : "L-") + assigned.ToString("D5", CultureInfo.InvariantCulture);
+    }
+
     // The atomic claim (RESEARCH.md Pattern 3). One statement: creates the counter row on
     // first use (next_value seeded to 2 so this txn owns 1) or increments it, returning the
     // value this transaction owns. Runs on the DbContext connection + ambient transaction so
@@ -78,24 +94,34 @@ public sealed class NumberingService
     // concurrent finalizations of the same series.
     private async Task<long> ClaimAsync(int docType, int year, CancellationToken ct)
     {
-        var connection = _db.Database.GetDbConnection();
-        await using var cmd = connection.CreateCommand();
-        cmd.Transaction = _db.Database.CurrentTransaction?.GetDbTransaction();
-        cmd.CommandText =
-            """
-            INSERT INTO number_sequences (id, tenant_id, doc_type, year, next_value)
-            VALUES (@id, current_setting('app.current_tenant')::uuid, @docType, @year, 2)
-            ON CONFLICT (tenant_id, doc_type, year)
-            DO UPDATE SET next_value = number_sequences.next_value + 1
-            RETURNING next_value - 1;
-            """;
-        cmd.Parameters.Add(Param(cmd, "id", Guid.CreateVersion7()));
-        cmd.Parameters.Add(Param(cmd, "docType", docType));
-        cmd.Parameters.Add(Param(cmd, "year", year));
+        // EF opens the connection through its tenant interceptor, including for partner
+        // creation with no preceding query/transaction. Balance EF's open count below.
+        await _db.Database.OpenConnectionAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var connection = _db.Database.GetDbConnection();
+            await using var cmd = connection.CreateCommand();
+            cmd.Transaction = _db.Database.CurrentTransaction?.GetDbTransaction();
+            cmd.CommandText =
+                """
+                INSERT INTO number_sequences (id, tenant_id, doc_type, year, next_value)
+                VALUES (@id, current_setting('app.current_tenant')::uuid, @docType, @year, 2)
+                ON CONFLICT (tenant_id, doc_type, year)
+                DO UPDATE SET next_value = number_sequences.next_value + 1
+                RETURNING next_value - 1;
+                """;
+            cmd.Parameters.Add(Param(cmd, "id", Guid.CreateVersion7()));
+            cmd.Parameters.Add(Param(cmd, "docType", docType));
+            cmd.Parameters.Add(Param(cmd, "year", year));
 
-        var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false)
-            ?? throw new InvalidOperationException("Numbering claim returned no value.");
-        return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+            var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Numbering claim returned no value.");
+            return Convert.ToInt64(result, CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            await _db.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
     }
 
     private static DbParameter Param(DbCommand cmd, string name, object value)

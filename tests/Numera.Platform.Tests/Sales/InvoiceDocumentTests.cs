@@ -53,6 +53,53 @@ public class InvoiceDocumentTests
 
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 
+    [Theory]
+    [InlineData("de", "Kundennummer")]
+    [InlineData("en", "Customer no.")]
+    public void Frozen_customer_number_is_mapped_and_rendered(string language, string label)
+    {
+        var document = BuildFixture();
+        var recipient = System.Text.Json.Nodes.JsonNode.Parse(document.RecipientSnapshot!)!;
+        recipient["customerNumber"] = "K-00042";
+        document.RecipientSnapshot = recipient.ToJsonString();
+
+        var model = SnapshotReader.FromDocument(document, language: language);
+
+        Assert.Equal("K-00042", model.Recipient.CustomerNumber);
+        Assert.Contains(WithoutWhitespace($"{label}: K-00042"), RenderText(model));
+    }
+
+    [Theory]
+    [InlineData("de", null)]
+    [InlineData("en", null)]
+    [InlineData("de", "")]
+    [InlineData("en", "")]
+    [InlineData("de", "   ")]
+    [InlineData("en", "   ")]
+    public void Empty_customer_number_omits_the_meta_line(string language, string? number)
+    {
+        var document = BuildFixture();
+        var recipient = System.Text.Json.Nodes.JsonNode.Parse(document.RecipientSnapshot!)!;
+        recipient["customerNumber"] = number;
+        document.RecipientSnapshot = recipient.ToJsonString();
+
+        var model = SnapshotReader.FromDocument(document, language: language);
+
+        Assert.Equal(number, model.Recipient.CustomerNumber);
+        Assert.DoesNotContain(WithoutWhitespace(PdfLabels.For(language).CustomerNumber), RenderText(model));
+    }
+
+    [Theory]
+    [InlineData("de")]
+    [InlineData("en")]
+    public void Legacy_snapshot_without_customer_number_still_renders(string language)
+    {
+        var model = SnapshotReader.FromDocument(BuildFixture(), language: language);
+
+        Assert.Null(model.Recipient.CustomerNumber);
+        Assert.DoesNotContain(WithoutWhitespace(PdfLabels.For(language).CustomerNumber), RenderText(model));
+    }
+
     public static IEnumerable<object[]> SupplyDateDocumentTypes() =>
         from language in new[] { "de", "en" }
         from type in Enum.GetValues<DocumentType>()

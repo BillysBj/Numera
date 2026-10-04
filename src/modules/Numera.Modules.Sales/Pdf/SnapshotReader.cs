@@ -156,6 +156,7 @@ public static class SnapshotReader
 
         return new InvoicePdfModel.RecipientBlock
         {
+            CustomerNumber = GetString(root, "customerNumber"),
             Name = GetString(root, "name"),
             LegalForm = GetString(root, "legalForm"),
             BillingAddress = ParseAddress(GetProperty(root, "billingAddress")),

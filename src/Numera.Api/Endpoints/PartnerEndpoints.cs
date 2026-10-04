@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Contracts;
 using Numera.Modules.Crm;
+using Numera.Modules.Sales.Numbering;
 using Numera.Platform.Audit;
 using Numera.Platform.Db;
 using Numera.Platform.Tenancy;
@@ -109,6 +110,7 @@ public static class PartnerEndpoints
             CreatePartnerRequest req,
             IValidator<CreatePartnerRequest> validator,
             NumeraDbContext db,
+            NumberingService numbering,
             IAuditWriter audit,
             ICurrentTenant tenant,
             ICurrentUser user,
@@ -144,6 +146,7 @@ public static class PartnerEndpoints
                 SupplierNumber = req.SupplierNumber,
             };
 
+            await AssignMissingNumbersAsync(p, numbering, ct).ConfigureAwait(false);
             db.Add(p);
             await audit.RecordAsync(
                 new PartnerAuditEvent("partner.created", p.Id, Before: null, After: Snapshot(p)), ct)
@@ -162,6 +165,7 @@ public static class PartnerEndpoints
             UpdatePartnerRequest req,
             IValidator<UpdatePartnerRequest> validator,
             NumeraDbContext db,
+            NumberingService numbering,
             IAuditWriter audit,
             ICurrentUser user,
             CancellationToken ct) =>
@@ -200,8 +204,16 @@ public static class PartnerEndpoints
             p.DefaultTaxCategory = req.DefaultTaxCategory;
             p.IsCustomer = req.IsCustomer;
             p.IsSupplier = req.IsSupplier;
-            p.CustomerNumber = req.CustomerNumber;
-            p.SupplierNumber = req.SupplierNumber;
+            // Once assigned, retain the number across edits and role changes.
+            if (string.IsNullOrWhiteSpace(p.CustomerNumber))
+            {
+                p.CustomerNumber = req.CustomerNumber;
+            }
+            if (string.IsNullOrWhiteSpace(p.SupplierNumber))
+            {
+                p.SupplierNumber = req.SupplierNumber;
+            }
+            await AssignMissingNumbersAsync(p, numbering, ct).ConfigureAwait(false);
 
             await audit.RecordAsync(
                 new PartnerAuditEvent("partner.updated", p.Id, before, Snapshot(p)), ct)
@@ -251,6 +263,19 @@ public static class PartnerEndpoints
     }
 
     // --- Mapping + shared helpers -------------------------------------------
+
+    private static async Task AssignMissingNumbersAsync(
+        BusinessPartner partner, NumberingService numbering, CancellationToken ct)
+    {
+        if (partner.IsCustomer && string.IsNullOrWhiteSpace(partner.CustomerNumber))
+        {
+            partner.CustomerNumber = await numbering.AssignPartnerNumberAsync(customer: true, ct).ConfigureAwait(false);
+        }
+        if (partner.IsSupplier && string.IsNullOrWhiteSpace(partner.SupplierNumber))
+        {
+            partner.SupplierNumber = await numbering.AssignPartnerNumberAsync(customer: false, ct).ConfigureAwait(false);
+        }
+    }
 
     private static Address ToAddress(AddressDto a) => new()
     {
