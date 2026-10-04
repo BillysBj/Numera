@@ -14,7 +14,12 @@
     "role": "Role",
     "submit": "Invite",
     "submitting": "Inviting …",
-    "success": "The member was added."
+    "success": "The member was added.",
+    "emailSent": "Invitation email sent to {{email}}.",
+    "emailFailed": "The invitation email to {{email}} could not be sent. Please share the login information securely.",
+    "accessCreated": "Access created for {{email}}.",
+    "temporaryPassword": "Temporary password (shown only once — please share securely):",
+    "passwordChangeRequired": "The person signs in with their email and this password and must choose a new password at first login."
   },
   "members": {
     "title": "Members",

@@ -61,7 +61,7 @@ export function useInvite() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { email: string; role: MembershipRoleValue }) =>
-      request<{ userId: string; temporaryPassword: string | null }>('/api/team/invite', {
+      request<{ userId: string; temporaryPassword: string | null; emailSent: boolean }>('/api/team/invite', {
         method: 'POST',
         body: JSON.stringify(input),
       }),

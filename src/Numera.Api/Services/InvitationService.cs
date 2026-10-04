@@ -34,6 +34,8 @@ public sealed class InvitationService
     private readonly IConfiguration _configuration;
     private readonly ILogger<InvitationService> _logger;
     private readonly IAuditWriter _audit;
+    private readonly IEmailSender _emailSender;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public InvitationService(
         IHttpClientFactory httpClientFactory,
@@ -41,7 +43,9 @@ public sealed class InvitationService
         ICurrentTenant currentTenant,
         IConfiguration configuration,
         ILogger<InvitationService> logger,
-        IAuditWriter audit)
+        IAuditWriter audit,
+        IEmailSender emailSender,
+        IHttpContextAccessor httpContextAccessor)
     {
         _httpClientFactory = httpClientFactory;
         _db = db;
@@ -49,6 +53,8 @@ public sealed class InvitationService
         _configuration = configuration;
         _logger = logger;
         _audit = audit;
+        _emailSender = emailSender;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     /// <summary>Finds or creates a Keycloak user, adds it to the tenant, and mirrors the role.</summary>
@@ -63,9 +69,8 @@ public sealed class InvitationService
 
         var (userId, created) = await FindOrCreateUserAsync(http, realm, email, ct).ConfigureAwait(false);
 
-        // A brand-new user has no password. With no SMTP wired for a Keycloak invite mail,
-        // set a one-time temporary password (must be changed at first login) and return it so
-        // the inviting owner can hand it to the new member out of band.
+        // A brand-new user must change this password at first login. Return it to the
+        // owner as a fallback even when the invitation e-mail is delivered successfully.
         string? temporaryPassword = null;
         if (created)
         {
@@ -98,7 +103,36 @@ public sealed class InvitationService
         await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
         _logger.LogInformation("Invited user {UserId} to tenant {TenantId} as {Role}.", userId, tenantId, role);
-        return new InviteResult(userId, temporaryPassword);
+        var emailSent = await SendInvitationEmailAsync(email, role, temporaryPassword, tenantId, userId, ct)
+            .ConfigureAwait(false);
+        return new InviteResult(userId, temporaryPassword, emailSent);
+    }
+
+    private async Task<bool> SendInvitationEmailAsync(
+        string email, MembershipRole role, string? temporaryPassword, Guid tenantId, Guid userId,
+        CancellationToken ct)
+    {
+        try
+        {
+            var company = await _db.Tenants.AsNoTracking().Where(x => x.Id == tenantId)
+                .Select(x => x.Name).SingleOrDefaultAsync(ct).ConfigureAwait(false);
+            var loginUrl = InvitationEmailTemplate.LoginUrl(
+                _configuration["App:PublicUrl"], _httpContextAccessor.HttpContext?.Request);
+            // MailKitEmailSender resolves the current tenant's SMTP configuration per send.
+            // Send only after SaveChangesAsync; do not persist the temporary password in a job.
+            await _emailSender.SendAsync(
+                InvitationEmailTemplate.Build(email, role, company, temporaryPassword, loginUrl), ct)
+                .ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Log the failure type only: transport errors can contain credentials or message content.
+            _logger.LogWarning(
+                "Invitation e-mail failed for user {UserId} in tenant {TenantId} ({ErrorType}). Membership was saved.",
+                userId, tenantId, ex.GetType().Name);
+            return false;
+        }
     }
 
     /// <summary>Looks up the e-mail for each membership user id via the Keycloak admin API.</summary>
@@ -373,8 +407,8 @@ public sealed class InvitationService
 }
 
 /// <summary>Result of inviting a team member; <see cref="TemporaryPassword"/> is set only when a
-/// brand-new Keycloak user was created (to be shared with the invitee out of band).</summary>
-public sealed record InviteResult(Guid UserId, string? TemporaryPassword);
+/// brand-new Keycloak user was created. It remains available as a fallback to e-mail delivery.</summary>
+public sealed record InviteResult(Guid UserId, string? TemporaryPassword, bool EmailSent);
 
 internal sealed record TeamMemberAuditEvent(
     string Action,

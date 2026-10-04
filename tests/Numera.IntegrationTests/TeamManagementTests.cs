@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -32,6 +33,8 @@ public sealed class TeamManagementTests(PostgresFixture fixture)
             var result = await CreateService(db, tenantId, invitedId)
                 .InviteAsync("berater@example.test", MembershipRole.TaxAdvisor, default);
             Assert.Equal(invitedId, result.UserId);
+            Assert.True(result.EmailSent);
+            Assert.False(string.IsNullOrWhiteSpace(result.TemporaryPassword));
         }
 
         await using (var read = fixture.CreateAppContext(tenantId))
@@ -170,7 +173,14 @@ public sealed class TeamManagementTests(PostgresFixture fixture)
             tenant,
             configuration,
             NullLogger<InvitationService>.Instance,
-            new NoOpAuditWriter());
+            new NoOpAuditWriter(),
+            new FakeEmailSender(),
+            new HttpContextAccessor());
+    }
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakeHttpClientFactory(Guid createdUserId) : IHttpClientFactory

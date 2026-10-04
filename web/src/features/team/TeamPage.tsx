@@ -83,7 +83,7 @@ export default function TeamPage() {
     try {
       const result = await invite.mutateAsync(values)
       form.reset()
-      setStatus(t('invite.success'))
+      setStatus(`${t('invite.success')} ${t(result.emailSent ? 'invite.emailSent' : 'invite.emailFailed', { email: values.email })}`)
       setInvited(
         result.temporaryPassword
           ? { email: values.email, password: result.temporaryPassword }
@@ -165,16 +165,15 @@ export default function TeamPage() {
 
           {invited && (
             <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
-              <p className="font-medium">Zugang für {invited.email} erstellt.</p>
+              <p className="font-medium">{t('invite.accessCreated', { email: invited.email })}</p>
               <p className="mt-1">
-                Temporäres Passwort (wird nur einmal angezeigt — bitte sicher weitergeben):
+                {t('invite.temporaryPassword')}
               </p>
               <code className="mt-1.5 inline-block select-all rounded bg-background px-2 py-1 font-mono text-base">
                 {invited.password}
               </code>
               <p className="mt-2 text-xs">
-                Die Person meldet sich mit E-Mail + diesem Passwort an und muss beim ersten Login ein
-                eigenes Passwort vergeben.
+                {t('invite.passwordChangeRequired')}
               </p>
             </div>
           )}

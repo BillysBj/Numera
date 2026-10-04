@@ -59,7 +59,7 @@ public static class TeamEndpoints
                 .ConfigureAwait(false);
             return Results.Created(
                 $"/api/team/{result.UserId}",
-                new { userId = result.UserId, temporaryPassword = result.TemporaryPassword });
+                new { userId = result.UserId, temporaryPassword = result.TemporaryPassword, emailSent = result.EmailSent });
         });
 
         group.MapPut("/{userId:guid}/role", async (

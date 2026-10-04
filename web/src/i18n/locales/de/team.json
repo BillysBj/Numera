@@ -14,7 +14,12 @@
     "role": "Rolle",
     "submit": "Einladen",
     "submitting": "Wird eingeladen …",
-    "success": "Das Mitglied wurde hinzugefügt."
+    "success": "Das Mitglied wurde hinzugefügt.",
+    "emailSent": "Einladungs-E-Mail an {{email}} gesendet.",
+    "emailFailed": "Die Einladungs-E-Mail an {{email}} konnte nicht gesendet werden. Bitte geben Sie die Zugangsinformationen sicher weiter.",
+    "accessCreated": "Zugang für {{email}} erstellt.",
+    "temporaryPassword": "Temporäres Passwort (wird nur einmal angezeigt — bitte sicher weitergeben):",
+    "passwordChangeRequired": "Die Person meldet sich mit E-Mail + diesem Passwort an und muss beim ersten Login ein eigenes Passwort vergeben."
   },
   "members": {
     "title": "Mitglieder",
