@@ -54,6 +54,157 @@ public class InvoiceDocumentTests
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 
     [Theory]
+    [InlineData("de")]
+    [InlineData("en")]
+    public void Delivery_note_renders_items_and_notes_without_prices_taxes_or_payment_sections(string language)
+    {
+        var model = BuildPriceSectionFixture(language, DocumentType.Lieferschein);
+        var labels = PdfLabels.For(language);
+
+        var text = RenderText(model);
+
+        Assert.Contains(language == "en" ? "DeliveryNote" : "Lieferschein", text);
+        Assert.Contains(WithoutWhitespace(model.Recipient.Name!), text);
+        Assert.Contains(WithoutWhitespace(model.DocumentNumber!), text);
+        Assert.Contains(WithoutWhitespace(model.Notes!), text);
+        Assert.Contains(WithoutWhitespace(labels.Item
+            + (language == "en" ? "Description" : "Bezeichnung")
+            + labels.Qty + (language == "en" ? "Unit" : "Einheit")), text);
+        foreach (var line in model.Lines)
+        {
+            Assert.Contains(WithoutWhitespace(line.Name), text);
+            Assert.Contains(InvoiceDocument.FormatNumber(line.Quantity, labels.Culture), text);
+            if (line.Description is not null)
+            {
+                Assert.Contains(WithoutWhitespace(line.Description), text);
+            }
+        }
+        Assert.Contains(language == "en" ? "hrs" : "Std.", text);
+        Assert.Contains(language == "en" ? "pcs" : "Stk.", text);
+
+        // VAT identifiers remain part of recipient metadata and the issuer imprint.
+        Assert.Contains(WithoutWhitespace($"{labels.VatId}: {model.Recipient.VatId}"), text);
+        var textWithoutVatIdLabel = text.Replace(WithoutWhitespace(labels.VatId), string.Empty);
+        Assert.DoesNotContain(labels.Vat, textWithoutVatIdLabel, StringComparison.Ordinal);
+        foreach (var forbidden in new[]
+        {
+            labels.UnitPrice, labels.Amount, labels.Total, labels.SubtotalNet,
+            labels.VatBreakdown, labels.PayableBy, labels.BankDetails, labels.Iban,
+            language == "en" ? "Sum" : "Summe",
+            language == "en" ? "discount" : "Rabatt", "Skonto", "EUR", "€",
+            model.Prepayments[0].AbschlagNumber,
+        })
+        {
+            Assert.DoesNotContain(WithoutWhitespace(forbidden), textWithoutVatIdLabel, StringComparison.OrdinalIgnoreCase);
+        }
+        foreach (var row in model.BreakdownRows.Where(row => row.ExemptionReasonText is not null))
+        {
+            Assert.DoesNotContain(WithoutWhitespace(row.ExemptionReasonText!), text);
+        }
+        foreach (var amount in new[] { 100m, 300m, 500m, model.TotalNet, model.TotalTax, model.TotalGross })
+        {
+            Assert.DoesNotContain(InvoiceDocument.FormatNumber(amount, labels.Culture), text);
+        }
+    }
+
+    [Theory]
+    [InlineData("de", false)]
+    [InlineData("de", true)]
+    [InlineData("en", false)]
+    [InlineData("en", true)]
+    public void Delivery_note_renders_receipt_confirmation_after_items_and_optional_notes(string language, bool hasNotes)
+    {
+        var model = BuildPriceSectionFixture(language, DocumentType.Lieferschein);
+        model = model with { Notes = hasNotes ? model.Notes : null };
+        var confirmation = WithoutWhitespace(language == "en"
+            ? "Goods received complete and in good order:"
+            : "Ware vollständig und einwandfrei erhalten:");
+        var placeAndDate = WithoutWhitespace(language == "en" ? "Place, date" : "Ort, Datum");
+        var signature = WithoutWhitespace(language == "en" ? "Signature (recipient)" : "Unterschrift Empfänger");
+
+        var text = RenderText(model);
+
+        Assert.Contains(confirmation, text);
+        Assert.Contains(placeAndDate, text);
+        Assert.Contains(signature, text);
+        var precedingText = WithoutWhitespace(hasNotes ? model.Notes! : model.Lines[^1].Name);
+        Assert.True(text.IndexOf(confirmation, StringComparison.Ordinal) > text.IndexOf(precedingText, StringComparison.Ordinal));
+        Assert.True(text.IndexOf(placeAndDate, StringComparison.Ordinal) > text.IndexOf(confirmation, StringComparison.Ordinal));
+        Assert.True(text.IndexOf(signature, StringComparison.Ordinal) > text.IndexOf(placeAndDate, StringComparison.Ordinal));
+    }
+
+    public static IEnumerable<object[]> PricedDocumentTypes() =>
+        from language in new[] { "de", "en" }
+        from type in Enum.GetValues<DocumentType>()
+        where type != DocumentType.Lieferschein
+        select new object[] { language, type };
+
+    [Theory]
+    [MemberData(nameof(PricedDocumentTypes))]
+    public void Other_document_types_keep_prices_totals_taxes_discounts_and_payment_sections(
+        string language, DocumentType type)
+    {
+        var model = BuildPriceSectionFixture(language, type);
+        var labels = PdfLabels.For(language);
+
+        var text = RenderText(model);
+
+        Assert.DoesNotContain(WithoutWhitespace(labels.ReceiptConfirmation), text);
+        Assert.DoesNotContain(WithoutWhitespace(labels.PlaceAndDate), text);
+        Assert.DoesNotContain(WithoutWhitespace(labels.RecipientSignature), text);
+        Assert.Contains(WithoutWhitespace(labels.Item + labels.Description + labels.Qty
+            + labels.UnitPrice + labels.Amount), text);
+        foreach (var label in new[] { labels.SubtotalNet, labels.Total, labels.VatBreakdown,
+            labels.PayableBy, labels.BankDetails, labels.Iban })
+        {
+            Assert.Contains(WithoutWhitespace(label), text, StringComparison.OrdinalIgnoreCase);
+        }
+        foreach (var amount in new[] { 100m, 300m, 500m, model.TotalNet, model.TotalTax, model.TotalGross })
+        {
+            Assert.Contains(WithoutWhitespace($"{InvoiceDocument.FormatNumber(amount, labels.Culture)} €"), text);
+        }
+        Assert.Contains(WithoutWhitespace(language == "en" ? "less 12.5% discount" : "abzgl. 12,5% Rabatt"), text);
+        Assert.Contains(language == "en" ? "Onpaymentby" : "BeiZahlungbis", text);
+        Assert.Contains(model.Prepayments[0].AbschlagNumber, text);
+        foreach (var row in model.BreakdownRows.Where(row => row.ExemptionReasonText is not null))
+        {
+            Assert.Contains(WithoutWhitespace(row.ExemptionReasonText!), text);
+        }
+    }
+
+    private static InvoicePdfModel BuildPriceSectionFixture(string language, DocumentType type)
+    {
+        var document = BuildFixture();
+        document.DocumentType = type;
+        document.Lines[0].DiscountPercent = 12.5m;
+        var model = SnapshotReader.FromDocument(document, language: language);
+        return model with
+        {
+            Recipient = model.Recipient with { SkontoPercent = 2m, SkontoDays = 7 },
+            Prepayments =
+            [
+                new InvoicePdfModel.PrepaymentRow
+                {
+                    LineNumber = 1,
+                    AbschlagNumber = "AR-2026-00001",
+                    AbschlagDate = new DateOnly(2026, 6, 1),
+                    NetAmount = 50m,
+                    VatAmount = 9.5m,
+                    GrossAmount = 59.5m,
+                },
+            ],
+            BreakdownRows =
+            [
+                .. model.BreakdownRows,
+                new InvoicePdfModel.BreakdownRow
+                {
+                    ExemptionReasonText = "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.",
+                },
+            ],
+        };
+    }
+
+    [Theory]
     [InlineData("de", "Kundennummer")]
     [InlineData("en", "Customer no.")]
     public void Frozen_customer_number_is_mapped_and_rendered(string language, string label)

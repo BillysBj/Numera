@@ -103,6 +103,15 @@ public sealed record PdfLabels
     /// <summary>"Rechnungsempfänger" / "Bill To".</summary>
     public required string BillTo { get; init; }
 
+    /// <summary>Delivery-note confirmation that the goods were received complete and in good order.</summary>
+    public required string ReceiptConfirmation { get; init; }
+
+    /// <summary>"Ort, Datum" / "Place, date" (delivery-note signature area).</summary>
+    public required string PlaceAndDate { get; init; }
+
+    /// <summary>"Unterschrift Empfänger" / "Signature (recipient)".</summary>
+    public required string RecipientSignature { get; init; }
+
     /// <summary>Resolves the label set for a render language ("en" → English, everything else → German).</summary>
     public static PdfLabels For(string language) =>
         string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ? English : German;
@@ -139,6 +148,9 @@ public sealed record PdfLabels
         TaxAmount = "Steuerbetrag",
         VatBreakdown = "USt-Aufschlüsselung",
         BillTo = "Rechnungsempfänger",
+        ReceiptConfirmation = "Ware vollständig und einwandfrei erhalten:",
+        PlaceAndDate = "Ort, Datum",
+        RecipientSignature = "Unterschrift Empfänger",
     };
 
     /// <summary>English label set. Culture en-GB (European date order, £-free money formatted via currency string).</summary>
@@ -173,5 +185,8 @@ public sealed record PdfLabels
         TaxAmount = "Tax Amount",
         VatBreakdown = "VAT Breakdown",
         BillTo = "Bill To",
+        ReceiptConfirmation = "Goods received complete and in good order:",
+        PlaceAndDate = "Place, date",
+        RecipientSignature = "Signature (recipient)",
     };
 }

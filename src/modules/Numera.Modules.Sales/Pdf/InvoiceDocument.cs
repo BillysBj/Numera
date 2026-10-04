@@ -40,6 +40,8 @@ public sealed class InvoiceDocument : IDocument
     private readonly CultureInfo _culture;
     private readonly bool _pdfA;
 
+    private bool IsDeliveryNote => _model.DocumentType == DocumentType.Lieferschein;
+
     // Design palette. Accent is the single brand tone — change this one value to
     // re-skin the whole invoice in a company colour. Everything else is neutral.
     private const string Accent = "#28374D";      // deep ink-navy: title, table head, total
@@ -174,16 +176,40 @@ public sealed class InvoiceDocument : IDocument
 
             col.Item().Element(ComposeRecipientAndMeta);
             col.Item().Element(ComposeLinesTable);
-            col.Item().Element(ComposeTotals);
-            col.Item().Element(ComposeBreakdown);
-            col.Item().Element(ComposePrepayments);
-            col.Item().Element(ComposePflichttexte);
-            col.Item().Element(ComposePaymentBlock);
+            if (!IsDeliveryNote)
+            {
+                col.Item().Element(ComposeTotals);
+                col.Item().Element(ComposeBreakdown);
+                col.Item().Element(ComposePrepayments);
+                col.Item().Element(ComposePflichttexte);
+                col.Item().Element(ComposePaymentBlock);
+            }
 
             if (!string.IsNullOrWhiteSpace(_model.Notes))
             {
                 col.Item().PaddingTop(6).Text(_model.Notes!);
             }
+
+            if (IsDeliveryNote)
+            {
+                col.Item().ShowEntire().PaddingTop(16).Element(ComposeReceiptConfirmation);
+            }
+        });
+    }
+
+    private void ComposeReceiptConfirmation(IContainer container)
+    {
+        container.DefaultTextStyle(t => t.FontSize(9).FontColor(AccentSoft)).Column(col =>
+        {
+            col.Item().Text(_labels.ReceiptConfirmation);
+            col.Item().PaddingTop(32).Row(row =>
+            {
+                row.Spacing(28);
+                row.RelativeItem().BorderTop(0.5f).BorderColor(Hairline).PaddingTop(4)
+                    .Text(_labels.PlaceAndDate);
+                row.RelativeItem().BorderTop(0.5f).BorderColor(Hairline).PaddingTop(4)
+                    .Text(_labels.RecipientSignature);
+            });
         });
     }
 
@@ -278,17 +304,31 @@ public sealed class InvoiceDocument : IDocument
                 c.ConstantColumn(28);   // Pos.
                 c.RelativeColumn(5);    // Description
                 c.RelativeColumn(1.4f); // Qty
-                c.RelativeColumn(2);    // Unit price
-                c.RelativeColumn(2);    // Amount
+                if (IsDeliveryNote)
+                {
+                    c.RelativeColumn(1.4f); // Unit
+                }
+                else
+                {
+                    c.RelativeColumn(2);    // Unit price
+                    c.RelativeColumn(2);    // Amount
+                }
             });
 
             table.Header(header =>
             {
                 HeaderCell(header, _labels.Item);
-                HeaderCell(header, _labels.Description);
+                HeaderCell(header, IsDeliveryNote && _model.Language != "en" ? "Bezeichnung" : _labels.Description);
                 HeaderCell(header, _labels.Qty, right: true);
-                HeaderCell(header, _labels.UnitPrice, right: true);
-                HeaderCell(header, _labels.Amount, right: true);
+                if (IsDeliveryNote)
+                {
+                    HeaderCell(header, _model.Language == "en" ? "Unit" : "Einheit", right: true);
+                }
+                else
+                {
+                    HeaderCell(header, _labels.UnitPrice, right: true);
+                    HeaderCell(header, _labels.Amount, right: true);
+                }
             });
 
             foreach (var line in _model.Lines)
@@ -298,7 +338,7 @@ public sealed class InvoiceDocument : IDocument
                 BodyCell(table).Column(col =>
                 {
                     col.Item().Text(line.Name).SemiBold();
-                    if (line.DiscountPercent > 0m)
+                    if (!IsDeliveryNote && line.DiscountPercent > 0m)
                     {
                         var percent = line.DiscountPercent.ToString("0.############################", _culture);
                         var discount = _model.Language == "en"
@@ -312,10 +352,18 @@ public sealed class InvoiceDocument : IDocument
                     }
                 });
 
-                BodyCell(table).AlignRight().Text(
-                    $"{FormatNumber(line.Quantity, _culture)} {UnitDisplay(line.UnitCode)}".Trim());
-                BodyCell(table).AlignRight().Text(Money(line.NetUnitPrice));
-                BodyCell(table).AlignRight().Text(Money(line.LineNetAmount));
+                if (IsDeliveryNote)
+                {
+                    BodyCell(table).AlignRight().Text(FormatNumber(line.Quantity, _culture));
+                    BodyCell(table).AlignRight().Text(UnitDisplay(line.UnitCode));
+                }
+                else
+                {
+                    BodyCell(table).AlignRight().Text(
+                        $"{FormatNumber(line.Quantity, _culture)} {UnitDisplay(line.UnitCode)}".Trim());
+                    BodyCell(table).AlignRight().Text(Money(line.NetUnitPrice));
+                    BodyCell(table).AlignRight().Text(Money(line.LineNetAmount));
+                }
             }
         });
     }
