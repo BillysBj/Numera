@@ -57,6 +57,7 @@ import ReconciliationQueuePage from './features/banking/ReconciliationQueuePage'
 import ReconciliationMatchPage from './features/banking/ReconciliationMatchPage'
 import BillingPage from './features/billing/BillingPage'
 import UserManualPage from './features/help/UserManualPage'
+import ManualChapterPage from './features/help/ManualChapterPage'
 import LedgerSetupPage from './features/ledger/LedgerSetupPage'
 import { useBillingStatus } from './features/billing/billingApi'
 import DegradationBanner from './features/billing/DegradationBanner'
@@ -404,6 +405,7 @@ function AppShell() {
             <Route path="/recurring/:id/edit" element={<RecurringTemplateFormPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/handbuch" element={<UserManualPage />} />
+            <Route path="/handbuch/:slug" element={<ManualChapterPage />} />
             <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
             <Route path="/reports/euer" element={<EuerRoute />} />
             <Route path="/reports/datev" element={<DatevExportPage />} />
