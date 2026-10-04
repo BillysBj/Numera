@@ -7,9 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using MimeKit;
+
 using Numera.Api.Jobs;
 using Numera.Api.Services;
 using Numera.Modules.Sales;
+using Numera.Modules.Sales.EInvoice;
 using Numera.Modules.Sales.Email;
 using Numera.Platform.Db;
 using Numera.Platform.Money;
@@ -111,7 +114,7 @@ public sealed class DocumentEmailSendTests
         Assert.Equal(recipient, toAddress);
         Assert.Equal("Rechnung RE-2026-00001", subject);
 
-        // (2) …and it carries the rendered PDF attachment named {documentNumber}.pdf.
+        // (2) …and it carries the ZUGFeRD PDF attachment named {documentNumber}.pdf.
         var detailJson = await http.GetStringAsync($"/api/v1/message/{messageId}");
         using var detail = JsonDocument.Parse(detailJson);
         var attachments = detail.RootElement.GetProperty("Attachments");
@@ -121,10 +124,20 @@ public sealed class DocumentEmailSendTests
             "pdf",
             attachment.GetProperty("ContentType").GetString() ?? string.Empty,
             StringComparison.OrdinalIgnoreCase);
+        using var rawMessage = await http.GetStreamAsync($"/api/v1/message/{messageId}/raw");
+        using var mimeMessage = await MimeMessage.LoadAsync(rawMessage);
+        var pdfAttachment = Assert.IsType<MimePart>(Assert.Single(mimeMessage.Attachments));
+        Assert.NotNull(pdfAttachment.Content);
+        using var attachmentBytes = new MemoryStream();
+        await pdfAttachment.Content.DecodeToAsync(attachmentBytes);
 
         // (3) document_email flipped to Sent (SentAt set, one attempt), SalesDocument.SentAt is set.
         await using (var read = _fixture.CreateAppContext(tenant))
         {
+            var hybrid = await read.Set<EInvoiceArtifact>().AsNoTracking()
+                .SingleAsync(a => a.DocumentId == docId && a.Format == EInvoiceFormat.ZugferdPdfA3);
+            Assert.Equal(hybrid.Xml, attachmentBytes.ToArray());
+
             var email = await read.Set<DocumentEmail>().AsNoTracking().FirstAsync(e => e.Id == emailId);
             Assert.Equal(EmailStatus.Sent, email.Status);
             Assert.NotNull(email.SentAt);
@@ -154,6 +167,8 @@ public sealed class DocumentEmailSendTests
         services.AddScoped<ICurrentTenant, TenantContext>();
         services.AddDbContext<NumeraDbContext>(o => o.UseNpgsql(_fixture.AppConnectionString));
         services.AddScoped<DocumentPdfService>();
+        services.AddScoped<EInvoiceService>();
+        services.AddSingleton<IEInvoiceValidator, AcceptingEInvoiceValidator>();
         services.Configure<EmailOptions>(o =>
         {
             o.Host = smtpHost;
@@ -170,6 +185,12 @@ public sealed class DocumentEmailSendTests
             NullLogger<SendDocumentEmailJob>.Instance);
 
         await job.RunAsync(tenant, emailId, "de", false, CancellationToken.None);
+    }
+
+    private sealed class AcceptingEInvoiceValidator : IEInvoiceValidator
+    {
+        public Task<EInvoiceValidationResult> ValidateAsync(byte[] xml, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new EInvoiceValidationResult(EInvoiceValidationStatus.Accepted, [], null));
     }
 
     // Polls Mailpit's HTTP API until exactly one message is present (SMTP delivery completes when

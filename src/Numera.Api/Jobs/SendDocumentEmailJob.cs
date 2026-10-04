@@ -107,16 +107,39 @@ public sealed class SendDocumentEmailJob
             }
             else
             {
-                var render = await pdf.GetOrRender(email.DocumentId, language, cancellationToken)
-                    .ConfigureAwait(false);
-                if (render.Result != DocumentPdfService.Outcome.Ok)
+                var einvoice = services.GetRequiredService<EInvoiceService>();
+                EInvoiceService.XmlResult zugferd = default;
+                try
                 {
-                    throw new InvalidOperationException(
-                        $"Cannot send document {email.DocumentId}: render outcome was {render.Result}.");
+                    zugferd = await einvoice.GetOrGenerate(email.DocumentId, EInvoiceFormat.ZugferdPdfA3, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    _logger.LogWarning(ex,
+                        "ZUGFeRD unavailable for document {DocumentId}; falling back to the rendered PDF.",
+                        email.DocumentId);
                 }
 
-                documentNumber = render.DocumentNumber!;
-                attachment = new EmailAttachment($"{documentNumber}.pdf", render.PdfBytes!, "application/pdf");
+                if (zugferd.Result == EInvoiceService.Outcome.Ok && zugferd.Xml is { Length: > 0 })
+                {
+                    documentNumber = await ResolveDocumentNumberAsync(db, email.DocumentId, cancellationToken)
+                        .ConfigureAwait(false);
+                    attachment = new EmailAttachment($"{documentNumber}.pdf", zugferd.Xml, "application/pdf");
+                }
+                else
+                {
+                    var render = await pdf.GetOrRender(email.DocumentId, language, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (render.Result != DocumentPdfService.Outcome.Ok)
+                    {
+                        throw new InvalidOperationException(
+                            $"Cannot send document {email.DocumentId}: render outcome was {render.Result}.");
+                    }
+
+                    documentNumber = render.DocumentNumber!;
+                    attachment = new EmailAttachment($"{documentNumber}.pdf", render.PdfBytes!, "application/pdf");
+                }
             }
 
             var document = await db.Set<SalesDocument>().AsNoTracking()
