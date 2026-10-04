@@ -101,7 +101,7 @@ public static class CompanyProfileEndpoints
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             return Results.Ok(ToDto(profile));
-        });
+        }).RequireAuthorization("RequireOwner");
 
         // PUT /api/company-profile/logo — upload the tenant letterhead logo (PNG/JPG, <= 1 MB).
         // Attaches to the existing profile (the §14 settings must exist first — a profile requires
@@ -154,7 +154,7 @@ public static class CompanyProfileEndpoints
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
             return Results.Ok(new { contentType, size = bytes.Length });
-        }).DisableAntiforgery();
+        }).RequireAuthorization("RequireOwner").DisableAntiforgery();
 
         // GET /api/company-profile/logo — serve the stored logo bytes with their content-type.
         g.MapGet("/logo", async (NumeraDbContext db, CancellationToken ct) =>

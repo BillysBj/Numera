@@ -81,6 +81,8 @@ export interface Me {
   tenant: { id: string; name: string; plan: string } | null
   /** Membership role string, e.g. "Owner" | "Employee" | "TaxAdvisor". */
   role: string | null
+  /** Null grants all areas. Applies only to Employee memberships. */
+  allowedAreas: import('./areaPermissions').Area[] | null
 }
 
 export interface Entitlements {

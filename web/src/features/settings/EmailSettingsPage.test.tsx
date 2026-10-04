@@ -55,7 +55,7 @@ async function submit(index = 0) {
 beforeEach(async () => {
   vi.clearAllMocks()
   await i18n.changeLanguage('de')
-  vi.mocked(getMe).mockResolvedValue({ user: { sub: 'owner', name: 'Owner', email: 'owner@example.com' }, tenant: null, role: 'Owner' })
+  vi.mocked(getMe).mockResolvedValue({ user: { sub: 'owner', name: 'Owner', email: 'owner@example.com' }, tenant: null, role: 'Owner', allowedAreas: null })
   vi.mocked(getEmailSettings).mockResolvedValue(settings)
   vi.mocked(saveEmailSettings).mockResolvedValue(settings)
   vi.mocked(sendTestEmail).mockResolvedValue({ success: true, error: null })
@@ -106,7 +106,7 @@ describe('EmailSettingsPage', () => {
     expect(container.querySelector('script')).toBeNull()
   })
   it('does not load settings or render the form for an employee', async () => {
-    vi.mocked(getMe).mockResolvedValue({ user: { sub: 'employee', name: null, email: null }, tenant: null, role: 'Employee' })
+    vi.mocked(getMe).mockResolvedValue({ user: { sub: 'employee', name: null, email: null }, tenant: null, role: 'Employee', allowedAreas: null })
     await render()
     expect(getEmailSettings).not.toHaveBeenCalled()
     expect(container.querySelector('form')).toBeNull()

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from '@/i18n'
 import TeamPage from './TeamPage'
+import { AREA_KEYS } from '@/lib/areaPermissions'
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true
@@ -48,6 +49,52 @@ describe('team invitation delivery', () => {
     expect(container.querySelector('[role="status"]')?.textContent)
       .toContain('Invitation email sent to member@example.test.')
     expect(container.querySelector('code')).toBeNull()
+  })
+})
+
+describe('team area permissions', () => {
+  it.each(['de', 'en'])('renders employee checkboxes and saves selected areas (%s)', async language => {
+    await i18n.changeLanguage(language)
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === '/api/me/entitlements') return Response.json({ capabilities: ['MultiUser'] })
+      if (url === '/api/team') return Response.json([
+        { userId: 'owner', role: 1, email: 'owner@test.de', allowedAreas: null },
+        { userId: 'employee', role: 2, email: 'employee@test.de', allowedAreas: null },
+        { userId: 'advisor', role: 3, email: 'advisor@test.de', allowedAreas: null },
+      ])
+      if (url === '/api/team/employee/areas' && init?.method === 'PUT') return new Response(null, { status: 204 })
+      throw new Error(`Unexpected request: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await act(async () => root.render(<QueryClientProvider client={queryClient}><TeamPage /></QueryClientProvider>))
+    await flush()
+    await flush()
+    const boxes = Array.from(container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
+    expect(boxes).toHaveLength(9)
+    expect(boxes.every(box => box.checked)).toBe(true)
+    expect(container.textContent).toContain(language === 'de' ? 'Vollzugriff' : 'Full access')
+    expect(container.querySelectorAll('fieldset')).toHaveLength(1)
+    await act(async () => boxes[0].click())
+    await act(async () => container.querySelector<HTMLButtonElement>('fieldset button')!.click())
+    await flush()
+    expect(fetchMock).toHaveBeenCalledWith('/api/team/employee/areas', expect.objectContaining({
+      method: 'PUT', body: JSON.stringify(AREA_KEYS.filter(area => area !== 'Documents')),
+    }))
+  })
+
+  it('renders a restricted or empty employee selection exactly', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url === '/api/me/entitlements') return Response.json({ capabilities: ['MultiUser'] })
+      return Response.json([
+        { userId: 'restricted', role: 2, email: null, allowedAreas: ['Documents'] },
+        { userId: 'empty', role: 2, email: null, allowedAreas: [] },
+      ])
+    }))
+    await act(async () => root.render(<QueryClientProvider client={queryClient}><TeamPage /></QueryClientProvider>))
+    await flush()
+    await flush()
+    expect(container.querySelectorAll('input[type="checkbox"]')).toHaveLength(18)
+    expect(container.querySelectorAll('input:checked')).toHaveLength(1)
   })
 })
 

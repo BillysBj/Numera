@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
+using Numera.Api.Auth;
 using Numera.Api.Services;
 using Numera.Platform.Db;
 using Numera.Platform.Db.Entities;
@@ -21,7 +22,7 @@ public static class TeamEndpoints
                 .AsNoTracking()
                 .OrderBy(x => x.Role)
                 .ThenBy(x => x.UserId)
-                .Select(x => new { x.UserId, x.Role })
+                .Select(x => new { x.UserId, x.Role, x.AllowedAreas })
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
 
@@ -32,7 +33,8 @@ public static class TeamEndpoints
                 .ConfigureAwait(false);
 
             var members = rows
-                .Select(r => new TeamMemberResponse(r.UserId, r.Role, emails.GetValueOrDefault(r.UserId)))
+                .Select(r => new TeamMemberResponse(r.UserId, r.Role, emails.GetValueOrDefault(r.UserId),
+                    r.Role == MembershipRole.Employee ? AreaPermissions.Parse(r.AllowedAreas) : null))
                 .ToList();
             return Results.Ok(members);
         });
@@ -85,6 +87,34 @@ public static class TeamEndpoints
 
             var outcome = await service.ChangeRoleAsync(userId, request.Role, ct).ConfigureAwait(false);
             return ToResult(outcome);
+        });
+
+        group.MapPut("/{userId:guid}/areas", async (
+            Guid userId,
+            string[] areas,
+            NumeraDbContext db,
+            CancellationToken ct) =>
+        {
+            if (areas.Any(area => !AreaPermissions.All.Contains(area, StringComparer.Ordinal)))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["areas"] = ["Unknown area key."],
+                });
+            }
+
+            var member = await db.Memberships.SingleOrDefaultAsync(m => m.UserId == userId, ct)
+                .ConfigureAwait(false);
+            if (member is null) return Results.NotFound();
+            if (member.Role != MembershipRole.Employee)
+            {
+                return Results.Problem(statusCode: StatusCodes.Status403Forbidden,
+                    title: "Only employee area permissions can be changed.");
+            }
+
+            member.AllowedAreas = string.Join(',', AreaPermissions.All.Where(area => areas.Contains(area, StringComparer.Ordinal)));
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            return Results.NoContent();
         });
 
         group.MapDelete("/{userId:guid}", async (
@@ -153,6 +183,6 @@ public static class TeamEndpoints
     };
 }
 
-internal sealed record TeamMemberResponse(Guid UserId, MembershipRole Role, string? Email);
+internal sealed record TeamMemberResponse(Guid UserId, MembershipRole Role, string? Email, string[]? AllowedAreas);
 internal sealed record InviteTeamMemberRequest(string Email, MembershipRole Role);
 internal sealed record ChangeTeamMemberRoleRequest(MembershipRole Role);

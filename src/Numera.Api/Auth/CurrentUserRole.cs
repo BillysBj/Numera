@@ -9,12 +9,13 @@ namespace Numera.Api.Auth;
 /// <summary>
 /// Scoped, memoised resolver for the authenticated user's RLS-scoped membership role.
 /// </summary>
-public sealed class CurrentUserRole : ICurrentUserRole
+public sealed class CurrentUserRole : ICurrentUserRole, ICurrentUserPermissions
 {
     private readonly ICurrentTenant _currentTenant;
     private readonly ICurrentUser _currentUser;
     private readonly NumeraDbContext _db;
     private MembershipRole? _cached;
+    private string[]? _allowedAreas;
     private bool _resolved;
 
     /// <summary>Creates the resolver for the current request scope.</summary>
@@ -44,14 +45,25 @@ public sealed class CurrentUserRole : ICurrentUserRole
             return null;
         }
 
-        _cached = await _db.Memberships
+        var membership = await _db.Memberships
             .AsNoTracking()
             .Where(m => m.TenantId == tenantId.Value && m.UserId == userId.Value)
-            .Select(m => (MembershipRole?)m.Role)
+            .Select(m => new { m.Role, m.AllowedAreas })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+        _cached = membership?.Role;
+        _allowedAreas = membership?.Role == MembershipRole.Employee
+            ? AreaPermissions.Parse(membership.AllowedAreas)
+            : null;
         _resolved = true;
 
         return _cached;
+    }
+
+    /// <inheritdoc />
+    public async Task<string[]?> GetAllowedAreasAsync(CancellationToken cancellationToken = default)
+    {
+        await GetAsync(cancellationToken).ConfigureAwait(false);
+        return _allowedAreas;
     }
 }

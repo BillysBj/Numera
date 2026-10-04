@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -20,14 +20,17 @@ import {
 } from '@/components/ui/table'
 import { UpgradeHint } from '@/features/shared/UpgradeHint'
 import { hasCapability, useEntitlements } from '@/lib/entitlements'
+import { AREA_KEYS, type Area } from '@/lib/areaPermissions'
 import {
   MembershipRole,
   TeamApiError,
   useChangeRole,
+  useChangeAreas,
   useInvite,
   useRemoveMember,
   useTeam,
   type MembershipRoleValue,
+  type TeamMember,
 } from './team'
 
 interface InviteValues {
@@ -190,6 +193,7 @@ export default function TeamPage() {
                       <TableHead>{t('members.user')}</TableHead>
                       <TableHead>{t('members.role')}</TableHead>
                       <TableHead>{t('members.changeRole')}</TableHead>
+                      <TableHead>{t('areas.title')}</TableHead>
                       <TableHead className="text-right">{t('members.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -222,6 +226,11 @@ export default function TeamPage() {
                               ))}
                             </Select>
                           </TableCell>
+                          <TableCell>
+                            {member.role === MembershipRole.Employee
+                              ? <MemberAreas member={member} />
+                              : <span>{t(member.role === MembershipRole.Owner ? 'areas.fullAccess' : 'areas.readOnly')}</span>}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               type="button"
@@ -243,5 +252,38 @@ export default function TeamPage() {
         </>
       )}
     </main>
+  )
+}
+
+function MemberAreas({ member }: { member: TeamMember }) {
+  const { t } = useTranslation('team')
+  const changeAreas = useChangeAreas()
+  const [selected, setSelected] = useState<Area[]>(() => member.allowedAreas ?? [...AREA_KEYS])
+  const [saved, setSaved] = useState(false)
+  useEffect(() => setSelected(member.allowedAreas ?? [...AREA_KEYS]), [member.allowedAreas])
+  return (
+    <fieldset className="min-w-52 space-y-2" disabled={changeAreas.isPending}>
+      <legend className="sr-only">{t('areas.title')} — {member.email ?? member.userId}</legend>
+      <div className="grid gap-1 sm:grid-cols-2">
+        {AREA_KEYS.map(area => (
+          <label key={area} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={selected.includes(area)} onChange={event => {
+              setSaved(false)
+              setSelected(current => event.target.checked ? [...current, area] : current.filter(value => value !== area))
+            }} />
+            {t(`areas.labels.${area}`)}
+          </label>
+        ))}
+      </div>
+      <Button type="button" disabled={changeAreas.isPending} onClick={async () => {
+        setSaved(false)
+        try {
+          await changeAreas.mutateAsync({ userId: member.userId, areas: selected })
+          setSaved(true)
+        } catch { /* The mutation error is rendered below. */ }
+      }}>{t(changeAreas.isPending ? 'areas.saving' : 'areas.save')}</Button>
+      {changeAreas.isError && <p role="alert" className="text-sm text-destructive">{t('errors.server')}</p>}
+      {saved && <p role="status" className="text-sm">{t('areas.saved')}</p>}
+    </fieldset>
   )
 }

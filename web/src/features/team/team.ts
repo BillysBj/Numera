@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Area } from '@/lib/areaPermissions'
 
 /** Mirrors Numera.Platform.Db.Entities.MembershipRole. */
 export const MembershipRole = {
@@ -14,6 +15,7 @@ export interface TeamMember {
   userId: string
   role: MembershipRoleValue
   email: string | null
+  allowedAreas: Area[] | null
 }
 
 export class TeamApiError extends Error {
@@ -87,5 +89,21 @@ export function useRemoveMember() {
     mutationFn: (userId: string) =>
       request<void>(`/api/team/${userId}`, { method: 'DELETE' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team'] }),
+  })
+}
+
+export function useChangeAreas() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { userId: string; areas: Area[] }) =>
+      request<void>(`/api/team/${input.userId}/areas`, {
+        method: 'PUT', body: JSON.stringify(input.areas),
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['team'] }),
+        queryClient.invalidateQueries({ queryKey: ['me'] }),
+      ])
+    },
   })
 }

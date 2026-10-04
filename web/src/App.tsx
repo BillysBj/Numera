@@ -1,8 +1,9 @@
 import { useState, type ComponentType, type SVGProps } from 'react'
-import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { getMe, API_BASE } from './lib/api'
+import { canAccessRoute } from './lib/areaPermissions'
 import { getLedgerSettings, Gewinnermittlungsart } from './lib/api/ledger'
 import { useTheme } from './lib/useTheme'
 import { cn } from './lib/utils'
@@ -73,7 +74,7 @@ interface NavGroup {
   items: NavItem[]
 }
 
-function useNavGroups(): NavGroup[] {
+export function useNavGroups(): NavGroup[] {
   const { t } = useTranslation('common')
   const { t: tp } = useTranslation('partners')
   const { t: tc } = useTranslation('catalog')
@@ -156,7 +157,15 @@ function useNavGroups(): NavGroup[] {
         { to: '/handbuch', label: t('nav.handbuch'), icon: IconBook },
       ],
     },
-  ]
+  ].map(group => ({ ...group, items: group.items.filter(item => canAccessRoute(me.data, item.to)) }))
+    .filter(group => group.items.length > 0)
+}
+
+export function PermissionRoute() {
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const { pathname } = useLocation()
+  if (me.isPending) return null
+  return canAccessRoute(me.data, pathname) ? <Outlet /> : <Navigate to="/dashboard" replace />
 }
 
 // Deep-link guard: the EÜR view is only for tenants whose ledger uses EÜR as the
@@ -400,6 +409,7 @@ function AppShell() {
         <DegradationBanner />
         <div className="flex-1">
           <Routes>
+            <Route element={<PermissionRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/partners" element={<PartnerListPage />} />
             <Route path="/partners/new" element={<PartnerFormPage />} />
@@ -439,6 +449,7 @@ function AppShell() {
             <Route path="/billing/cancel" element={<BillingPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Route>
           </Routes>
         </div>
       </div>

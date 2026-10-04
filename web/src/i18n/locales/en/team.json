@@ -31,6 +31,25 @@
     "roleChanged": "The role was changed.",
     "removed": "The member was removed."
   },
+  "areas": {
+    "title": "Area permissions",
+    "fullAccess": "Full access",
+    "readOnly": "Read-only access (tax advisor)",
+    "save": "Save permissions",
+    "saving": "Saving …",
+    "saved": "Permissions saved.",
+    "labels": {
+      "Documents": "Documents",
+      "OpenItems": "Open items",
+      "Dunning": "Dunning",
+      "Recurring": "Recurring invoices",
+      "Inbound": "Inbound documents",
+      "Banking": "Banking",
+      "Partners": "Partners",
+      "Catalog": "Catalog",
+      "Reports": "Reports"
+    }
+  },
   "errors": {
     "invalidEmail": "Enter a valid email address.",
     "invalidRole": "Select a valid role.",

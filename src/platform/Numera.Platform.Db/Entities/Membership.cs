@@ -41,6 +41,9 @@ public sealed class Membership : ITenantEntity
     /// <summary>The member's role in this tenant. Default Owner.</summary>
     public MembershipRole Role { get; set; } = MembershipRole.Owner;
 
+    /// <summary>Employee area keys as CSV. Null grants all areas; empty grants none.</summary>
+    public string? AllowedAreas { get; set; }
+
     /// <summary>Creation timestamp (UTC).</summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 

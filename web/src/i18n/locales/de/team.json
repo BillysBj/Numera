@@ -31,6 +31,25 @@
     "roleChanged": "Die Rolle wurde geändert.",
     "removed": "Das Mitglied wurde entfernt."
   },
+  "areas": {
+    "title": "Bereichsberechtigungen",
+    "fullAccess": "Vollzugriff",
+    "readOnly": "Lesezugriff (Steuerberater)",
+    "save": "Berechtigungen speichern",
+    "saving": "Wird gespeichert …",
+    "saved": "Die Berechtigungen wurden gespeichert.",
+    "labels": {
+      "Documents": "Belege",
+      "OpenItems": "Offene Posten",
+      "Dunning": "Mahnwesen",
+      "Recurring": "Serienrechnungen",
+      "Inbound": "Eingangsbelege",
+      "Banking": "Banking",
+      "Partners": "Partner",
+      "Catalog": "Artikel",
+      "Reports": "Berichte"
+    }
+  },
   "errors": {
     "invalidEmail": "Bitte eine gültige E-Mail-Adresse eingeben.",
     "invalidRole": "Bitte eine gültige Rolle auswählen.",

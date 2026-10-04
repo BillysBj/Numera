@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.FeatureManagement;
 
+using Numera.Api.Auth;
 using Numera.Platform.Db;
 using Numera.Platform.Entitlements;
 using Numera.Platform.Tenancy;
@@ -23,6 +24,8 @@ public static class MeEndpoints
         app.MapGet("/api/me", async (
             ClaimsPrincipal principal,
             ICurrentTenant currentTenant,
+            ICurrentUserRole currentUserRole,
+            ICurrentUserPermissions permissions,
             NumeraDbContext db,
             CancellationToken ct) =>
         {
@@ -42,12 +45,8 @@ public static class MeEndpoints
                 .FirstOrDefaultAsync(ct)
                 .ConfigureAwait(false);
 
-            var role = await db.Memberships
-                .AsNoTracking()
-                .Where(m => m.TenantId == tenantId.Value && m.UserId == Sub(principal))
-                .Select(m => m.Role.ToString())
-                .FirstOrDefaultAsync(ct)
-                .ConfigureAwait(false);
+            var role = (await currentUserRole.GetAsync(ct).ConfigureAwait(false))?.ToString();
+            var allowedAreas = await permissions.GetAllowedAreasAsync(ct).ConfigureAwait(false);
 
             return Results.Ok(new
             {
@@ -59,6 +58,7 @@ public static class MeEndpoints
                 },
                 tenant,
                 role,
+                allowedAreas,
             });
         })
         .RequireAuthorization();
@@ -91,9 +91,4 @@ public static class MeEndpoints
         return app;
     }
 
-    private static Guid Sub(ClaimsPrincipal principal)
-    {
-        var sub = principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? principal.FindFirstValue("sub");
-        return Guid.TryParse(sub, out var id) ? id : Guid.Empty;
-    }
 }

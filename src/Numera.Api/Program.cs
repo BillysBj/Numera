@@ -66,7 +66,9 @@ var hangfireConnectionString = builder.Configuration.GetConnectionString("Hangfi
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentTenant, TenantContext>();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-builder.Services.AddScoped<ICurrentUserRole, CurrentUserRole>();
+builder.Services.AddScoped<CurrentUserRole>();
+builder.Services.AddScoped<ICurrentUserRole>(sp => sp.GetRequiredService<CurrentUserRole>());
+builder.Services.AddScoped<ICurrentUserPermissions>(sp => sp.GetRequiredService<CurrentUserRole>());
 builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(connectionString));
 
 // --- Audit + entitlements --------------------------------------------------
@@ -269,6 +271,7 @@ app.UseAuthorization();
 
 app.UseMiddleware<BillingDegradationWriteGuardMiddleware>();
 app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
+app.UseMiddleware<AreaPermissionGuardMiddleware>();
 
 app.MapAuthEndpoints();
 app.MapMeEndpoints();
