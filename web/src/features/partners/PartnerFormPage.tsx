@@ -264,10 +264,12 @@ export default function PartnerFormPage() {
               )}
               <TextField
                 label={t('form.fields.customerNumber')}
+                placeholder={t('form.fields.autoAssignHint')}
                 {...register('customerNumber')}
               />
               <TextField
                 label={t('form.fields.supplierNumber')}
+                placeholder={t('form.fields.autoAssignHint')}
                 {...register('supplierNumber')}
               />
             </CardContent>

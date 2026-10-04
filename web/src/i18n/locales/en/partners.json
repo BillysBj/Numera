@@ -77,7 +77,8 @@
       "isCustomer": "Customer",
       "isSupplier": "Supplier",
       "customerNumber": "Customer number",
-      "supplierNumber": "Supplier number"
+      "supplierNumber": "Supplier number",
+      "autoAssignHint": "Assigned automatically if left empty"
     },
     "language": {
       "de": "German",

@@ -77,7 +77,8 @@
       "isCustomer": "Kunde",
       "isSupplier": "Lieferant",
       "customerNumber": "Kundennummer",
-      "supplierNumber": "Lieferantennummer"
+      "supplierNumber": "Lieferantennummer",
+      "autoAssignHint": "Wird automatisch vergeben, wenn leer"
     },
     "language": {
       "de": "Deutsch",
