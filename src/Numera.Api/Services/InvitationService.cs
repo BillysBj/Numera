@@ -240,6 +240,16 @@ public sealed class InvitationService
             ct).ConfigureAwait(false);
         await EnsureSuccessAsync(response, "remove organization member", ct).ConfigureAwait(false);
 
+        // Also delete the Keycloak user account itself (not only the organization
+        // membership), so removing a member from the UI fully removes them from Keycloak.
+        // A 404 means the user is already gone — treat as success and clean up the local row.
+        using var userDelete = await http.DeleteAsync(
+            $"admin/realms/{realm}/users/{userId}", ct).ConfigureAwait(false);
+        if (userDelete.StatusCode != HttpStatusCode.NotFound)
+        {
+            await EnsureSuccessAsync(userDelete, "delete user", ct).ConfigureAwait(false);
+        }
+
         _db.Remove(membership);
         await _audit.RecordAsync(
             new TeamMemberAuditEvent(
