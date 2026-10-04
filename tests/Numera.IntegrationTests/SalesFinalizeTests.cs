@@ -7,6 +7,7 @@ using Npgsql;
 
 using Numera.Api.Contracts;
 using Numera.Api.Endpoints;
+using Numera.Modules.Crm;
 using Numera.Modules.Sales;
 using Numera.Platform.Money;
 
@@ -34,8 +35,11 @@ public sealed class SalesFinalizeTests
 
     // ------------------------------------------------------ side-effects
 
-    [Fact]
-    public async Task Finalize_creates_open_item_breakdown_snapshots_and_a_formatted_number()
+    [Theory]
+    [InlineData(PartnerLanguage.De, "de")]
+    [InlineData(PartnerLanguage.En, "en")]
+    public async Task Finalize_creates_open_item_breakdown_snapshots_and_a_formatted_number(
+        PartnerLanguage language, string expectedLanguage)
     {
         var tenant = Guid.CreateVersion7();
         var date = new DateOnly(2026, 6, 1);
@@ -56,7 +60,13 @@ public sealed class SalesFinalizeTests
 
         await using (var db = _fixture.CreateAppContext(tenant))
         {
+            var recipient = await db.Set<BusinessPartner>().SingleAsync(b => b.Id == partner.Id);
+            recipient.Language = language;
+            await db.SaveChangesAsync();
             await SalesTestData.FinalizeAsync(db, docId);
+            // Later master-data edits must not change the finalized document's language.
+            recipient.Language = language == PartnerLanguage.En ? PartnerLanguage.De : PartnerLanguage.En;
+            await db.SaveChangesAsync();
         }
 
         await using var read = _fixture.CreateAppContext(tenant);
@@ -78,6 +88,10 @@ public sealed class SalesFinalizeTests
         Assert.Equal(doc.FinalizedAt, ok.Value.FinalizedAt);
         var json = JsonSerializer.SerializeToElement(ok.Value, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.Equal(doc.FinalizedAt, json.GetProperty("finalizedAt").GetDateTimeOffset());
+        Assert.Equal(expectedLanguage, ok.Value.RecipientLanguage);
+        Assert.Equal(expectedLanguage, json.GetProperty("recipientLanguage").GetString());
+        using var recipientSnapshot = JsonDocument.Parse(doc.RecipientSnapshot!);
+        Assert.Equal(expectedLanguage, recipientSnapshot.RootElement.GetProperty("language").GetString());
 
         // Totals: per-category rounded tax summed (19.00 + 14.00 = 33.00), gross = 333.00.
         Assert.Equal(300.00m, doc.TotalNet);

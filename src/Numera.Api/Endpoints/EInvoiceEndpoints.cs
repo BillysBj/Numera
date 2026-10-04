@@ -166,7 +166,11 @@ public static class EInvoiceEndpoints
                     title: "No recipient e-mail address");
             }
 
-            var language = string.Equals(req?.Language, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "de";
+            var language = string.Equals(req?.Language, "en", StringComparison.OrdinalIgnoreCase)
+                ? "en"
+                : string.Equals(req?.Language, "de", StringComparison.OrdinalIgnoreCase)
+                    ? "de"
+                    : SalesDocumentEndpoints.ResolveRecipientLanguage(doc.RecipientSnapshot);
             var subject = DocumentEmailTemplates
                 .Build(language, doc.DocumentNumber ?? doc.Id.ToString())
                 .Subject;

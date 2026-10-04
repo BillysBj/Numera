@@ -178,7 +178,9 @@ public static class SalesDocumentEndpoints
 
             var language = string.Equals(req?.Language, "en", StringComparison.OrdinalIgnoreCase)
                 ? "en"
-                : "de";
+                : string.Equals(req?.Language, "de", StringComparison.OrdinalIgnoreCase)
+                    ? "de"
+                    : ResolveRecipientLanguage(doc.RecipientSnapshot);
             var subject = DocumentEmailTemplates
                 .Build(language, doc.DocumentNumber ?? doc.Id.ToString())
                 .Subject;
@@ -1104,7 +1106,7 @@ public static class SalesDocumentEndpoints
         d.IsKleinunternehmer, d.ReverseCharge, d.BuyerReference, d.Notes,
         d.FinalizedAt,
         d.SourceDocumentId, d.CorrectsDocumentId, d.CancelledByDocumentId,
-        d.IssuerSnapshot, d.RecipientSnapshot,
+        d.IssuerSnapshot, d.RecipientSnapshot, ResolveRecipientLanguage(d.RecipientSnapshot),
         d.Lines
             .OrderBy(l => l.LineNumber)
             .Select(l => new SalesLineDto(
@@ -1518,10 +1520,39 @@ public static class SalesDocumentEndpoints
         b.VatId,
         b.TaxNumber,
         b.Email,
+        Language = b.Language == PartnerLanguage.En ? "en" : "de",
         // Frozen payment terms (Skonto) so the PDF can print the early-payment discount.
         b.SkontoPercent,
         b.SkontoDays,
     }, AuditJson);
+
+    // Older documents and malformed snapshots retain the German default.
+    internal static string ResolveRecipientLanguage(string? recipientSnapshot)
+    {
+        if (string.IsNullOrWhiteSpace(recipientSnapshot))
+        {
+            return "de";
+        }
+
+        try
+        {
+            using var json = JsonDocument.Parse(recipientSnapshot);
+            var root = json.RootElement;
+            if (root.ValueKind == JsonValueKind.Object
+                && (root.TryGetProperty("language", out var language) || root.TryGetProperty("Language", out language))
+                && language.ValueKind == JsonValueKind.String
+                && string.Equals(language.GetString(), "en", StringComparison.OrdinalIgnoreCase))
+            {
+                return "en";
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall back for malformed legacy snapshots.
+        }
+
+        return "de";
+    }
 
     // Reads the frozen recipient e-mail (BT-43) from the RecipientSnapshot jsonb (serialized with
     // Web camelCase at finalize; PascalCase tolerated). Returns null when absent so the send

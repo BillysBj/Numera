@@ -162,6 +162,7 @@ export interface SalesDocumentDetail {
   // the source of truth (RESEARCH Pitfall 2).
   issuerSnapshot?: unknown
   recipientSnapshot?: unknown
+  recipientLanguage?: 'de' | 'en'
 }
 
 export interface SalesDocumentPrepayment {
@@ -494,7 +495,7 @@ export function sendEInvoice(
 export interface SendDocumentEmailRequest {
   /** Override recipient address; omit → the frozen recipient e-mail on the document. */
   toAddress?: string
-  /** Covering-mail language (de/en); omit → de. The PDF's legal content is unaffected. */
+  /** PDF/covering-mail language; omit to use the frozen recipient language (default de). */
   language?: 'de' | 'en'
 }
 

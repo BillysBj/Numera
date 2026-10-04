@@ -188,12 +188,22 @@ export default function DocumentDetailPage() {
   const [convertTarget, setConvertTarget] = useState<DocumentType>(
     DocumentType.Rechnung,
   )
-  const [pdfLang, setPdfLang] = useState<'de' | 'en'>('de')
+  const [languageOverride, setLanguageOverride] = useState<{
+    documentId: string
+    language: 'de' | 'en'
+  } | null>(null)
+  // Reset a manual choice when navigating to another document, including back navigation.
+  if (languageOverride && languageOverride.documentId !== id) {
+    setLanguageOverride(null)
+  }
 
   const doc = useQuery({
     queryKey: ['document', id],
     queryFn: () => getSalesDocument(id),
   })
+  const pdfLang = languageOverride?.documentId === id
+    ? languageOverride.language
+    : doc.data?.recipientLanguage ?? 'de'
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['document', id] })
@@ -269,7 +279,7 @@ export default function DocumentDetailPage() {
   // Enqueue the async e-mail send (04-04). The response is Queued; the detail refresh reflects
   // SentAt once the Hangfire job delivers. 422 (no recipient) / 409 surface in the banner.
   const send = useMutation({
-    mutationFn: () => sendDocumentEmail(id),
+    mutationFn: () => sendDocumentEmail(id, { language: pdfLang }),
     onSuccess: () => {
       setBanner({ kind: 'success', text: t('actions.sendQueued') })
       refresh()
@@ -294,7 +304,7 @@ export default function DocumentDetailPage() {
   })
 
   const sendEinvoice = useMutation({
-    mutationFn: () => sendEInvoice(id),
+    mutationFn: () => sendEInvoice(id, { language: pdfLang }),
     onSuccess: () => {
       setBanner({ kind: 'success', text: t('actions.sendEInvoiceQueued') })
       refresh()
@@ -448,7 +458,7 @@ export default function DocumentDetailPage() {
         )}
 
         {/* PDF download + e-mail send — only on finalized documents (a Draft has no frozen
-            snapshot / render). Language is chosen per download; send uses the frozen recipient. */}
+            snapshot / render). The chosen language also applies to both send actions. */}
         {!isDraft && (
           <>
             <div className="flex items-center gap-1">
@@ -456,7 +466,9 @@ export default function DocumentDetailPage() {
                 className="h-9 w-36"
                 value={pdfLang}
                 disabled={actionsDisabled}
-                onChange={(e) => setPdfLang(e.target.value as 'de' | 'en')}
+                onChange={(e) => setLanguageOverride({
+                  documentId: id, language: e.target.value as 'de' | 'en',
+                })}
               >
                 <option value="de">{t('lang.de')}</option>
                 <option value="en">{t('lang.en')}</option>
