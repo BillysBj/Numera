@@ -2,7 +2,7 @@ import { useState, type ComponentType, type SVGProps } from 'react'
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import { getMe } from './lib/api'
+import { getMe, API_BASE } from './lib/api'
 import { getLedgerSettings, Gewinnermittlungsart } from './lib/api/ledger'
 import { useTheme } from './lib/useTheme'
 import { cn } from './lib/utils'
@@ -311,6 +311,24 @@ function UserChip() {
   )
 }
 
+// Logout is a top-level form POST so the browser follows the BFF's sign-out redirect
+// chain (cookie + Keycloak end-session) — a background fetch cannot complete that.
+function LogoutButton() {
+  const { t } = useTranslation('common')
+  return (
+    <form method="post" action={`${API_BASE}/auth/logout`}>
+      <button
+        type="submit"
+        aria-label={t('ui.signOut')}
+        title={t('ui.signOut')}
+        className="grid h-9 place-items-center rounded-lg border border-border bg-card px-3 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+      >
+        {t('ui.signOut')}
+      </button>
+    </form>
+  )
+}
+
 function Topbar({ title, onOpenMenu }: { title: string; onOpenMenu: () => void }) {
   const { t } = useTranslation('common')
   return (
@@ -330,6 +348,7 @@ function Topbar({ title, onOpenMenu }: { title: string; onOpenMenu: () => void }
       <LanguageSwitcher />
       <ThemeToggle />
       <UserChip />
+      <LogoutButton />
     </header>
   )
 }
