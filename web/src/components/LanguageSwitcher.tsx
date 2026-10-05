@@ -15,7 +15,7 @@ function persistLng(lng: SupportedLanguage) {
   document.cookie = `lng=${lng}; path=/; max-age=${oneYear}; SameSite=Lax`
 }
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ className }: { className?: string }) {
   const { i18n, t } = useTranslation('common')
   // i18n.resolvedLanguage collapses "de-DE" → "de".
   const active = (i18n.resolvedLanguage ?? i18n.language) as string
@@ -29,7 +29,10 @@ export function LanguageSwitcher() {
 
   return (
     <div
-      className="hidden items-center rounded-lg border border-border bg-secondary/60 p-0.5 sm:inline-flex"
+      className={cn(
+        'inline-flex items-center rounded-lg border border-border bg-secondary/60 p-0.5',
+        className,
+      )}
       role="group"
       aria-label={t('language.label')}
     >

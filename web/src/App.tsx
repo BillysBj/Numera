@@ -269,6 +269,7 @@ function BrandMark() {
 }
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useTranslation('common')
   const location = useLocation()
   const groups = useNavGroups()
   const active = activePath(
@@ -317,9 +318,16 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </div>
       ))}
-      <p className="mt-auto px-3 pt-2 text-[0.68rem] text-sidebar-muted">
-        powered by NOEMA Essentials
-      </p>
+      <div className="mt-auto flex flex-col gap-3 px-3 pt-2">
+        {/* Language switch for mobile: the Topbar switcher is hidden below sm. */}
+        <div className="md:hidden">
+          <p className="pb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.09em] text-sidebar-muted">
+            {t('language.label')}
+          </p>
+          <LanguageSwitcher className="w-full justify-center" />
+        </div>
+        <p className="text-[0.68rem] text-sidebar-muted">powered by NOEMA Essentials</p>
+      </div>
     </nav>
   )
 }
@@ -410,7 +418,7 @@ function Topbar({ title, onOpenMenu }: { title: string; onOpenMenu: () => void }
         {title}
       </h1>
       <PlanBadge />
-      <LanguageSwitcher />
+      <LanguageSwitcher className="hidden sm:inline-flex" />
       <ThemeToggle />
       <UserChip />
       <LogoutButton />
