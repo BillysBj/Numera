@@ -513,7 +513,7 @@ export const CHAPTERS: Chapter[] = [
           EÜR-Mandanten sind diese Punkte ausgeblendet (dort erscheint stattdessen die EÜR).
         </P>
         <Note>
-          Diese Ansichten werten die laufende doppelte Buchführung aus. Sie ersetzen <strong>nicht</strong>
+          Diese Ansichten werten die laufende doppelte Buchführung aus. Sie ersetzen <strong>nicht</strong>{' '}
           die Abgabe von E-Bilanz, Körperschaft- und Gewerbesteuererklärung sowie die Offenlegung —
           diese laufen weiterhin über ELSTER bzw. eine Abschluss-Software/Ihren Steuerberater.
         </Note>
@@ -561,7 +561,7 @@ export const CHAPTERS: Chapter[] = [
         <H3>Gesetzliche Rücklage §5a GmbHG</H3>
         <P>
           Eine UG muss <strong>25&nbsp;%</strong> des um einen Verlustvortrag verminderten
-          Jahresüberschusses in eine gesetzliche Rücklage einstellen. Unter
+          Jahresüberschusses in eine gesetzliche Rücklage einstellen. Unter{' '}
           <UI>Berichte → §5a-Rücklage</UI> wählen Sie Jahr und optional den <UI>Verlustvortrag Vorjahr</UI>;
           Numera zeigt Jahresüberschuss, maßgeblichen Betrag und die errechnete Rücklage.
         </P>
