@@ -2,17 +2,21 @@ using System.Text.Json;
 
 using Microsoft.EntityFrameworkCore;
 
+using Numera.Api.Contracts;
 using Numera.Api.Pdf;
 using Numera.Api.Reporting;
 using Numera.Api.Reporting.Elster;
 using Numera.Modules.Ledger;
+using Numera.Modules.Ledger.Seed;
 using Numera.Modules.Sales;
 using Numera.Platform.Db;
+using Numera.Platform.Audit;
+using Numera.Platform.Tenancy;
 using Numera.Platform.Money;
 
 namespace Numera.Api.Endpoints;
 
-/// <summary>Authenticated USt-VA and EÜR review, drill-down and export endpoints.</summary>
+/// <summary>Authenticated USt-VA, EÜR, GuV and Bilanz review, drill-down and export endpoints.</summary>
 public static class ReportEndpoints
 {
     /// <summary>Maps tenant-scoped report reads and downloads below <c>/api/reports</c>.</summary>
@@ -49,6 +53,18 @@ public static class ReportEndpoints
             EuerCalculator calculator,
             CancellationToken ct) =>
             Results.Ok(await GetEuerAsync(jahr, from, to, calculator, ct).ConfigureAwait(false)));
+
+        group.MapGet("/guv", async (
+            int jahr,
+            AbschlussCalculator calculator,
+            CancellationToken ct) =>
+            Results.Ok(await GetGuvAsync(jahr, calculator, ct).ConfigureAwait(false)));
+
+        group.MapGet("/bilanz", async (
+            int jahr,
+            AbschlussCalculator calculator,
+            CancellationToken ct) =>
+            Results.Ok(await GetBilanzAsync(jahr, calculator, ct).ConfigureAwait(false)));
 
         group.MapGet("/ustva/export.xml", async (
             int jahr,
@@ -97,7 +113,135 @@ public static class ReportEndpoints
             return Results.File(export.Bytes, export.ContentType, export.FileName);
         });
 
+        group.MapGet("/ug-ruecklage", GetUgRuecklageAsync);
+        group.MapPost("/ug-ruecklage/{jahr:int}/buchen", BookUgRuecklageAsync).RequireAuthorization("RequireOwner");
+
         return app;
+    }
+
+    internal static async Task<IResult> GetUgRuecklageAsync(int jahr, decimal? verlustvortrag,
+        NumeraDbContext db, AbschlussCalculator abschluss, UgRuecklageCalculator calculator, CancellationToken ct)
+    {
+        var errors = ValidateUgRuecklage(jahr, verlustvortrag ?? 0m);
+        return errors.Count > 0 ? Results.ValidationProblem(errors)
+            : Results.Ok(await ComputeUgRuecklageAsync(jahr, verlustvortrag ?? 0m, db, abschluss, calculator, ct).ConfigureAwait(false));
+    }
+
+    private static async Task<UgRuecklageReport> ComputeUgRuecklageAsync(int jahr, decimal verlustvortrag,
+        NumeraDbContext db, AbschlussCalculator abschluss, UgRuecklageCalculator calculator, CancellationToken ct)
+    {
+        var guv = await abschluss.ComputeGuvAsync(jahr, ct).ConfigureAwait(false);
+        if (guv.Hinweis is not null)
+        {
+            return new(jahr, 0m, 0m, 0m, 0m, guv.Hinweis);
+        }
+
+        var settings = await db.Set<LedgerSettings>().AsNoTracking().SingleAsync(ct).ConfigureAwait(false);
+        var result = calculator.Compute(guv.Jahresueberschuss, verlustvortrag, settings.UgRuecklagepflichtAktiv);
+        return new(jahr, guv.Jahresueberschuss, verlustvortrag, result.MassgeblicherBetrag, result.Ruecklage,
+            settings.UgRuecklagepflichtAktiv ? null : "Die gesetzliche Rücklagepflicht gemäß §5a GmbHG ist deaktiviert.");
+    }
+
+    internal static async Task<IResult> BookUgRuecklageAsync(int jahr, UgRuecklageBookingRequest request,
+        NumeraDbContext db, AbschlussCalculator abschluss, UgRuecklageCalculator calculator,
+        PostingEngine engine, IAuditWriter audit, ICurrentTenant currentTenant, CancellationToken ct)
+    {
+        var errors = ValidateUgRuecklage(jahr, request.Verlustvortrag);
+        if (errors.Count > 0)
+        {
+            return Results.ValidationProblem(errors);
+        }
+
+        var tenant = currentTenant.TenantId ?? throw new InvalidOperationException("A tenant is required.");
+        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        var periodLock = $"ledger-journal:{tenant:D}:{jahr}";
+        await db.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({periodLock}, 0))", ct).ConfigureAwait(false);
+
+        if (await db.Set<UgRuecklageBuchung>().AnyAsync(booking => booking.Jahr == jahr, ct).ConfigureAwait(false))
+        {
+            return Results.Conflict(new { message = "The statutory reserve has already been booked for this fiscal year." });
+        }
+
+        var report = await ComputeUgRuecklageAsync(jahr, request.Verlustvortrag, db, abschluss, calculator, ct).ConfigureAwait(false);
+        if (report.Hinweis is not null || report.Ruecklage == 0m)
+        {
+            return Results.Conflict(new { message = report.Hinweis ?? "There is no statutory reserve to book for this fiscal year." });
+        }
+
+        var settings = await db.Set<LedgerSettings>().AsNoTracking().SingleAsync(ct).ConfigureAwait(false);
+        var entryDate = new DateOnly(jahr, settings.FiscalYearStartMonth, 1).AddMonths(12).AddDays(-1);
+        if (entryDate.Year != jahr)
+        {
+            // Festschreibung locks calendar years; non-calendar fiscal years end in the next one.
+            var closingLock = $"ledger-journal:{tenant:D}:{entryDate.Year}";
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock(hashtextextended({closingLock}, 0))", ct).ConfigureAwait(false);
+        }
+
+        var period = await db.Set<FiscalPeriod>()
+            .SingleOrDefaultAsync(candidate => candidate.Year == entryDate.Year && candidate.Month == entryDate.Month, ct)
+            .ConfigureAwait(false);
+        if (period is { Status: FiscalPeriodStatus.Locked })
+        {
+            return Results.Conflict(new { message = "The closing fiscal period is locked." });
+        }
+
+        var debitNumber = SkrMapping.GewinnvortragAccount(settings.ChartVariant);
+        var creditNumber = SkrMapping.UgRuecklageAccount(settings.ChartVariant);
+        var accounts = await db.Set<Account>().AsNoTracking()
+            .Where(account => account.ChartVariant == settings.ChartVariant && account.IsActive && account.Type == AccountType.Equity
+                && (account.Number == debitNumber || account.Number == creditNumber))
+            .ToListAsync(ct).ConfigureAwait(false);
+        var debit = accounts.SingleOrDefault(account => account.Number == debitNumber);
+        var credit = accounts.SingleOrDefault(account => account.Number == creditNumber);
+        if (debit is null || credit is null)
+        {
+            return Results.Conflict(new { message = "The statutory reserve requires both active Equity accounts in the tenant chart." });
+        }
+
+        if (period is null)
+        {
+            period = new FiscalPeriod { TenantId = tenant, Year = entryDate.Year, Month = entryDate.Month };
+            db.Add(period);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+
+        var entry = await engine.PostAsync(new UgRuecklagePostingSource(tenant, debit.Id, credit.Id, report.Ruecklage),
+            new JournalEntry
+            {
+                TenantId = tenant, EntryDate = entryDate, PeriodId = period.Id,
+                SourceType = LedgerSourceType.Manual, SourceRef = $"ug-ruecklage:{jahr}",
+                Description = $"Gesetzliche Rücklage §5a GmbHG {jahr}", PostingType = PostingType.Normal,
+            }, ct).ConfigureAwait(false);
+        var booking = new UgRuecklageBuchung
+        {
+            TenantId = tenant, Jahr = jahr, Betrag = report.Ruecklage,
+            VerlustvortragVorjahr = request.Verlustvortrag, JournalEntryId = entry.Id,
+        };
+        // TODO: Reserve release/reversal requires a separate, explicitly authorized accounting workflow.
+        db.Add(booking);
+        await audit.RecordAsync(new UgRuecklageAuditEvent("ledger.ug_ruecklage_booked", booking.Id, null,
+            JsonSerializer.Serialize(booking)), ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+        return Results.Ok(booking);
+    }
+
+    private static Dictionary<string, string[]> ValidateUgRuecklage(int jahr, decimal verlustvortrag)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (jahr is < 1 or > 9998)
+        {
+            errors["jahr"] = ["Fiscal year must be between 1 and 9998."];
+        }
+
+        if (verlustvortrag is < 0m or > 999999999999999.9999m || decimal.Round(verlustvortrag, 4) != verlustvortrag)
+        {
+            errors["verlustvortrag"] = ["Loss carryforward must be a non-negative numeric(19,4) amount."];
+        }
+
+        return errors;
     }
 
     internal static Task<UstVaReport> GetUstVaAsync(
@@ -114,6 +258,18 @@ public static class ReportEndpoints
         EuerCalculator calculator,
         CancellationToken ct) =>
         calculator.ComputeAsync(jahr, from, to, ct);
+
+    internal static Task<GuvReport> GetGuvAsync(
+        int jahr,
+        AbschlussCalculator calculator,
+        CancellationToken ct) =>
+        calculator.ComputeGuvAsync(jahr, ct);
+
+    internal static Task<BilanzReport> GetBilanzAsync(
+        int jahr,
+        AbschlussCalculator calculator,
+        CancellationToken ct) =>
+        calculator.ComputeBilanzAsync(jahr, ct);
 
     /// <summary>
     /// Returns either journal-date contributions (Soll) or invoice/payment attribution
@@ -494,3 +650,8 @@ public sealed record UstVaDrillDownEntry(
 
 /// <summary>File bytes plus the HTTP metadata used by a report download endpoint.</summary>
 internal sealed record ReportExport(byte[] Bytes, string ContentType, string FileName);
+
+internal sealed record UgRuecklageAuditEvent(string Action, Guid? EntityId, string? Before, string? After) : IAuditEvent
+{
+    public string EntityType => nameof(UgRuecklageBuchung);
+}

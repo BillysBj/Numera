@@ -23,6 +23,36 @@ public enum StandardAccountKind
 /// </summary>
 public static class SkrMapping
 {
+    /// <summary>Proposed statutory reserve account (Equity).</summary>
+    public static string UgRuecklageAccount(ChartVariant variant) =>
+        // TODO(Steuerberater): verify account; these mappings are proposals, not tax advice.
+        variant switch
+        {
+            ChartVariant.Skr03 => "0846",
+            ChartVariant.Skr04 => "2929",
+            _ => throw UnsupportedVariant(variant),
+        };
+
+    /// <summary>Proposed retained earnings / profit appropriation account (Equity).</summary>
+    public static string GewinnvortragAccount(ChartVariant variant) =>
+        // TODO(Steuerberater): verify account; these mappings are proposals, not tax advice.
+        variant switch
+        {
+            ChartVariant.Skr03 => "0860",
+            ChartVariant.Skr04 => "2970",
+            _ => throw UnsupportedVariant(variant),
+        };
+
+    /// <summary>Proposed depreciation expense account for tangible fixed assets.</summary>
+    public static string DepreciationExpenseAccount(ChartVariant variant) =>
+        // TODO(Steuerberater): verify account; these mappings are proposals, not tax advice.
+        variant switch
+        {
+            ChartVariant.Skr03 => "4830",
+            ChartVariant.Skr04 => "6220",
+            _ => throw UnsupportedVariant(variant),
+        };
+
     /// <summary>Maps an EN-16931 revenue tax category to its revenue, output-tax and BU accounts.</summary>
     public static (string RevenueAccount, string? UstAccount, Steuerschluessel Key) RevenueMapping(
         ChartVariant variant,

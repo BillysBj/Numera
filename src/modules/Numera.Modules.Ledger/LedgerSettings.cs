@@ -45,4 +45,11 @@ public sealed class LedgerSettings : ITenantEntity
 
     /// <summary>First month of the fiscal year (1-12).</summary>
     public int FiscalYearStartMonth { get; set; } = 1;
+
+    /// <summary>
+    /// Manual owner choice: the §5a obligation ends only on a capital increase to the GmbH
+    /// minimum capital, not when share capital plus reserves reach EUR 25,000.
+    /// </summary>
+    // TODO: Track capital increases to the GmbH minimum capital before automating this choice.
+    public bool UgRuecklagepflichtAktiv { get; set; } = true;
 }

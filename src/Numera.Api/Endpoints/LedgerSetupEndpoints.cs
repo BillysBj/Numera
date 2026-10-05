@@ -13,15 +13,17 @@ using Numera.Platform.Tenancy;
 
 namespace Numera.Api.Endpoints;
 
-/// <summary>One-time chart-of-accounts setup and ledger settings reads.</summary>
+/// <summary>One-time chart-of-accounts setup and owner-controlled ledger settings.</summary>
 public static class LedgerSetupEndpoints
 {
-    /// <summary>Maps owner-gated setup and authenticated settings reads under <c>/api/ledger</c>.</summary>
+    /// <summary>Maps owner-gated setup/settings writes and authenticated reads under <c>/api/ledger</c>.</summary>
     public static IEndpointRouteBuilder MapLedgerSetupEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/ledger").RequireAuthorization();
 
         group.MapPost("/setup", SetupAsync)
+            .RequireAuthorization("RequireOwner");
+        group.MapPut("/settings", UpdateSettingsAsync)
             .RequireAuthorization("RequireOwner");
 
         group.MapGet("/settings", async (NumeraDbContext db, CancellationToken ct) =>
@@ -37,6 +39,25 @@ public static class LedgerSetupEndpoints
         });
 
         return app;
+    }
+
+    internal static async Task<IResult> UpdateSettingsAsync(LedgerSettingsUpdateRequest request,
+        NumeraDbContext db, IAuditWriter audit, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+        var settings = await db.Set<LedgerSettings>().SingleOrDefaultAsync(ct).ConfigureAwait(false);
+        if (settings is null)
+        {
+            return Results.NotFound();
+        }
+
+        var before = JsonSerializer.Serialize(ToDto(settings));
+        settings.UgRuecklagepflichtAktiv = request.UgRuecklagepflichtAktiv;
+        await audit.RecordAsync(new LedgerSetupAuditEvent("ledger.settings_updated", settings.Id, before,
+            JsonSerializer.Serialize(ToDto(settings))), ct).ConfigureAwait(false);
+        await db.SaveChangesAsync(ct).ConfigureAwait(false);
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+        return Results.Ok(ToDto(settings));
     }
 
     internal static async Task<IResult> SetupAsync(
@@ -68,6 +89,7 @@ public static class LedgerSetupEndpoints
             Besteuerungsart = request.Besteuerungsart,
             Gewinnermittlungsart = request.Gewinnermittlungsart,
             FiscalYearStartMonth = request.FiscalYearStartMonth ?? 1,
+            UgRuecklagepflichtAktiv = request.UgRuecklagepflichtAktiv,
         };
 
         await using var tx = await db.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
@@ -140,7 +162,8 @@ public static class LedgerSetupEndpoints
         settings.ChartVariant,
         settings.Besteuerungsart,
         settings.Gewinnermittlungsart,
-        settings.FiscalYearStartMonth);
+        settings.FiscalYearStartMonth,
+        settings.UgRuecklagepflichtAktiv);
 }
 
 internal sealed record LedgerSetupAuditEvent(

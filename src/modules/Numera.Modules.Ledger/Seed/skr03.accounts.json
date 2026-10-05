@@ -110,5 +110,29 @@
     "isAutomatikkonto": false,
     "steuerschluessel": 9,
     "ustvaKennziffer": "66"
+  },
+  {
+    "number": "4830",
+    "name": "Abschreibungen auf Sachanlagen",
+    "type": "Expense",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "0846",
+    "name": "Gesetzliche Rücklage gemäß §5a GmbHG",
+    "type": "Equity",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
+  },
+  {
+    "number": "0860",
+    "name": "Gewinnvortrag / Ergebnisverwendung",
+    "type": "Equity",
+    "isAutomatikkonto": false,
+    "steuerschluessel": null,
+    "ustvaKennziffer": null
   }
 ]

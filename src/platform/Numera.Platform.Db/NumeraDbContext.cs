@@ -136,6 +136,7 @@ public class NumeraDbContext : DbContext
                             .HasDatabaseName("ix_postings_account_id");
                         break;
                     case "LedgerSettings":
+                        builder.Property("UgRuecklagepflichtAktiv").HasDefaultValue(true);
                         builder.HasIndex(nameof(ITenantEntity.TenantId))
                             .IsUnique()
                             .HasDatabaseName("ux_ledger_settings_tenant_id");
@@ -371,6 +372,25 @@ public class NumeraDbContext : DbContext
             }
 
             modelBuilder.Entity(clrType);
+        }
+
+        var fixedAsset = modelBuilder.Model.GetEntityTypes().SingleOrDefault(e => e.ClrType.Name == "FixedAsset");
+        var afaBuchung = modelBuilder.Model.GetEntityTypes().SingleOrDefault(e => e.ClrType.Name == "AfaBuchung");
+        var journalEntry = modelBuilder.Model.GetEntityTypes().SingleOrDefault(e => e.ClrType.Name == "JournalEntry");
+        if (fixedAsset is not null && afaBuchung is not null && journalEntry is not null)
+        {
+            modelBuilder.Entity(fixedAsset.ClrType).Property<decimal>("AnschaffungsnebenkostenNetto").HasDefaultValue(0m);
+            modelBuilder.Entity(afaBuchung.ClrType).HasOne(fixedAsset.ClrType, null)
+                .WithMany().HasForeignKey("FixedAssetId").OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity(afaBuchung.ClrType).HasOne(journalEntry.ClrType, null)
+                .WithMany().HasForeignKey("JournalEntryId").OnDelete(DeleteBehavior.Restrict);
+        }
+
+        var ugRuecklageBuchung = modelBuilder.Model.GetEntityTypes().SingleOrDefault(e => e.ClrType.Name == "UgRuecklageBuchung");
+        if (ugRuecklageBuchung is not null && journalEntry is not null)
+        {
+            modelBuilder.Entity(ugRuecklageBuchung.ClrType).HasOne(journalEntry.ClrType, null)
+                .WithMany().HasForeignKey("JournalEntryId").OnDelete(DeleteBehavior.Restrict);
         }
 
         // For every mapped ITenantEntity (module-contributed OR built-in Membership),

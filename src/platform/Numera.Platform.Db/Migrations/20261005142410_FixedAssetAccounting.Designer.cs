@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Numera.Platform.Db;
@@ -11,9 +12,11 @@ using Numera.Platform.Db;
 namespace Numera.Platform.Db.Migrations
 {
     [DbContext(typeof(NumeraDbContext))]
-    partial class NumeraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005142410_FixedAssetAccounting")]
+    partial class FixedAssetAccounting
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1126,12 +1129,6 @@ namespace Numera.Platform.Db.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
 
-                    b.Property<bool>("UgRuecklagepflichtAktiv")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("ug_ruecklagepflicht_aktiv");
-
                     b.HasKey("Id")
                         .HasName("pk_ledger_settings");
 
@@ -1246,50 +1243,6 @@ namespace Numera.Platform.Db.Migrations
                         .HasDatabaseName("ix_vat_payment_tenant_id_value_date");
 
                     b.ToTable("vat_payment");
-                });
-
-            modelBuilder.Entity("Numera.Modules.Ledger.UgRuecklageBuchung", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<decimal>("Betrag")
-                        .HasColumnType("numeric(19,4)")
-                        .HasColumnName("betrag");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("Jahr")
-                        .HasColumnType("integer")
-                        .HasColumnName("jahr");
-
-                    b.Property<Guid?>("JournalEntryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("journal_entry_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<decimal>("VerlustvortragVorjahr")
-                        .HasColumnType("numeric(19,4)")
-                        .HasColumnName("verlustvortrag_vorjahr");
-
-                    b.HasKey("Id")
-                        .HasName("pk_ug_ruecklage_buchungen");
-
-                    b.HasIndex("JournalEntryId")
-                        .HasDatabaseName("ix_ug_ruecklage_buchungen_journal_entry_id");
-
-                    b.HasIndex("TenantId", "Jahr")
-                        .IsUnique()
-                        .HasDatabaseName("ix_ug_ruecklage_buchungen_tenant_id_jahr");
-
-                    b.ToTable("ug_ruecklage_buchungen");
                 });
 
             modelBuilder.Entity("Numera.Modules.Sales.Belege.Payments.SupplierPayment", b =>
@@ -3154,15 +3107,6 @@ namespace Numera.Platform.Db.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_postings_journal_entries_journal_entry_id");
-                });
-
-            modelBuilder.Entity("Numera.Modules.Ledger.UgRuecklageBuchung", b =>
-                {
-                    b.HasOne("Numera.Modules.Ledger.JournalEntry", null)
-                        .WithMany()
-                        .HasForeignKey("JournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_ug_ruecklage_buchungen_journal_entries_journal_entry_id");
                 });
 
             modelBuilder.Entity("Numera.Modules.Sales.CompanyProfile", b =>

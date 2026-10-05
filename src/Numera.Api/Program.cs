@@ -84,6 +84,8 @@ builder.Services.AddScoped<IBillingState, BillingStateService>();
 builder.Services.AddScoped<ChartSeeder>();
 builder.Services.AddScoped<AccountResolver>();
 builder.Services.AddScoped<PostingEngine>();
+builder.Services.AddScoped<AfaCalculator>();
+builder.Services.AddScoped<AnlagenspiegelCalculator>();
 builder.Services.AddScoped<FestschreibungService>();
 
 // --- Reporting (Phase 11 integration) --------------------------------------
@@ -92,6 +94,8 @@ builder.Services.AddScoped<FestschreibungService>();
 builder.Services.AddScoped<RecognitionReader>();
 builder.Services.AddScoped<UstVaCalculator>();
 builder.Services.AddScoped<EuerCalculator>();
+builder.Services.AddScoped<AbschlussCalculator>();
+builder.Services.AddScoped<UgRuecklageCalculator>();
 
 // --- Sales finalize services (plan 03-05) ----------------------------------
 // NumberingService claims the race-safe document number inside the finalize
@@ -283,6 +287,7 @@ app.MapCatalogEndpoints();
 app.MapCompanyProfileEndpoints();
 app.MapEmailSettingsEndpoints();
 app.MapLedgerSetupEndpoints();
+app.MapFixedAssetEndpoints();
 app.MapLedgerEndpoints();
 app.MapReportEndpoints();
 app.MapDashboardEndpoints();

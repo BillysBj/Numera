@@ -28,7 +28,7 @@ public sealed class LedgerSetupTests(PostgresFixture fixture)
         var settings = await read.Set<LedgerSettings>().AsNoTracking().SingleAsync();
         var accounts = await read.Set<Account>().AsNoTracking().ToListAsync();
         Assert.Equal(ChartVariant.Skr03, settings.ChartVariant);
-        Assert.Equal(14, accounts.Count);
+        Assert.Equal(17, accounts.Count);
         Assert.All(accounts, account => Assert.True(account.IsActive));
         Assert.Contains(accounts, account => account.Number == "8400");
         Assert.Contains(accounts, account => account.Number == "8125");
@@ -48,7 +48,7 @@ public sealed class LedgerSetupTests(PostgresFixture fixture)
         AssertStatus(second, StatusCodes.Status409Conflict);
         await using var read = fixture.CreateAppContext(tenant);
         Assert.Equal(1, await read.Set<LedgerSettings>().CountAsync());
-        Assert.Equal(14, await read.Set<Account>().CountAsync());
+        Assert.Equal(17, await read.Set<Account>().CountAsync());
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class LedgerSetupTests(PostgresFixture fixture)
         var settings = await read.Set<LedgerSettings>().AsNoTracking().SingleAsync();
         var accounts = await read.Set<Account>().AsNoTracking().ToListAsync();
         Assert.Equal(ChartVariant.Skr04, settings.ChartVariant);
-        Assert.Equal(14, accounts.Count);
+        Assert.Equal(17, accounts.Count);
         Assert.All(accounts, account => Assert.Equal(ChartVariant.Skr04, account.ChartVariant));
         Assert.Contains(accounts, account => account.Number == "4400");
         Assert.Contains(accounts, account => account.Number == "4125");

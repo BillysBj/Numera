@@ -7,7 +7,8 @@ public sealed record LedgerSetupRequest(
     ChartVariant ChartVariant,
     Besteuerungsart Besteuerungsart,
     Gewinnermittlungsart Gewinnermittlungsart,
-    int? FiscalYearStartMonth);
+    int? FiscalYearStartMonth,
+    bool UgRuecklagepflichtAktiv = true);
 
 /// <summary>The tenant's persisted ledger configuration.</summary>
 public sealed record LedgerSettingsDto(
@@ -15,10 +16,14 @@ public sealed record LedgerSettingsDto(
     ChartVariant ChartVariant,
     Besteuerungsart Besteuerungsart,
     Gewinnermittlungsart Gewinnermittlungsart,
-    int FiscalYearStartMonth);
+    int FiscalYearStartMonth,
+    bool UgRuecklagepflichtAktiv = true);
 
 /// <summary>The configuration and chart size created by ledger setup.</summary>
 public sealed record LedgerSetupResponse(LedgerSettingsDto Settings, int AccountCount);
+
+/// <summary>Manual owner-controlled statutory reserve obligation.</summary>
+public sealed record LedgerSettingsUpdateRequest(bool UgRuecklagepflichtAktiv = true);
 
 /// <summary>One summarized row in the Buchungsjournal.</summary>
 public sealed record JournalEntryListItem(
