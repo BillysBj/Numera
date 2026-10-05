@@ -75,6 +75,47 @@ export interface EuerReport {
   hinweis: string | null
 }
 
+export interface GuvPosition {
+  bezeichnung: string
+  betrag: number
+}
+
+export interface GuvReport {
+  jahr: number
+  from: string
+  to: string
+  ertraege: GuvPosition[]
+  aufwendungen: GuvPosition[]
+  jahresueberschuss: number
+  hinweis: string | null
+}
+
+export interface BilanzPosition {
+  gruppe: string
+  bezeichnung: string
+  betrag: number
+}
+
+export interface BilanzReport {
+  jahr: number
+  stichtag: string
+  aktiva: BilanzPosition[]
+  summeAktiva: number
+  passiva: BilanzPosition[]
+  summePassiva: number
+  bilanzDifferenz: number
+  hinweis: string | null
+}
+
+export interface UgRuecklageReport {
+  jahr: number
+  jahresueberschuss: number
+  verlustvortragVorjahr: number
+  massgeblicherBetrag: number
+  ruecklage: number
+  hinweis: string | null
+}
+
 async function request<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -130,6 +171,32 @@ export function useEuerReport(jahr: number, from: string, to: string) {
     queryKey: ['reports', 'euer', jahr, from, to],
     queryFn: () => request<EuerReport>(`/reports/euer?${euerParams(jahr, from, to)}`),
     enabled: from.length > 0 && to.length > 0 && from <= to,
+  })
+}
+
+export function useGuvReport(jahr: number) {
+  return useQuery({
+    queryKey: ['reports', 'guv', jahr],
+    queryFn: () =>
+      request<GuvReport>(`/reports/guv?${new URLSearchParams({ jahr: String(jahr) })}`),
+  })
+}
+
+export function useBilanzReport(jahr: number) {
+  return useQuery({
+    queryKey: ['reports', 'bilanz', jahr],
+    queryFn: () =>
+      request<BilanzReport>(`/reports/bilanz?${new URLSearchParams({ jahr: String(jahr) })}`),
+  })
+}
+
+export function useUgRuecklage(jahr: number, verlustvortrag: number) {
+  return useQuery({
+    queryKey: ['reports', 'ug-ruecklage', jahr, verlustvortrag],
+    queryFn: () =>
+      request<UgRuecklageReport>(
+        `/reports/ug-ruecklage?${new URLSearchParams({ jahr: String(jahr), verlustvortrag: String(verlustvortrag) })}`,
+      ),
   })
 }
 

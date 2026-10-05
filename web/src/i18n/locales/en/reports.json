@@ -24,7 +24,11 @@
   "nav": {
     "group": "Reports",
     "ustva": "VAT return",
-    "euer": "Cash-basis statement"
+    "euer": "Cash-basis statement",
+    "bilanz": "Balance sheet",
+    "guv": "P&L",
+    "anlagen": "Fixed assets/AfA",
+    "ugRuecklage": "§5a reserve"
   },
   "loading": "Loading report …",
   "filters": {
@@ -116,5 +120,92 @@
       "description": "Description",
       "amount": "Amount"
     }
+  },
+  "guv": {
+    "title": "Profit and loss statement",
+    "subtitle": "Total cost method for the fiscal year",
+    "income": "Income",
+    "expenses": "Expenses",
+    "totalIncome": "Total income",
+    "totalExpenses": "Total expenses",
+    "result": "Result",
+    "profit": "Net income",
+    "loss": "Net loss",
+    "columns": {
+      "description": "Description",
+      "amount": "Amount"
+    }
+  },
+  "bilanz": {
+    "title": "Balance sheet",
+    "subtitle": "Assets and equity/liabilities as of fiscal year end",
+    "assets": "Assets",
+    "liabilities": "Equity and liabilities",
+    "totalAssets": "Total assets",
+    "totalLiabilities": "Total equity and liabilities",
+    "difference": "Balance difference",
+    "differenceHint": "The difference usually stems from missing year-end closing entries (e.g. carrying prior-year results to retained earnings). It is shown transparently rather than booked automatically.",
+    "balanced": "Balance sheet balanced: assets = equity and liabilities."
+  },
+  "anlagen": {
+    "title": "Fixed assets & depreciation",
+    "subtitle": "Record fixed assets, book depreciation and view the asset movement schedule",
+    "runButton": "Book depreciation for the year",
+    "running": "Booking depreciation …",
+    "runResult": "Depreciation booked: {{booked}} asset(s), {{skipped}} skipped, total {{total}}.",
+    "runError": "The depreciation run could not be executed.",
+    "spiegelTitle": "Asset movement schedule",
+    "listTitle": "Fixed assets",
+    "empty": "No fixed assets recorded yet.",
+    "edit": "Edit",
+    "newTitle": "New fixed asset",
+    "editTitle": "Edit fixed asset",
+    "create": "Create",
+    "update": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving …",
+    "saveError": "The fixed asset could not be saved. Please check the inputs (incl. a valid asset account).",
+    "columns": {
+      "name": "Description",
+      "inService": "In service",
+      "cost": "Acquisition value",
+      "usefulLife": "Useful life (yrs)",
+      "openingValue": "Opening value",
+      "additions": "Additions",
+      "disposals": "Disposals",
+      "afa": "Depreciation",
+      "closingValue": "Closing value",
+      "total": "Total"
+    },
+    "fields": {
+      "name": "Description",
+      "account": "Asset account",
+      "accountHint": "Fixed-asset ledger account (from the chart of accounts).",
+      "acquisitionDate": "Acquisition date",
+      "inServiceDate": "In-service date",
+      "cost": "Acquisition cost (net)",
+      "extraCost": "Incidental acquisition cost (net)",
+      "usefulLife": "Useful life (years)",
+      "method": "Method",
+      "expenseAccount": "Depreciation account",
+      "expenseAccountHint": "Leave empty → the chart's default depreciation account."
+    },
+    "methods": {
+      "linear": "Straight-line",
+      "gwg": "Low-value asset (immediate)"
+    }
+  },
+  "ugRuecklage": {
+    "title": "Statutory reserve §5a GmbHG",
+    "subtitle": "25% of net income reduced by a prior-year loss carryforward",
+    "lossCarryforward": "Prior-year loss carryforward",
+    "netIncome": "Net income",
+    "base": "Relevant amount",
+    "reserve": "Statutory reserve (25%)",
+    "note": "The reserve is not an expense and does not reduce profit; it is shown within equity.",
+    "book": "Book reserve",
+    "booking": "Booking …",
+    "booked": "Reserve booked.",
+    "bookError": "The reserve could not be booked (possibly already booked for this year)."
   }
 }

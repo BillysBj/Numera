@@ -24,7 +24,11 @@
   "nav": {
     "group": "Berichte",
     "ustva": "USt-Voranmeldung",
-    "euer": "EÜR"
+    "euer": "EÜR",
+    "bilanz": "Bilanz",
+    "guv": "GuV",
+    "anlagen": "Anlagen/AfA",
+    "ugRuecklage": "§5a-Rücklage"
   },
   "loading": "Bericht wird geladen …",
   "filters": {
@@ -116,5 +120,92 @@
       "description": "Bezeichnung",
       "amount": "Betrag"
     }
+  },
+  "guv": {
+    "title": "Gewinn- und Verlustrechnung",
+    "subtitle": "Gesamtkostenverfahren für das Geschäftsjahr",
+    "income": "Erträge",
+    "expenses": "Aufwendungen",
+    "totalIncome": "Summe Erträge",
+    "totalExpenses": "Summe Aufwendungen",
+    "result": "Ergebnis",
+    "profit": "Jahresüberschuss",
+    "loss": "Jahresfehlbetrag",
+    "columns": {
+      "description": "Bezeichnung",
+      "amount": "Betrag"
+    }
+  },
+  "bilanz": {
+    "title": "Bilanz",
+    "subtitle": "Vermögens- und Kapitalübersicht zum Geschäftsjahresende",
+    "assets": "Aktiva",
+    "liabilities": "Passiva",
+    "totalAssets": "Summe Aktiva",
+    "totalLiabilities": "Summe Passiva",
+    "difference": "Bilanzdifferenz",
+    "differenceHint": "Die Differenz entsteht meist durch noch fehlende Jahresabschlussbuchungen (z. B. Ergebnisübernahme/Gewinnvortrag der Vorjahre). Sie wird transparent ausgewiesen statt automatisch verbucht.",
+    "balanced": "Bilanz ausgeglichen: Aktiva = Passiva."
+  },
+  "anlagen": {
+    "title": "Anlagevermögen & AfA",
+    "subtitle": "Anlagegüter erfassen, Abschreibungen buchen und den Anlagenspiegel einsehen",
+    "runButton": "AfA-Lauf für das Jahr buchen",
+    "running": "AfA wird gebucht …",
+    "runResult": "AfA gebucht: {{booked}} Anlage(n), {{skipped}} übersprungen, Summe {{total}}.",
+    "runError": "Der AfA-Lauf konnte nicht ausgeführt werden.",
+    "spiegelTitle": "Anlagenspiegel",
+    "listTitle": "Anlagegüter",
+    "empty": "Noch keine Anlagegüter erfasst.",
+    "edit": "Bearbeiten",
+    "newTitle": "Neues Anlagegut",
+    "editTitle": "Anlagegut bearbeiten",
+    "create": "Anlegen",
+    "update": "Speichern",
+    "cancel": "Abbrechen",
+    "saving": "Wird gespeichert …",
+    "saveError": "Das Anlagegut konnte nicht gespeichert werden. Bitte prüfe die Angaben (u. a. gültiges Anlagekonto).",
+    "columns": {
+      "name": "Bezeichnung",
+      "inService": "Inbetriebnahme",
+      "cost": "Anschaffungswert",
+      "usefulLife": "Nutzungsdauer (J.)",
+      "openingValue": "Buchwert Anfang",
+      "additions": "Zugänge",
+      "disposals": "Abgänge",
+      "afa": "AfA",
+      "closingValue": "Buchwert Ende",
+      "total": "Summe"
+    },
+    "fields": {
+      "name": "Bezeichnung",
+      "account": "Anlagekonto",
+      "accountHint": "Sachkonto des Anlagevermögens (aus dem Kontenrahmen).",
+      "acquisitionDate": "Anschaffungsdatum",
+      "inServiceDate": "Inbetriebnahme",
+      "cost": "Anschaffungskosten (netto)",
+      "extraCost": "Anschaffungsnebenkosten (netto)",
+      "usefulLife": "Nutzungsdauer (Jahre)",
+      "method": "Methode",
+      "expenseAccount": "Abschreibungskonto",
+      "expenseAccountHint": "Leer lassen → Standard-Abschreibungskonto des Kontenrahmens."
+    },
+    "methods": {
+      "linear": "Linear",
+      "gwg": "GWG (Sofortabschreibung)"
+    }
+  },
+  "ugRuecklage": {
+    "title": "Gesetzliche Rücklage §5a GmbHG",
+    "subtitle": "25 % des um einen Verlustvortrag verminderten Jahresüberschusses",
+    "lossCarryforward": "Verlustvortrag Vorjahr",
+    "netIncome": "Jahresüberschuss",
+    "base": "Maßgeblicher Betrag",
+    "reserve": "Gesetzliche Rücklage (25 %)",
+    "note": "Die Rücklage ist keine Betriebsausgabe und mindert den Gewinn nicht; sie wird innerhalb des Eigenkapitals ausgewiesen.",
+    "book": "Rücklage buchen",
+    "booking": "Wird gebucht …",
+    "booked": "Rücklage wurde gebucht.",
+    "bookError": "Die Rücklage konnte nicht gebucht werden (evtl. bereits für dieses Jahr gebucht)."
   }
 }

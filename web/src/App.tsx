@@ -49,6 +49,10 @@ import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFor
 import TeamPage from './features/team/TeamPage'
 import UstVaPruefansichtPage from './features/reports/UstVaPruefansichtPage'
 import EuerReportPage from './features/reports/EuerReportPage'
+import GuvReportPage from './features/reports/GuvReportPage'
+import BilanzReportPage from './features/reports/BilanzReportPage'
+import UgRuecklagePage from './features/reports/UgRuecklagePage'
+import FixedAssetsPage from './features/fixed-assets/FixedAssetsPage'
 import DatevExportPage from './features/reports/DatevExportPage'
 import BelegReviewQueuePage from './features/belege/BelegReviewQueuePage'
 import BelegCapturePage from './features/belege/BelegCapturePage'
@@ -98,6 +102,9 @@ export function useNavGroups(): NavGroup[] {
   // report is hidden for them. Driven generically by the tenant's own ledger setting.
   const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
   const showEuer = ledger.data?.gewinnermittlungsart === Gewinnermittlungsart.Euer
+  // Bilanz/GuV are the counterpart to the EÜR: they only apply to a bilanzierender
+  // tenant (UG/GmbH), so they are shown exactly when the EÜR is not.
+  const showBilanz = ledger.data?.gewinnermittlungsart === Gewinnermittlungsart.Bilanzierung
 
   return [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
@@ -131,6 +138,14 @@ export function useNavGroups(): NavGroup[] {
         { to: '/reports/ustva', label: trep('nav.ustva'), icon: IconDocuments },
         ...(showEuer
           ? [{ to: '/reports/euer', label: trep('nav.euer'), icon: IconDashboard }]
+          : []),
+        ...(showBilanz
+          ? [
+              { to: '/reports/bilanz', label: trep('nav.bilanz'), icon: IconDashboard },
+              { to: '/reports/guv', label: trep('nav.guv'), icon: IconDashboard },
+              { to: '/reports/anlagen', label: trep('nav.anlagen'), icon: IconDocuments },
+              { to: '/reports/ug-ruecklage', label: trep('nav.ugRuecklage'), icon: IconDashboard },
+            ]
           : []),
         { to: '/reports/datev', label: 'DATEV-Export', icon: IconDocuments },
       ],
@@ -178,6 +193,44 @@ function EuerRoute() {
     return <Navigate to="/reports/ustva" replace />
   }
   return <EuerReportPage />
+}
+
+// Deep-link guards: Bilanz and GuV are only for a bilanzierender tenant (UG/GmbH).
+// An EÜR tenant reaching the URL directly is sent back to the USt-VA.
+function BilanzRoute() {
+  const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
+  if (ledger.isLoading) return null
+  if (ledger.data?.gewinnermittlungsart !== Gewinnermittlungsart.Bilanzierung) {
+    return <Navigate to="/reports/ustva" replace />
+  }
+  return <BilanzReportPage />
+}
+
+function GuvRoute() {
+  const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
+  if (ledger.isLoading) return null
+  if (ledger.data?.gewinnermittlungsart !== Gewinnermittlungsart.Bilanzierung) {
+    return <Navigate to="/reports/ustva" replace />
+  }
+  return <GuvReportPage />
+}
+
+function AnlagenRoute() {
+  const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
+  if (ledger.isLoading) return null
+  if (ledger.data?.gewinnermittlungsart !== Gewinnermittlungsart.Bilanzierung) {
+    return <Navigate to="/reports/ustva" replace />
+  }
+  return <FixedAssetsPage />
+}
+
+function UgRuecklageRoute() {
+  const ledger = useQuery({ queryKey: ['ledger-settings'], queryFn: getLedgerSettings })
+  if (ledger.isLoading) return null
+  if (ledger.data?.gewinnermittlungsart !== Gewinnermittlungsart.Bilanzierung) {
+    return <Navigate to="/reports/ustva" replace />
+  }
+  return <UgRuecklagePage />
 }
 
 // The nav item whose path is the longest prefix of the current route (so
@@ -440,6 +493,10 @@ function AppShell() {
             <Route path="/handbuch/:slug" element={<ManualChapterPage />} />
             <Route path="/reports/ustva" element={<UstVaPruefansichtPage />} />
             <Route path="/reports/euer" element={<EuerRoute />} />
+            <Route path="/reports/bilanz" element={<BilanzRoute />} />
+            <Route path="/reports/guv" element={<GuvRoute />} />
+            <Route path="/reports/anlagen" element={<AnlagenRoute />} />
+            <Route path="/reports/ug-ruecklage" element={<UgRuecklageRoute />} />
             <Route path="/reports/datev" element={<DatevExportPage />} />
             <Route path="/belege" element={<BelegReviewQueuePage />} />
             <Route path="/belege/capture" element={<BelegCapturePage />} />
