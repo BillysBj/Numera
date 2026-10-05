@@ -88,7 +88,7 @@ export const CHAPTERS: Chapter[] = [
           <li><UI>Verkauf</UI> — Belege, Offene Posten, Mahnwesen, Serienrechnungen, Eingangsbelege</li>
           <li><UI>Belege</UI> — Eingangsbelege erfassen sowie prüfen &amp; buchen</li>
           <li><UI>Banking</UI> — Bankkonten und Zahlungsabgleich</li>
-          <li><UI>Berichte</UI> — USt-Voranmeldung, EÜR (nur bei Gewinnermittlung EÜR) und DATEV-Export</li>
+          <li><UI>Berichte</UI> — USt-Voranmeldung und DATEV-Export; je nach Gewinnermittlung zusätzlich EÜR (bei EÜR) bzw. Bilanz, GuV, Anlagen/AfA und §5a-Rücklage (bei Bilanzierung)</li>
           <li><UI>Stammdaten</UI> — Partner (Kunden/Lieferanten) und Artikel</li>
           <li><UI>System</UI> — Einstellungen, E-Mail, Kontenrahmen, Team und dieses Handbuch</li>
         </Bullets>
@@ -482,7 +482,8 @@ export const CHAPTERS: Chapter[] = [
         </P>
         <Note>
           Eine Kapitalgesellschaft (UG/GmbH) bilanziert und gibt <strong>keine</strong> EÜR, sondern
-          eine E-Bilanz ab — in diesem Fall ist die EÜR-Ansicht ausgeblendet.
+          eine E-Bilanz ab — in diesem Fall ist die EÜR-Ansicht ausgeblendet und es erscheinen
+          stattdessen die Abschluss-Ansichten (siehe Kapitel „Jahresabschluss").
         </Note>
 
         <H3>DATEV-Export</H3>
@@ -499,8 +500,82 @@ export const CHAPTERS: Chapter[] = [
     ),
   },
   {
-    slug: 'team',
+    slug: 'abschluss',
     number: 12,
+    title: 'Jahresabschluss (Bilanzierung)',
+    summary: 'Für bilanzierende Unternehmen (UG/GmbH): Bilanz, GuV, Anlagen/AfA und §5a-Rücklage.',
+    Body: () => (
+      <>
+        <P>
+          Ist Ihre Gewinnermittlung auf <strong>Bilanzierung</strong> eingestellt (Kapitel
+          „Kontenrahmen"), blendet Numera unter <UI>Berichte</UI> zusätzlich die Abschluss-Ansichten
+          ein: <UI>Bilanz</UI>, <UI>GuV</UI>, <UI>Anlagen/AfA</UI> und <UI>§5a-Rücklage</UI>. Für
+          EÜR-Mandanten sind diese Punkte ausgeblendet (dort erscheint stattdessen die EÜR).
+        </P>
+        <Note>
+          Diese Ansichten werten die laufende doppelte Buchführung aus. Sie ersetzen <strong>nicht</strong>
+          die Abgabe von E-Bilanz, Körperschaft- und Gewerbesteuererklärung sowie die Offenlegung —
+          diese laufen weiterhin über ELSTER bzw. eine Abschluss-Software/Ihren Steuerberater.
+        </Note>
+
+        <H3>Bilanz</H3>
+        <P>
+          Die <UI>Bilanz</UI> stellt zum Geschäftsjahresende <strong>Aktiva</strong> (Vermögen) und
+          <strong> Passiva</strong> (Eigenkapital, Rückstellungen, Verbindlichkeiten) gegenüber, jeweils
+          mit Summen. Der Jahresüberschuss aus der GuV wird im Eigenkapital ausgewiesen. Wählen Sie oben
+          nur das <UI>Jahr</UI>.
+        </P>
+        <Bullets>
+          <li>Stimmen Aktiva und Passiva überein, erscheint der Hinweis „Bilanz ausgeglichen".</li>
+          <li>Gibt es eine <strong>Bilanzdifferenz</strong>, wird sie offen ausgewiesen — meist durch noch fehlende Jahresabschlussbuchungen (z.&nbsp;B. Ergebnisübernahme/Gewinnvortrag der Vorjahre). Numera erfindet dafür bewusst keine Buchungen.</li>
+        </Bullets>
+
+        <H3>GuV (Gewinn- und Verlustrechnung)</H3>
+        <P>
+          Die <UI>GuV</UI> zeigt im Gesamtkostenverfahren die <strong>Erträge</strong> und
+          <strong> Aufwendungen</strong> des Geschäftsjahres, gruppiert nach Positionen, und darunter
+          das Ergebnis als <strong>Jahresüberschuss</strong> bzw. <strong>Jahresfehlbetrag</strong>.
+        </P>
+
+        <H3>Anlagen/AfA (Anlagevermögen)</H3>
+        <P>
+          Unter <UI>Berichte → Anlagen/AfA</UI> verwalten Sie Anlagegüter und buchen die
+          Abschreibungen (AfA).
+        </P>
+        <Steps>
+          <li>Im Formular <UI>Neues Anlagegut</UI> erfassen: Bezeichnung, <strong>Anlagekonto</strong> (Sachkonto aus dem Kontenrahmen), Anschaffungs- und Inbetriebnahmedatum, Anschaffungskosten (netto) und ggf. Nebenkosten, <strong>Nutzungsdauer</strong> in Jahren sowie die <strong>Methode</strong>.</li>
+          <li>Als Methode stehen <UI>Linear</UI> (gleichmäßige Abschreibung über die Nutzungsdauer, im ersten Jahr zeitanteilig ab Inbetriebnahme) und <UI>GWG</UI> (Sofortabschreibung im Anschaffungsjahr) zur Verfügung.</li>
+          <li>Das <UI>Abschreibungskonto</UI> kann leer bleiben — dann nutzt Numera das Standard-Abschreibungskonto des Kontenrahmens.</li>
+          <li>Anlegen. Bereits gebuchte Eckdaten lassen sich später nicht mehr rückwirkend ändern.</li>
+          <li>Mit <UI>AfA-Lauf für das Jahr buchen</UI> erzeugt Numera die Abschreibungsbuchungen aller Anlagegüter für das gewählte Jahr. Der Lauf ist <strong>idempotent</strong>: ein zweiter Lauf für dasselbe Jahr bucht nicht doppelt.</li>
+        </Steps>
+        <P>
+          Der <strong>Anlagenspiegel</strong> oben zeigt je Anlagegut Buchwert zu Jahresanfang,
+          Zugänge, Abgänge, die Jahres-AfA und den Buchwert zum Jahresende.
+        </P>
+        <Note>
+          Nutzungsdauern, GWG-Grenzen und die genaue Kontenzuordnung bitte mit dem Steuerberater
+          abstimmen. Die Ausbuchung bei Abgang (Verkauf/Verschrottung) ist noch nicht enthalten.
+        </Note>
+
+        <H3>Gesetzliche Rücklage §5a GmbHG</H3>
+        <P>
+          Eine UG muss <strong>25&nbsp;%</strong> des um einen Verlustvortrag verminderten
+          Jahresüberschusses in eine gesetzliche Rücklage einstellen. Unter
+          <UI>Berichte → §5a-Rücklage</UI> wählen Sie Jahr und optional den <UI>Verlustvortrag Vorjahr</UI>;
+          Numera zeigt Jahresüberschuss, maßgeblichen Betrag und die errechnete Rücklage.
+        </P>
+        <Bullets>
+          <li>Über <UI>Rücklage buchen</UI> (nur Inhaber) wird die Rücklage als Ergebnisverwendung im Eigenkapital gebucht — je Jahr nur einmal.</li>
+          <li>Die Rücklage ist <strong>keine Betriebsausgabe</strong> und mindert den Gewinn nicht.</li>
+          <li>Ist kein zu bildender Betrag vorhanden (z.&nbsp;B. Jahresüberschuss 0 oder Verlust), bleibt die Schaltfläche deaktiviert.</li>
+        </Bullets>
+      </>
+    ),
+  },
+  {
+    slug: 'team',
+    number: 13,
     title: 'Team & Nutzer',
     summary: 'Personen einladen, Rollen vergeben, temporäres Passwort; strikte Mandantentrennung.',
     Body: () => (
@@ -518,7 +593,7 @@ export const CHAPTERS: Chapter[] = [
   },
   {
     slug: 'email',
-    number: 13,
+    number: 14,
     title: 'E-Mail-Einstellungen',
     summary: 'SMTP pro Mandant (Passwort verschlüsselt) und anpassbare Textvorlagen mit Platzhaltern.',
     Body: () => (
@@ -552,7 +627,7 @@ export const CHAPTERS: Chapter[] = [
   },
   {
     slug: 'compliance',
-    number: 14,
+    number: 15,
     title: 'GoBD, Backup & Datenschutz',
     summary: 'Unveränderbarkeit, Audit-Log, Mandantentrennung, Backups und DSGVO-Datenexport.',
     Body: () => (
