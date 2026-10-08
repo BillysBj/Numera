@@ -40,7 +40,7 @@ export function makeLineSchema(t: Translate) {
     ),
     discountPercent: z.preprocess(
       (v) => v === '' || v === undefined ? 0 : Number(v),
-      z.number().min(0, t('form.errors.discountRange')).lt(100, t('form.errors.discountRange')),
+      z.number().min(0, t('form.errors.discountRange')).lte(100, t('form.errors.discountRange')),
     ),
     taxCategory: z.number().int(),
     vatRatePercent: numberField(t('form.errors.required'), (s) =>
@@ -202,7 +202,7 @@ export function computePreviewTotals(lines: PreviewLine[]): PreviewTotals {
     if (!Number.isFinite(qty) || !Number.isFinite(price)) continue
 
     const discount = Number(l.discountPercent ?? 0)
-    if (!Number.isFinite(discount) || discount < 0 || discount >= 100) continue
+    if (!Number.isFinite(discount) || discount < 0 || discount > 100) continue
     const storedNet = roundAway(qty * price * (1 - discount / 100), 4)
     const lineNet = hasDiscount ? roundAway(storedNet, 2) : storedNet
     net += lineNet

@@ -157,8 +157,15 @@ describe('line discounts', () => {
     expect(lineSchema.parse(legacyLine).discountPercent).toBe(0)
   })
 
-  it.each([-0.01, 100, 101])('rejects %s percent', (discountPercent) => {
+  it.each([-0.01, 100.01, 101])('rejects %s percent', (discountPercent) => {
     expect(lineSchema.safeParse({ ...emptyLine(), name: 'Service', netUnitPrice: 100, discountPercent }).success).toBe(false)
+  })
+
+  it('accepts 100 percent (full discount)', () => {
+    expect(lineSchema.safeParse({ ...emptyLine(), name: 'Service', netUnitPrice: 100, discountPercent: 100 }).success).toBe(true)
+    expect(computePreviewTotals([
+      { quantity: 1, netUnitPrice: 100, discountPercent: 100, taxCategory: TaxCategory.S, vatRatePercent: 19 },
+    ])).toEqual({ net: 0, tax: 0, gross: 0 })
   })
 
   it('reduces net and VAT separately in mixed-rate buckets', () => {

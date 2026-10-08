@@ -18,8 +18,9 @@ public class LineDiscountTests
     [Theory]
     [InlineData("0", true)]
     [InlineData("99.999999", true)]
+    [InlineData("100", true)]
     [InlineData("-0.01", false)]
-    [InlineData("100", false)]
+    [InlineData("100.01", false)]
     public void Validates_discount_range(string value, bool valid)
     {
         var request = Request(decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
