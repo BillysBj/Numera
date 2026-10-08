@@ -96,6 +96,7 @@ export interface CatalogLineItem {
   id: string
   itemNumber: string
   name: string
+  description?: string | null
   unitCode: string
   netPrice: number
   taxCategory: TaxCategory

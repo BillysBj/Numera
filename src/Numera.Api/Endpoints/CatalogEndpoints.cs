@@ -60,7 +60,7 @@ public static class CatalogEndpoints
                     .OrderBy(c => c.Name)
                     .Take(20)
                     .Select(c => new CatalogLineItem(
-                        c.Id, c.ItemNumber, c.Name, c.UnitCode, c.NetPrice, c.TaxCategory, c.VatRatePercent))
+                        c.Id, c.ItemNumber, c.Name, c.Description, c.UnitCode, c.NetPrice, c.TaxCategory, c.VatRatePercent))
                     .ToListAsync(ct)
                     .ConfigureAwait(false);
 

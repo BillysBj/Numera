@@ -222,7 +222,7 @@ export default function DocumentFormPage() {
     append({
       catalogItemId: item.id,
       name: item.name,
-      description: '',
+      description: item.description ?? '',
       quantity: 1,
       unitCode: (UNIT_CODES as readonly string[]).includes(item.unitCode)
         ? item.unitCode

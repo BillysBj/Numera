@@ -84,6 +84,7 @@ public sealed record CatalogLineItem(
     Guid Id,
     string ItemNumber,
     string Name,
+    string? Description,
     string UnitCode,
     decimal NetPrice,
     TaxCategory TaxCategory,
