@@ -118,6 +118,12 @@ public sealed class CompanyProfile : ITenantEntity
     /// <summary>Managing director / authorised representative (Geschäftsführer) for the imprint.</summary>
     public string? ManagingDirector { get; set; }
 
+    /// <summary>Optional multi-line invoice closing text, frozen into the issuer snapshot at finalize.</summary>
+    public string? InvoiceFooterText { get; set; }
+
+    /// <summary>Optional multi-line delivery-note closing text, frozen into the issuer snapshot at finalize.</summary>
+    public string? DeliveryNoteFooterText { get; set; }
+
     /// <summary>Issuer contact e-mail shown on documents.</summary>
     public string? ContactEmail { get; set; }
 

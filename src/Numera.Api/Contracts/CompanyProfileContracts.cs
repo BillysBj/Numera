@@ -34,7 +34,9 @@ public sealed record CompanyProfileDto(
     string? ManagingDirector,
     string? ContactEmail,
     string? ContactPhone,
-    string? LogoRef);
+    string? LogoRef,
+    string? InvoiceFooterText,
+    string? DeliveryNoteFooterText);
 
 /// <summary>
 /// Payload to create-or-update the issuer profile via <c>PUT /api/company-profile</c> (upsert:
@@ -58,4 +60,6 @@ public sealed record UpdateCompanyProfileRequest(
     string? ManagingDirector,
     string? ContactEmail,
     string? ContactPhone,
-    string? LogoRef);
+    string? LogoRef,
+    string? InvoiceFooterText,
+    string? DeliveryNoteFooterText);

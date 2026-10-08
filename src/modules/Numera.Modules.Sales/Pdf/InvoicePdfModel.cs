@@ -156,6 +156,12 @@ public sealed record InvoicePdfModel
         /// <summary>Geschäftsführer (imprint). Nullable.</summary>
         public string? ManagingDirector { get; init; }
 
+        /// <summary>Invoice closing text frozen at finalize. Nullable for legacy snapshots.</summary>
+        public string? InvoiceFooterText { get; init; }
+
+        /// <summary>Delivery-note closing text frozen at finalize. Nullable for legacy snapshots.</summary>
+        public string? DeliveryNoteFooterText { get; init; }
+
         /// <summary>Contact email. Nullable.</summary>
         public string? ContactEmail { get; init; }
 

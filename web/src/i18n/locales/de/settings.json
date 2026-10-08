@@ -16,7 +16,8 @@
     "master": "Stammdaten",
     "tax": "Steuer",
     "payment": "Zahlung",
-    "bank": "Bank & Register"
+    "bank": "Bank & Register",
+    "closingTexts": "Abschlusstexte"
   },
   "fields": {
     "legalName": "Firmenname",
@@ -37,10 +38,14 @@
     "registerCourt": "Registergericht",
     "registerNumber": "Registernummer",
     "managingDirector": "Geschäftsführer",
+    "invoiceFooterText": "Abschlusstext Rechnung",
+    "deliveryNoteFooterText": "Abschlusstext Lieferschein",
     "contactEmail": "E-Mail",
     "contactPhone": "Telefon"
   },
   "hints": {
+    "invoiceFooterText": "Erscheint unten auf der Rechnung.",
+    "deliveryNoteFooterText": "Erscheint unten auf dem Lieferschein.",
     "kleinunternehmer": "Bei aktivem §19 wird auf allen Rechnungen keine Umsatzsteuer ausgewiesen."
   },
   "logo": {
@@ -67,6 +72,7 @@
   "errors": {
     "legalNameRequired": "Ein Firmenname ist erforderlich.",
     "legalNameMax": "Höchstens 200 Zeichen.",
+    "closingTextMax": "Höchstens 2000 Zeichen.",
     "streetRequired": "Eine Straße ist erforderlich.",
     "postalCodeRequired": "Eine PLZ ist erforderlich.",
     "cityRequired": "Ein Ort ist erforderlich.",

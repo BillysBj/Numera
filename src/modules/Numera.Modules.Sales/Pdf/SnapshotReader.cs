@@ -142,6 +142,8 @@ public static class SnapshotReader
             RegisterCourt = GetString(root, "registerCourt"),
             RegisterNumber = GetString(root, "registerNumber"),
             ManagingDirector = GetString(root, "managingDirector"),
+            InvoiceFooterText = GetString(root, "invoiceFooterText"),
+            DeliveryNoteFooterText = GetString(root, "deliveryNoteFooterText"),
             ContactEmail = GetString(root, "contactEmail"),
             ContactPhone = GetString(root, "contactPhone"),
         };

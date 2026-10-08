@@ -58,6 +58,12 @@ public sealed partial class UpdateCompanyProfileRequestValidator : AbstractValid
             .When(x => x.DefaultPaymentTermsNetDays.HasValue)
             .WithName("DefaultPaymentTermsNetDays")
             .WithMessage("Payment terms must be between 0 and 365 days.");
+
+        RuleFor(x => x.InvoiceFooterText)
+            .MaximumLength(2000);
+
+        RuleFor(x => x.DeliveryNoteFooterText)
+            .MaximumLength(2000);
     }
 
     private static bool HaveExactlyOneTaxId(UpdateCompanyProfileRequest x)

@@ -194,7 +194,25 @@ public sealed class InvoiceDocument : IDocument
             {
                 col.Item().ShowEntire().PaddingTop(16).Element(ComposeReceiptConfirmation);
             }
+
+            col.Item().Element(ComposeClosingText);
         });
+    }
+
+    private void ComposeClosingText(IContainer container)
+    {
+        var text = _model.DocumentType switch
+        {
+            DocumentType.Lieferschein => _model.Issuer.DeliveryNoteFooterText,
+            DocumentType.Rechnung or DocumentType.Abschlagsrechnung or DocumentType.Schlussrechnung
+                or DocumentType.Gutschrift or DocumentType.Storno => _model.Issuer.InvoiceFooterText,
+            _ => null,
+        };
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            container.PaddingTop(8).Text(text).FontSize(8.5f).FontColor(AccentSoft);
+        }
     }
 
     private void ComposeReceiptConfirmation(IContainer container)
@@ -222,7 +240,11 @@ public sealed class InvoiceDocument : IDocument
             // Recipient (Bill To) block.
             row.RelativeItem().Column(col =>
             {
-                col.Item().Text(_labels.BillTo.ToUpperInvariant())
+                // A Lieferschein goes to the goods recipient, not the invoice recipient.
+                var recipientHeading = IsDeliveryNote
+                    ? (_model.Language == "en" ? "Ship To" : "Warenempfänger")
+                    : _labels.BillTo;
+                col.Item().Text(recipientHeading.ToUpperInvariant())
                     .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
 
                 // Append the legal form only when the name does not already carry it
@@ -266,9 +288,24 @@ public sealed class InvoiceDocument : IDocument
                     {
                         MetaLine(meta, $"{_labels.CustomerNumber}:", recipient.CustomerNumber);
                     }
-                    MetaLine(meta, _labels.Date, FormatDate(_model.DocumentDate));
+                    // On a Lieferschein the document date is labelled "Belegdatum" and the supply
+                    // date (Leistungsdatum) is shown as the "Lieferdatum".
+                    MetaLine(
+                        meta,
+                        IsDeliveryNote ? (_model.Language == "en" ? "Document date" : "Belegdatum") : _labels.Date,
+                        FormatDate(_model.DocumentDate));
 
-                    if (_model.ServicePeriodEnd is { } periodEnd && _model.ServiceDate is { } periodStart)
+                    if (IsDeliveryNote)
+                    {
+                        if (_model.ServiceDate is { } deliveryDate)
+                        {
+                            MetaLine(
+                                meta,
+                                _model.Language == "en" ? "Delivery date" : "Lieferdatum",
+                                FormatDate(deliveryDate));
+                        }
+                    }
+                    else if (_model.ServicePeriodEnd is { } periodEnd && _model.ServiceDate is { } periodStart)
                     {
                         MetaLine(meta, _labels.ServicePeriod, $"{FormatDate(periodStart)} – {FormatDate(periodEnd)}");
                     }
@@ -281,7 +318,8 @@ public sealed class InvoiceDocument : IDocument
                         meta.Item().Text(_labels.ServiceDateMatchesInvoiceDate).FontSize(8.5f).SemiBold();
                     }
 
-                    if (_model.DueDate is { } due)
+                    // A Lieferschein (delivery note) has no payment due date — suppress it there.
+                    if (_model.DueDate is { } due && !IsDeliveryNote)
                     {
                         MetaLine(meta, _labels.Due, FormatDate(due));
                     }
@@ -595,32 +633,75 @@ public sealed class InvoiceDocument : IDocument
     internal void ComposeFooter(IContainer container)
     {
         var issuer = _model.Issuer;
-        var parts = new List<string>();
+        var en = _model.Language == "en";
 
+        // Line 1 — firm (incl. legal-form suffix) and registered seat. A UG business letter
+        // must carry the Rechtsform and Sitz (§35a GmbHG); the address supplies the seat.
+        var identity = new List<string>();
+        if (!string.IsNullOrWhiteSpace(issuer.LegalName))
+        {
+            identity.Add(issuer.LegalName!);
+        }
+
+        var addr = issuer.Address;
+        if (!string.IsNullOrWhiteSpace(addr.Street))
+        {
+            identity.Add(addr.Street!);
+        }
+
+        if (!string.IsNullOrWhiteSpace(addr.Line2))
+        {
+            identity.Add(addr.Line2!);
+        }
+
+        var cityLine = string.Join(" ", new[] { addr.PostalCode, addr.City }
+            .Where(s => !string.IsNullOrWhiteSpace(s)));
+        if (!string.IsNullOrWhiteSpace(cityLine))
+        {
+            identity.Add(cityLine);
+        }
+
+        // Line 2 — managing director(s) and commercial register (§35a GmbHG imprint).
+        var legal = new List<string>();
+        if (!string.IsNullOrWhiteSpace(issuer.ManagingDirector))
+        {
+            legal.Add($"{(en ? "Managing Director" : "Geschäftsführer")}: {issuer.ManagingDirector}");
+        }
+
+        var register = string.Join(" ", new[] { issuer.RegisterCourt, issuer.RegisterNumber }
+            .Where(s => !string.IsNullOrWhiteSpace(s)));
+        if (!string.IsNullOrWhiteSpace(register))
+        {
+            legal.Add(register);
+        }
+
+        // Line 3 — tax identity (§14 UStG / general practice).
+        var tax = new List<string>();
         if (!string.IsNullOrWhiteSpace(issuer.VatId))
         {
-            parts.Add($"{_labels.VatId}: {issuer.VatId}");
+            tax.Add($"{_labels.VatId}: {issuer.VatId}");
         }
 
         if (!string.IsNullOrWhiteSpace(issuer.TaxNumber))
         {
-            parts.Add($"{_labels.TaxNo}: {issuer.TaxNumber}");
+            tax.Add($"{_labels.TaxNo}: {issuer.TaxNumber}");
         }
 
-        if (!string.IsNullOrWhiteSpace(issuer.ManagingDirector))
+        container.BorderTop(0.75f).BorderColor(Hairline).PaddingTop(5).Column(col =>
         {
-            parts.Add(issuer.ManagingDirector!);
-        }
+            col.Spacing(1.5f);
+            FooterLine(col, string.Join(" · ", identity));
+            FooterLine(col, string.Join("  •  ", legal));
+            FooterLine(col, string.Join("  •  ", tax));
+        });
+    }
 
-        if (!string.IsNullOrWhiteSpace(issuer.RegisterCourt) || !string.IsNullOrWhiteSpace(issuer.RegisterNumber))
+    private static void FooterLine(ColumnDescriptor col, string text)
+    {
+        if (!string.IsNullOrWhiteSpace(text))
         {
-            parts.Add(string.Join(" ", new[] { issuer.RegisterCourt, issuer.RegisterNumber }
-                .Where(s => !string.IsNullOrWhiteSpace(s))));
+            col.Item().Text(text).FontSize(7.5f).FontColor(AccentSoft).AlignCenter();
         }
-
-        container.BorderTop(0.75f).BorderColor(Hairline).PaddingTop(5)
-            .Text(string.Join("  •  ", parts))
-            .FontSize(7.5f).FontColor(AccentSoft).AlignCenter();
     }
 
     // --- Small composition helpers -------------------------------------------

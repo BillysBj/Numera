@@ -51,6 +51,8 @@ export interface CompanyProfileDto {
   registerCourt?: string | null
   registerNumber?: string | null
   managingDirector?: string | null
+  invoiceFooterText?: string | null
+  deliveryNoteFooterText?: string | null
   contactEmail?: string | null
   contactPhone?: string | null
   logoRef?: string | null
@@ -71,6 +73,8 @@ export interface UpdateCompanyProfileRequest {
   registerCourt?: string | null
   registerNumber?: string | null
   managingDirector?: string | null
+  invoiceFooterText?: string | null
+  deliveryNoteFooterText?: string | null
   contactEmail?: string | null
   contactPhone?: string | null
   logoRef?: string | null

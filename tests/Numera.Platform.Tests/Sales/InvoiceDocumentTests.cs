@@ -54,6 +54,94 @@ public class InvoiceDocumentTests
     private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
 
     [Theory]
+    [MemberData(nameof(SupplyDateDocumentTypes))]
+    public void Frozen_closing_text_renders_only_for_the_matching_document_type(
+        string language, DocumentType type, bool isInvoice)
+    {
+        const string invoiceText = "InvoiceClosingFirst\nInvoiceClosingSecond";
+        const string deliveryText = "DeliveryClosingFirst\r\nDeliveryClosingSecond";
+        var document = BuildFixture();
+        document.DocumentType = type;
+        var issuer = System.Text.Json.Nodes.JsonNode.Parse(document.IssuerSnapshot!)!;
+        issuer["invoiceFooterText"] = invoiceText;
+        issuer["deliveryNoteFooterText"] = deliveryText;
+        document.IssuerSnapshot = issuer.ToJsonString();
+
+        var model = SnapshotReader.FromDocument(document, language: language);
+        Assert.Equal(invoiceText, model.Issuer.InvoiceFooterText);
+        Assert.Equal(deliveryText, model.Issuer.DeliveryNoteFooterText);
+
+        var text = RenderText(model);
+        Assert.Equal(isInvoice, text.Contains(WithoutWhitespace(invoiceText), StringComparison.Ordinal));
+        Assert.Equal(type == DocumentType.Lieferschein,
+            text.Contains(WithoutWhitespace(deliveryText), StringComparison.Ordinal));
+
+        if (isInvoice || type == DocumentType.Lieferschein)
+        {
+            var closingText = WithoutWhitespace(isInvoice ? invoiceText : deliveryText);
+            var precedingText = WithoutWhitespace(isInvoice ? model.Notes! : PdfLabels.For(language).RecipientSignature);
+            Assert.True(text.IndexOf(closingText, StringComparison.Ordinal) > text.IndexOf(precedingText, StringComparison.Ordinal));
+
+            using var pdf = PdfDocument.Open(InvoiceDocument.Render(model));
+            var words = pdf.GetPages().SelectMany(page => page.GetWords()).ToList();
+            var first = Assert.Single(words, word => word.Text == (isInvoice ? "InvoiceClosingFirst" : "DeliveryClosingFirst"));
+            var second = Assert.Single(words, word => word.Text == (isInvoice ? "InvoiceClosingSecond" : "DeliveryClosingSecond"));
+            Assert.True(first.BoundingBox.Bottom > second.BoundingBox.Top);
+        }
+    }
+
+    [Theory]
+    [InlineData(DocumentType.Rechnung)]
+    [InlineData(DocumentType.Lieferschein)]
+    public void Closing_text_snapshot_is_unchanged_after_company_profile_changes(DocumentType type)
+    {
+        var profile = new CompanyProfile
+        {
+            LegalName = "Muster GmbH",
+            Address = new Address { Street = "Hauptstraße 1", PostalCode = "10115", City = "Berlin" },
+            InvoiceFooterText = "FrozenInvoiceClosing",
+            DeliveryNoteFooterText = "FrozenDeliveryClosing",
+        };
+        var document = BuildFixture();
+        document.DocumentType = type;
+        var serializeIssuer = typeof(Numera.Api.Endpoints.SalesDocumentEndpoints)
+            .GetMethod("SerializeIssuer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        document.IssuerSnapshot = (string)serializeIssuer.Invoke(null, [profile])!;
+        profile.InvoiceFooterText = "ChangedInvoiceClosing";
+        profile.DeliveryNoteFooterText = "ChangedDeliveryClosing";
+
+        var model = SnapshotReader.FromDocument(document);
+        Assert.Equal("FrozenInvoiceClosing", model.Issuer.InvoiceFooterText);
+        Assert.Equal("FrozenDeliveryClosing", model.Issuer.DeliveryNoteFooterText);
+        var text = RenderText(model);
+        Assert.Contains(type == DocumentType.Rechnung ? "FrozenInvoiceClosing" : "FrozenDeliveryClosing", text);
+        Assert.DoesNotContain("ChangedInvoiceClosing", text);
+        Assert.DoesNotContain("ChangedDeliveryClosing", text);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \r\n ")]
+    public void Missing_or_empty_closing_text_keeps_legacy_rendering(string? closingText)
+    {
+        var document = BuildFixture();
+        var legacyModel = SnapshotReader.FromDocument(document);
+        Assert.Null(legacyModel.Issuer.InvoiceFooterText);
+        Assert.Null(legacyModel.Issuer.DeliveryNoteFooterText);
+
+        var issuer = System.Text.Json.Nodes.JsonNode.Parse(document.IssuerSnapshot!)!;
+        issuer["InvoiceFooterText"] = closingText;
+        issuer["DeliveryNoteFooterText"] = closingText;
+        document.IssuerSnapshot = issuer.ToJsonString();
+        var model = SnapshotReader.FromDocument(document);
+
+        Assert.Equal(closingText, model.Issuer.InvoiceFooterText);
+        Assert.Equal(closingText, model.Issuer.DeliveryNoteFooterText);
+        Assert.Equal(RenderText(legacyModel), RenderText(model));
+    }
+
+    [Theory]
     [InlineData("de")]
     [InlineData("en")]
     public void Delivery_note_renders_items_and_notes_without_prices_taxes_or_payment_sections(string language)

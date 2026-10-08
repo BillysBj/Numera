@@ -28,6 +28,20 @@ function base(): CompanyProfileFormValues {
 }
 
 describe('companyProfileSchema', () => {
+  it.each(['invoiceFooterText', 'deliveryNoteFooterText'] as const)(
+    'limits %s to 2000 characters and allows empty text',
+    (field) => {
+      for (const value of [undefined, '', 'x'.repeat(2000)]) {
+        expect(schema.safeParse({ ...base(), [field]: value }).success).toBe(true)
+      }
+      const result = schema.safeParse({ ...base(), [field]: 'x'.repeat(2001) })
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path[0] === field)).toBe(true)
+      }
+    },
+  )
+
   it('accepts a valid profile with only a USt-IdNr', () => {
     expect(schema.safeParse(base()).success).toBe(true)
   })
@@ -83,6 +97,21 @@ describe('companyProfileSchema', () => {
 })
 
 describe('toUpdateCompanyProfileRequest', () => {
+  it('preserves closing-text line breaks and maps empty texts to null', () => {
+    const body = toUpdateCompanyProfileRequest(schema.parse({
+      ...base(),
+      invoiceFooterText: 'Vielen Dank!\n\nIhr Team',
+      deliveryNoteFooterText: 'Ware erhalten.\r\nVielen Dank!',
+    }))
+    expect(body.invoiceFooterText).toBe('Vielen Dank!\n\nIhr Team')
+    expect(body.deliveryNoteFooterText).toBe('Ware erhalten.\r\nVielen Dank!')
+    const empty = toUpdateCompanyProfileRequest({
+      ...base(), invoiceFooterText: '', deliveryNoteFooterText: ' \n ',
+    })
+    expect(empty.invoiceFooterText).toBeNull()
+    expect(empty.deliveryNoteFooterText).toBeNull()
+  })
+
   it('trims fields and maps blank optionals to null', () => {
     const body = toUpdateCompanyProfileRequest(base())
     expect(body.legalName).toBe('Muster GmbH')

@@ -64,11 +64,16 @@ public sealed class SalesFinalizeTests
             var recipient = await db.Set<BusinessPartner>().SingleAsync(b => b.Id == partner.Id);
             recipient.Language = language;
             recipient.CustomerNumber = "K-00042";
+            var issuer = await db.Set<CompanyProfile>().SingleAsync();
+            issuer.InvoiceFooterText = "FrozenInvoiceClosing\nSecondLine";
+            issuer.DeliveryNoteFooterText = "FrozenDeliveryClosing";
             await db.SaveChangesAsync();
             await SalesTestData.FinalizeAsync(db, docId);
-            // Later master-data edits must not change the frozen recipient values.
+            // Later master-data edits must not change the frozen issuer or recipient values.
             recipient.Language = language == PartnerLanguage.En ? PartnerLanguage.De : PartnerLanguage.En;
             recipient.CustomerNumber = "K-99999";
+            issuer.InvoiceFooterText = "ChangedInvoiceClosing";
+            issuer.DeliveryNoteFooterText = "ChangedDeliveryClosing";
             await db.SaveChangesAsync();
         }
 
@@ -98,12 +103,18 @@ public sealed class SalesFinalizeTests
         Assert.Equal("K-00042", recipientSnapshot.RootElement.GetProperty("customerNumber").GetString());
         var pdfModel = SnapshotReader.FromDocument(doc, language: expectedLanguage);
         Assert.Equal("K-00042", pdfModel.Recipient.CustomerNumber);
+        Assert.Equal("FrozenInvoiceClosing\nSecondLine", pdfModel.Issuer.InvoiceFooterText);
+        Assert.Equal("FrozenDeliveryClosing", pdfModel.Issuer.DeliveryNoteFooterText);
         QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
         using var pdf = UglyToad.PdfPig.PdfDocument.Open(InvoiceDocument.Render(pdfModel));
         var pdfText = new string(string.Concat(pdf.GetPages().Select(p => p.Text))
             .Where(c => !char.IsWhiteSpace(c)).ToArray());
         Assert.Contains(expectedLanguage == "en" ? "Customerno.:K-00042" : "Kundennummer:K-00042", pdfText);
         Assert.DoesNotContain("K-99999", pdfText);
+        Assert.Contains("FrozenInvoiceClosingSecondLine", pdfText);
+        Assert.DoesNotContain("FrozenDeliveryClosing", pdfText);
+        Assert.DoesNotContain("ChangedInvoiceClosing", pdfText);
+        Assert.DoesNotContain("ChangedDeliveryClosing", pdfText);
 
         // Totals: per-category rounded tax summed (19.00 + 14.00 = 33.00), gross = 333.00.
         Assert.Equal(300.00m, doc.TotalNet);

@@ -69,6 +69,8 @@ export function makeCompanyProfileSchema(t: Translate) {
       registerCourt: optionalString,
       registerNumber: optionalString,
       managingDirector: optionalString,
+      invoiceFooterText: z.string().max(2000, t('errors.closingTextMax')).optional(),
+      deliveryNoteFooterText: z.string().max(2000, t('errors.closingTextMax')).optional(),
       contactEmail: optionalString,
       contactPhone: optionalString,
     })
@@ -106,6 +108,8 @@ export function emptyCompanyProfileForm(): CompanyProfileFormValues {
     registerCourt: undefined,
     registerNumber: undefined,
     managingDirector: undefined,
+    invoiceFooterText: undefined,
+    deliveryNoteFooterText: undefined,
     contactEmail: undefined,
     contactPhone: undefined,
   }
@@ -137,6 +141,8 @@ export function toUpdateCompanyProfileRequest(
     registerCourt: nn(v.registerCourt),
     registerNumber: nn(v.registerNumber),
     managingDirector: nn(v.managingDirector),
+    invoiceFooterText: nn(v.invoiceFooterText),
+    deliveryNoteFooterText: nn(v.deliveryNoteFooterText),
     contactEmail: nn(v.contactEmail),
     contactPhone: nn(v.contactPhone),
   }

@@ -30,6 +30,7 @@ import {
 } from './companyProfileSchema'
 import { Form } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -71,6 +72,8 @@ function toFormValues(p: CompanyProfileDto): CompanyProfileFormValues {
     registerCourt: p.registerCourt ?? undefined,
     registerNumber: p.registerNumber ?? undefined,
     managingDirector: p.managingDirector ?? undefined,
+    invoiceFooterText: p.invoiceFooterText ?? undefined,
+    deliveryNoteFooterText: p.deliveryNoteFooterText ?? undefined,
     contactEmail: p.contactEmail ?? undefined,
     contactPhone: p.contactPhone ?? undefined,
   }
@@ -317,6 +320,33 @@ export default function CompanyProfileSettingsPage() {
                 label={t('fields.contactPhone')}
                 {...register('contactPhone')}
               />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('sections.closingTexts')}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              {(['invoiceFooterText', 'deliveryNoteFooterText'] as const).map((field) => (
+                <div key={field} className="flex flex-col gap-1.5">
+                  <Label htmlFor={field}>{t(`fields.${field}`)}</Label>
+                  <Textarea
+                    id={field}
+                    rows={4}
+                    maxLength={2000}
+                    aria-describedby={`${field}-hint`}
+                    aria-invalid={!!errors[field]}
+                    {...register(field)}
+                  />
+                  <p id={`${field}-hint`} className="text-sm text-muted-foreground">
+                    {t(`hints.${field}`)}
+                  </p>
+                  {errors[field] && (
+                    <p className="text-sm text-destructive">{errors[field]?.message}</p>
+                  )}
+                </div>
+              ))}
             </CardContent>
           </Card>
 

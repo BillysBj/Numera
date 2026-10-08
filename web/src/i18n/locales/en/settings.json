@@ -16,7 +16,8 @@
     "master": "Master data",
     "tax": "Tax",
     "payment": "Payment",
-    "bank": "Bank & registry"
+    "bank": "Bank & registry",
+    "closingTexts": "Closing texts"
   },
   "fields": {
     "legalName": "Legal name",
@@ -37,10 +38,14 @@
     "registerCourt": "Register court",
     "registerNumber": "Register number",
     "managingDirector": "Managing director",
+    "invoiceFooterText": "Invoice closing text",
+    "deliveryNoteFooterText": "Delivery note closing text",
     "contactEmail": "Email",
     "contactPhone": "Phone"
   },
   "hints": {
+    "invoiceFooterText": "Appears at the bottom of the invoice.",
+    "deliveryNoteFooterText": "Appears at the bottom of the delivery note.",
     "kleinunternehmer": "With §19 enabled, no VAT is shown on any invoice."
   },
   "logo": {
@@ -67,6 +72,7 @@
   "errors": {
     "legalNameRequired": "A legal name is required.",
     "legalNameMax": "At most 200 characters.",
+    "closingTextMax": "At most 2000 characters.",
     "streetRequired": "A street is required.",
     "postalCodeRequired": "A postal code is required.",
     "cityRequired": "A city is required.",

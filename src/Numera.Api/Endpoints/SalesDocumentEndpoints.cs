@@ -1499,6 +1499,8 @@ public static class SalesDocumentEndpoints
         p.RegisterCourt,
         p.RegisterNumber,
         p.ManagingDirector,
+        p.InvoiceFooterText,
+        p.DeliveryNoteFooterText,
         p.ContactEmail,
         p.ContactPhone,
     }, AuditJson);

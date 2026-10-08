@@ -193,6 +193,8 @@ public static class CompanyProfileEndpoints
         p.ContactEmail = Trim(req.ContactEmail);
         p.ContactPhone = Trim(req.ContactPhone);
         p.LogoRef = Trim(req.LogoRef);
+        p.InvoiceFooterText = Trim(req.InvoiceFooterText);
+        p.DeliveryNoteFooterText = Trim(req.DeliveryNoteFooterText);
     }
 
     private static Address ToAddress(AddressDto a) => new()
@@ -214,13 +216,15 @@ public static class CompanyProfileEndpoints
         p.DefaultPaymentTermsNetDays, p.DefaultTaxCategory,
         p.Iban, p.Bic, p.BankName,
         p.RegisterCourt, p.RegisterNumber, p.ManagingDirector,
-        p.ContactEmail, p.ContactPhone, p.LogoRef);
+        p.ContactEmail, p.ContactPhone, p.LogoRef,
+        p.InvoiceFooterText, p.DeliveryNoteFooterText);
 
     private static CompanyProfileDto EmptyProfile() => new(
         LegalName: null, Address: null, VatId: null, TaxNumber: null,
         IsKleinunternehmer: false, DefaultPaymentTermsNetDays: null, DefaultTaxCategory: null,
         Iban: null, Bic: null, BankName: null, RegisterCourt: null, RegisterNumber: null,
-        ManagingDirector: null, ContactEmail: null, ContactPhone: null, LogoRef: null);
+        ManagingDirector: null, ContactEmail: null, ContactPhone: null, LogoRef: null,
+        InvoiceFooterText: null, DeliveryNoteFooterText: null);
 
     private static string? Trim(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
