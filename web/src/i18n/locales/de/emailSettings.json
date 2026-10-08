@@ -18,6 +18,13 @@
   "templateHint": "Leere Felder verwenden die Standardvorlage in der jeweiligen Versandsprache. Eigene Vorlagen gelten für beide Sprachen. Text ohne HTML eingeben; Zeilenumbrüche bleiben erhalten.",
   "placeholders": "Platzhalter: {Rechnungsnummer}, {Belegart}, {Betrag} (EUR), {Fälligkeitsdatum}, {Kundenname}, {Firmenname}. Unbekannte Platzhalter bleiben unverändert.",
   "dunningPlaceholders": "Zusätzlich: {Mahnstufe}, {Mahngebühr}. Das Fälligkeitsdatum bezieht sich auf die Rechnung.",
+  "insertDefault": "Standardtext einfügen",
+  "defaults": {
+    "invoiceSubject": "{Belegart} {Rechnungsnummer}",
+    "invoiceBody": "Sehr geehrte Damen und Herren,\n\nanbei erhalten Sie Ihre {Belegart} {Rechnungsnummer} über {Betrag} als PDF.\n\nMit freundlichen Grüßen\n{Firmenname}",
+    "dunningSubject": "{Mahnstufe} – Rechnung {Rechnungsnummer}",
+    "dunningBody": "Sehr geehrte Damen und Herren,\n\nzur Rechnung {Rechnungsnummer} über {Betrag} (fällig am {Fälligkeitsdatum}) konnten wir noch keinen vollständigen Zahlungseingang feststellen. Wir bitten Sie, den offenen Betrag zu begleichen.\n\nMahngebühr: {Mahngebühr}\n\nMit freundlichen Grüßen\n{Firmenname}"
+  },
   "invoice": "Rechnungsversand",
   "dunning": "Mahnungsversand",
   "subject": "Betreff",

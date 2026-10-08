@@ -82,6 +82,13 @@ function EmailSettingsForm({ ownerEmail }: { ownerEmail: string }) {
     }
   }
 
+  // Fills the subject + body with the editable default template so the user can tweak it.
+  // Leaving the fields empty keeps the per-language auto default at send time.
+  function insertDefaults(kind: 'invoice' | 'dunning') {
+    form.setValue(`${kind}Subject`, t(`defaults.${kind}Subject`), { shouldDirty: true })
+    form.setValue(`${kind}Body`, t(`defaults.${kind}Body`), { shouldDirty: true })
+  }
+
   if (existing.isPending) return <main className="app-main">{t('loading')}</main>
   if (existing.isError) return <main className="app-main" role="alert">{t('loadError')}</main>
   const smtpEnabled = Boolean(form.watch('host')?.trim())
@@ -112,10 +119,15 @@ function EmailSettingsForm({ ownerEmail }: { ownerEmail: string }) {
           <p className="text-sm text-muted-foreground break-words">{t('placeholders')}</p>
           {(['invoice', 'dunning'] as const).map((kind) => (
             <Card key={kind}>
-              <CardHeader><CardTitle>{t(kind)}</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between gap-3">
+                <CardTitle>{t(kind)}</CardTitle>
+                <Button type="button" variant="outline" size="sm" onClick={() => insertDefaults(kind)}>
+                  {t('insertDefault')}
+                </Button>
+              </CardHeader>
               <CardContent className="flex flex-col gap-3">
-                <div><Label htmlFor={`${kind}Subject`}>{t('subject')}</Label><Input id={`${kind}Subject`} maxLength={500} {...form.register(`${kind}Subject`)} /></div>
-                <div><Label htmlFor={`${kind}Body`}>{t('body')}</Label><Textarea id={`${kind}Body`} rows={8} maxLength={50000} {...form.register(`${kind}Body`)} /></div>
+                <div><Label htmlFor={`${kind}Subject`}>{t('subject')}</Label><Input id={`${kind}Subject`} maxLength={500} placeholder={t(`defaults.${kind}Subject`)} {...form.register(`${kind}Subject`)} /></div>
+                <div><Label htmlFor={`${kind}Body`}>{t('body')}</Label><Textarea id={`${kind}Body`} rows={8} maxLength={50000} placeholder={t(`defaults.${kind}Body`)} {...form.register(`${kind}Body`)} /></div>
                 {kind === 'dunning' && <p className="text-xs text-muted-foreground">{t('dunningPlaceholders')}</p>}
               </CardContent>
             </Card>
