@@ -100,6 +100,8 @@
       "documentType": "Belegart",
       "partnerId": "Geschäftspartner",
       "documentDate": "Belegdatum",
+      "serviceDate": "Leistungsdatum",
+      "deliveryDate": "Lieferdatum",
       "currency": "Währung",
       "exchangeRate": "Wechselkurs (1 EUR = X {{currency}})",
       "exchangeRateDate": "Kursdatum",

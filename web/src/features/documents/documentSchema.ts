@@ -54,6 +54,7 @@ export function makeDocumentSchema(t: Translate) {
     documentType: z.number().int(),
     partnerId: z.string().trim().optional().or(z.literal('')),
     documentDate: z.string().trim().min(1, t('form.errors.required')),
+    serviceDate: z.string().trim().optional().or(z.literal('')),
     currency: z.enum(['EUR', 'USD', 'GBP', 'CHF', 'CAD', 'AUD', 'NOK', 'SEK', 'DKK', 'PLN', 'CZK']),
     exchangeRate: z.preprocess(
       (v) => (v === '' || v === null || v === undefined ? undefined : Number(v)),
@@ -110,6 +111,7 @@ export function emptyDocumentForm(): DocumentFormValues {
     documentType: DocumentType.Rechnung,
     partnerId: '',
     documentDate: new Date().toISOString().slice(0, 10),
+    serviceDate: '',
     currency: 'EUR',
     exchangeRate: undefined,
     exchangeRateDate: '',
@@ -126,7 +128,7 @@ export function toCreateRequest(v: DocumentFormValues): CreateSalesDocumentReque
     documentType: v.documentType as DocumentType,
     partnerId: nn(v.partnerId),
     documentDate: v.documentDate,
-    serviceDate: null,
+    serviceDate: nn(v.serviceDate),
     notes: nn(v.notes),
     buyerReference: nn(v.buyerReference),
     lines: v.lines.map(

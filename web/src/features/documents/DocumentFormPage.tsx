@@ -92,6 +92,7 @@ function toFormValues(d: SalesDocumentDetail): DocumentFormValues {
     documentType: d.documentType,
     partnerId: d.partnerId ?? '',
     documentDate: d.documentDate.slice(0, 10),
+    serviceDate: d.serviceDate?.slice(0, 10) ?? '',
     currency: CURRENCIES.includes(d.currency)
       ? (d.currency as DocumentFormValues['currency'])
       : 'EUR',
@@ -310,6 +311,15 @@ export default function DocumentFormPage() {
                 disabled={isReadOnly}
                 error={errors.documentDate?.message}
                 {...register('documentDate')}
+              />
+              <TextField
+                label={documentType === DocumentType.Lieferschein
+                  ? t('form.fields.deliveryDate')
+                  : t('form.fields.serviceDate')}
+                type="date"
+                disabled={isReadOnly}
+                error={errors.serviceDate?.message}
+                {...register('serviceDate')}
               />
               <div className="flex flex-col gap-1.5">
                 <Label>{t('form.fields.currency')}</Label>

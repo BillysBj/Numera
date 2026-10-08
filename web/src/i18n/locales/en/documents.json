@@ -100,6 +100,8 @@
       "documentType": "Document type",
       "partnerId": "Business partner",
       "documentDate": "Document date",
+      "serviceDate": "Service date",
+      "deliveryDate": "Delivery date",
       "currency": "Currency",
       "exchangeRate": "Exchange rate (1 EUR = X {{currency}})",
       "exchangeRateDate": "Rate date",
