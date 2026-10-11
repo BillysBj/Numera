@@ -229,9 +229,14 @@ public class InvoiceDocumentTests
 
     [Theory]
     [MemberData(nameof(PricedDocumentTypes))]
-    public void Other_document_types_keep_prices_totals_taxes_discounts_and_payment_sections(
+    public void Other_document_types_keep_prices_totals_taxes_and_discounts(
         string language, DocumentType type)
     {
+        // Angebot / Auftragsbestätigung are priced but carry nothing to pay yet: they
+        // address the "Kunde" (not the bill recipient) and show no bank/skonto section.
+        var isInvoice = type is DocumentType.Rechnung or DocumentType.Abschlagsrechnung
+            or DocumentType.Schlussrechnung or DocumentType.Gutschrift or DocumentType.Storno;
+
         var model = BuildPriceSectionFixture(language, type);
         var labels = PdfLabels.For(language);
 
@@ -242,17 +247,35 @@ public class InvoiceDocumentTests
         Assert.DoesNotContain(WithoutWhitespace(labels.RecipientSignature), text);
         Assert.Contains(WithoutWhitespace(labels.Item + labels.Description + labels.Qty
             + labels.UnitPrice + labels.Amount), text);
-        foreach (var label in new[] { labels.SubtotalNet, labels.Total, labels.VatBreakdown,
-            labels.BankDetails, labels.Iban })
+        foreach (var label in new[] { labels.SubtotalNet, labels.Total, labels.VatBreakdown })
         {
             Assert.Contains(WithoutWhitespace(label), text, StringComparison.OrdinalIgnoreCase);
         }
+
+        // Recipient heading + bank/skonto section depend on whether this is an invoice.
+        var customerHeading = language == "en" ? "Customer" : "Kunde";
+        if (isInvoice)
+        {
+            Assert.Contains(WithoutWhitespace(labels.BillTo), text, StringComparison.OrdinalIgnoreCase);
+            foreach (var label in new[] { labels.BankDetails, labels.Iban })
+            {
+                Assert.Contains(WithoutWhitespace(label), text, StringComparison.OrdinalIgnoreCase);
+            }
+            Assert.Contains(language == "en" ? "Onpaymentby" : "BeiZahlungbis", text);
+        }
+        else
+        {
+            Assert.Contains(customerHeading, text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(WithoutWhitespace(labels.BillTo), text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(WithoutWhitespace(labels.Iban), text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(language == "en" ? "Onpaymentby" : "BeiZahlungbis", text);
+        }
+
         foreach (var amount in new[] { 100m, 300m, 500m, model.TotalNet, model.TotalTax, model.TotalGross })
         {
             Assert.Contains(WithoutWhitespace($"{InvoiceDocument.FormatNumber(amount, labels.Culture)} €"), text);
         }
         Assert.Contains(WithoutWhitespace(language == "en" ? "less 12.5% discount" : "abzgl. 12,5% Rabatt"), text);
-        Assert.Contains(language == "en" ? "Onpaymentby" : "BeiZahlungbis", text);
         Assert.Contains(model.Prepayments[0].AbschlagNumber, text);
         foreach (var row in model.BreakdownRows.Where(row => row.ExemptionReasonText is not null))
         {
