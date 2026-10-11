@@ -79,7 +79,7 @@ public class InvoiceDocumentTests
         if (isInvoice || type == DocumentType.Lieferschein)
         {
             var closingText = WithoutWhitespace(isInvoice ? invoiceText : deliveryText);
-            var precedingText = WithoutWhitespace(isInvoice ? model.Notes! : PdfLabels.For(language).RecipientSignature);
+            var precedingText = WithoutWhitespace(isInvoice ? PdfLabels.For(language).Total : PdfLabels.For(language).RecipientSignature);
             Assert.True(text.IndexOf(closingText, StringComparison.Ordinal) > text.IndexOf(precedingText, StringComparison.Ordinal));
 
             using var pdf = PdfDocument.Open(InvoiceDocument.Render(model));
@@ -243,7 +243,7 @@ public class InvoiceDocumentTests
         Assert.Contains(WithoutWhitespace(labels.Item + labels.Description + labels.Qty
             + labels.UnitPrice + labels.Amount), text);
         foreach (var label in new[] { labels.SubtotalNet, labels.Total, labels.VatBreakdown,
-            labels.PayableBy, labels.BankDetails, labels.Iban })
+            labels.BankDetails, labels.Iban })
         {
             Assert.Contains(WithoutWhitespace(label), text, StringComparison.OrdinalIgnoreCase);
         }
@@ -347,7 +347,7 @@ public class InvoiceDocumentTests
 
     [Theory]
     [MemberData(nameof(SupplyDateDocumentTypes))]
-    public void Missing_service_date_renders_invoice_date_note_only_for_invoice_types(
+    public void Missing_service_date_renders_supply_date_only_for_invoice_types(
         string language, DocumentType type, bool expectsNote)
     {
         var document = BuildFixture();
@@ -356,11 +356,11 @@ public class InvoiceDocumentTests
         var model = SnapshotReader.FromDocument(document, language: language);
 
         var text = RenderText(model);
-        var note = WithoutWhitespace(language == "en"
-            ? "Date of supply is the invoice date"
-            : "Leistungsdatum entspricht dem Rechnungsdatum");
+        // Invoice types without an explicit service date show the supply date as an explicit
+        // Leistungsdatum line (= invoice date); other document types show no supply date.
+        var supplyLabel = WithoutWhitespace(PdfLabels.For(language).ServiceDate);
 
-        Assert.Equal(expectsNote, text.Contains(note, StringComparison.Ordinal));
+        Assert.Equal(expectsNote, text.Contains(supplyLabel, StringComparison.Ordinal));
     }
 
     [Theory]

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -41,6 +42,9 @@ public sealed class InvoiceDocument : IDocument
     private readonly bool _pdfA;
 
     private bool IsDeliveryNote => _model.DocumentType == DocumentType.Lieferschein;
+
+    private bool IsInvoice => _model.DocumentType is DocumentType.Rechnung or DocumentType.Abschlagsrechnung
+        or DocumentType.Schlussrechnung or DocumentType.Gutschrift or DocumentType.Storno;
 
     // Design palette. Accent is the single brand tone — change this one value to
     // re-skin the whole invoice in a company colour. Everything else is neutral.
@@ -160,6 +164,12 @@ public sealed class InvoiceDocument : IDocument
                         var item = i == 0 ? col.Item().PaddingTop(4) : col.Item();
                         item.Text(contact[i]);
                     }
+
+                    // USt-IdNr. in the letterhead company block (in addition to the footer imprint).
+                    if (!string.IsNullOrWhiteSpace(issuer.VatId))
+                    {
+                        col.Item().PaddingTop(4).Text($"{_labels.VatId}: {issuer.VatId}");
+                    }
                 });
             });
 
@@ -182,6 +192,8 @@ public sealed class InvoiceDocument : IDocument
                 col.Item().Element(ComposeBreakdown);
                 col.Item().Element(ComposePrepayments);
                 col.Item().Element(ComposePflichttexte);
+                // Configurable closing text (from settings) appears ABOVE the payment / bank block.
+                col.Item().Element(ComposeClosingText);
                 col.Item().Element(ComposePaymentBlock);
             }
 
@@ -193,9 +205,9 @@ public sealed class InvoiceDocument : IDocument
             if (IsDeliveryNote)
             {
                 col.Item().ShowEntire().PaddingTop(16).Element(ComposeReceiptConfirmation);
+                // On a delivery note the closing text stays at the end (after the signature block).
+                col.Item().Element(ComposeClosingText);
             }
-
-            col.Item().Element(ComposeClosingText);
         });
     }
 
@@ -211,8 +223,39 @@ public sealed class InvoiceDocument : IDocument
 
         if (!string.IsNullOrWhiteSpace(text))
         {
-            container.PaddingTop(8).Text(text).FontSize(8.5f).FontColor(AccentSoft);
+            container.PaddingTop(8).Text(ApplyClosingPlaceholders(text!)).FontSize(8.5f).FontColor(AccentSoft);
         }
+    }
+
+    private static readonly Regex ClosingPlaceholderRegex = new(@"\{([^{}]+)\}", RegexOptions.Compiled);
+
+    // Replaces {Platzhalter} in the configurable closing text with this document's values.
+    // Unknown placeholders are left unchanged.
+    private string ApplyClosingPlaceholders(string template)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Rechnungsnummer"] = _model.DocumentNumber ?? string.Empty,
+            ["Belegart"] = DocumentTitle(),
+            ["Betrag"] = Money(_model.TotalGross),
+            ["Gesamtbetrag"] = Money(_model.TotalGross),
+            ["Fälligkeitsdatum"] = _model.DueDate is { } due ? FormatDate(due) : string.Empty,
+            ["Zahlungsziel"] = _model.DueDate is { } dueDays
+                ? Math.Max(0, dueDays.DayNumber - _model.DocumentDate.DayNumber).ToString(CultureInfo.InvariantCulture)
+                : string.Empty,
+            ["Kundenname"] = _model.Recipient.Name ?? string.Empty,
+            ["Firmenname"] = _model.Issuer.LegalName ?? string.Empty,
+            ["Rechnungsdatum"] = FormatDate(_model.DocumentDate),
+            ["Belegdatum"] = FormatDate(_model.DocumentDate),
+            ["Leistungsdatum"] = _model.ServiceDate is { } sd
+                ? FormatDate(sd)
+                : (_model.UsesInvoiceDateAsSupplyDate ? FormatDate(_model.DocumentDate) : string.Empty),
+            ["Lieferdatum"] = _model.ServiceDate is { } ld ? FormatDate(ld) : string.Empty,
+        };
+
+        return ClosingPlaceholderRegex.Replace(
+            template,
+            match => values.TryGetValue(match.Groups[1].Value, out var value) ? value : match.Value);
     }
 
     private void ComposeReceiptConfirmation(IContainer container)
@@ -283,17 +326,19 @@ public sealed class InvoiceDocument : IDocument
                 col.Item().Background(Tint).Padding(10).Column(meta =>
                 {
                     meta.Spacing(1);
-                    MetaLine(meta, DocumentNoLabel(), _model.DocumentNumber);
+                    // Document number is already in the title above, so it is not repeated here.
                     if (!string.IsNullOrWhiteSpace(recipient.CustomerNumber))
                     {
                         MetaLine(meta, $"{_labels.CustomerNumber}:", recipient.CustomerNumber);
                     }
-                    // On a Lieferschein the document date is labelled "Belegdatum" and the supply
-                    // date (Leistungsdatum) is shown as the "Lieferdatum".
-                    MetaLine(
-                        meta,
-                        IsDeliveryNote ? (_model.Language == "en" ? "Document date" : "Belegdatum") : _labels.Date,
-                        FormatDate(_model.DocumentDate));
+                    // Lieferschein → Belegdatum; Rechnung → Rechnungsdatum; sonst → Datum. The supply
+                    // date is shown as Lieferdatum on a Lieferschein and as Leistungsdatum otherwise.
+                    var dateLabel = IsDeliveryNote
+                        ? (_model.Language == "en" ? "Document date" : "Belegdatum")
+                        : IsInvoice
+                            ? (_model.Language == "en" ? "Invoice date" : "Rechnungsdatum")
+                            : _labels.Date;
+                    MetaLine(meta, dateLabel, FormatDate(_model.DocumentDate));
 
                     if (IsDeliveryNote)
                     {
@@ -315,14 +360,11 @@ public sealed class InvoiceDocument : IDocument
                     }
                     else if (_model.UsesInvoiceDateAsSupplyDate)
                     {
-                        meta.Item().Text(_labels.ServiceDateMatchesInvoiceDate).FontSize(8.5f).SemiBold();
+                        // Supply date equals the invoice date → show it as an explicit Leistungsdatum (§14 UStG).
+                        MetaLine(meta, _labels.ServiceDate, FormatDate(_model.DocumentDate));
                     }
 
-                    // A Lieferschein (delivery note) has no payment due date — suppress it there.
-                    if (_model.DueDate is { } due && !IsDeliveryNote)
-                    {
-                        MetaLine(meta, _labels.Due, FormatDate(due));
-                    }
+                    // The due date is shown in the payment block ("Zahlbar bis"), not in this meta block.
 
                     if (!string.IsNullOrWhiteSpace(_model.BuyerReference))
                     {
@@ -414,7 +456,21 @@ public sealed class InvoiceDocument : IDocument
             row.ConstantItem(240).Column(col =>
             {
                 TotalLine(col, _labels.SubtotalNet, Money(_model.TotalNet), bold: false);
-                TotalLine(col, _labels.Vat, Money(_model.TotalTax), bold: false);
+
+                // One VAT line per rate, prefixed: "zzgl. 19% USt:" / "plus 19% VAT:".
+                // Tax-free rows (Kleinunternehmer / §13b / 0%) carry no VAT and are omitted.
+                foreach (var vat in _model.BreakdownRows
+                    .Where(b => b.TaxAmount != 0m)
+                    .GroupBy(b => b.VatRatePercent)
+                    .OrderBy(g => g.Key)
+                    .Select(g => new { Rate = g.Key, Tax = g.Sum(b => b.TaxAmount) }))
+                {
+                    var vatLabel = _model.Language == "en"
+                        ? $"plus {FormatPercent(vat.Rate)} VAT:"
+                        : $"zzgl. {FormatPercent(vat.Rate)} USt:";
+                    TotalLine(col, vatLabel, Money(vat.Tax), bold: false);
+                }
+
                 col.Item().PaddingVertical(2).LineHorizontal(0.75f).LineColor(Colors.Grey.Medium);
 
                 // The grand total gets an accent-tinted band so it reads at a glance.
@@ -427,7 +483,7 @@ public sealed class InvoiceDocument : IDocument
 
                 if (_model.AmountDue != _model.TotalGross)
                 {
-                    TotalLine(col, _labels.PayableBy, Money(_model.AmountDue), bold: true);
+                    TotalLine(col, _model.Language == "en" ? "Amount due" : "Restbetrag", Money(_model.AmountDue), bold: true);
                 }
 
                 if (!string.Equals(_model.Currency, "EUR", StringComparison.OrdinalIgnoreCase)
@@ -482,7 +538,8 @@ public sealed class InvoiceDocument : IDocument
 
                 table.Header(header =>
                 {
-                    HeaderCell(header, _labels.Vat);
+                    // This column shows the EN-16931 tax category, so label it accordingly.
+                    HeaderCell(header, _model.Language == "en" ? "Tax category" : "Steuerkategorie");
                     HeaderCell(header, _labels.Rate, right: true);
                     HeaderCell(header, _labels.TaxableBase, right: true);
                     HeaderCell(header, _labels.TaxAmount, right: true);
@@ -591,11 +648,6 @@ public sealed class InvoiceDocument : IDocument
 
         container.Column(col =>
         {
-            if (_model.DueDate is { } due && !_model.IsKleinunternehmer)
-            {
-                col.Item().Text($"{_labels.PayableBy}: {FormatDate(due)}").SemiBold().FontColor(Accent);
-            }
-
             // Early-payment discount (Skonto), frozen from the partner's terms at finalize.
             if (_model.Recipient.SkontoPercent is { } skontoPct && skontoPct > 0m
                 && _model.Recipient.SkontoDays is { } skontoDays)
@@ -613,20 +665,22 @@ public sealed class InvoiceDocument : IDocument
             {
                 col.Item().PaddingTop(6).Text(_labels.BankDetails.ToUpperInvariant())
                     .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
-                col.Item().Text(t =>
+                if (!string.IsNullOrWhiteSpace(issuer.BankName))
                 {
-                    if (!string.IsNullOrWhiteSpace(issuer.BankName))
-                    {
-                        t.Span($"{issuer.BankName}  ");
-                    }
+                    col.Item().Text(issuer.BankName!);
+                }
 
-                    t.Span($"{_labels.Iban}: {issuer.Iban}");
-                    if (!string.IsNullOrWhiteSpace(issuer.Bic))
-                    {
-                        t.Span($"   {_labels.Bic}: {issuer.Bic}");
-                    }
-                });
+                col.Item().Text($"{_labels.Iban}: {issuer.Iban}");
+                if (!string.IsNullOrWhiteSpace(issuer.Bic))
+                {
+                    col.Item().Text($"{_labels.Bic}: {issuer.Bic}");
+                }
             }
+
+            // Fixed closing line below the bank details.
+            col.Item().PaddingTop(6).Text(_model.Language == "en"
+                ? "Thank you for the good cooperation."
+                : "Vielen Dank für die gute Zusammenarbeit.");
         });
     }
 
@@ -835,8 +889,6 @@ public sealed class InvoiceDocument : IDocument
             ? title
             : (_model.Language == "en" ? "Document" : "Beleg");
     }
-
-    private string DocumentNoLabel() => _model.Language == "en" ? "Document no." : "Belegnummer";
 
     private static readonly IReadOnlyDictionary<DocumentType, string> DocTitlesDe = new Dictionary<DocumentType, string>
     {
