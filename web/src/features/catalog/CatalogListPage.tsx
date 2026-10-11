@@ -170,7 +170,7 @@ export default function CatalogListPage() {
 
   return (
     <main className="app-main app-main--wide">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <Link to="/catalog/new" className={cn(buttonVariants())}>
           {t('actions.create')}
