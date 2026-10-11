@@ -453,7 +453,7 @@ public sealed class InvoiceDocument : IDocument
         container.Row(row =>
         {
             row.RelativeItem();
-            row.ConstantItem(240).Column(col =>
+            row.ConstantItem(290).Column(col =>
             {
                 TotalLine(col, _labels.SubtotalNet, Money(_model.TotalNet), bold: false);
 
@@ -477,7 +477,7 @@ public sealed class InvoiceDocument : IDocument
                 col.Item().PaddingTop(2).Background(Tint).PaddingVertical(6).PaddingHorizontal(8).Row(row =>
                 {
                     row.RelativeItem().Text(_labels.Total).Bold().FontSize(12).FontColor(Accent);
-                    row.ConstantItem(120).AlignRight().Text(Money(_model.TotalGross))
+                    row.ConstantItem(110).AlignRight().Text(Money(_model.TotalGross))
                         .Bold().FontSize(12).FontColor(Accent);
                 });
 
