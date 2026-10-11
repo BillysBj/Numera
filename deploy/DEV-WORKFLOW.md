@@ -33,12 +33,18 @@ Anmeldung an Keycloak wie in Prod (du meldest dich selbst an).
 
 Stoppen: **`Stop-Numera.cmd`** (Daten bleiben im Docker-Volume erhalten).
 
-> Erststart / nach neuen Migrationen: Schema anlegen als Migrator-Rolle
-> (siehe `scripts/db-roles.sql`):
+> Erststart / nach neuen Migrationen: Schema aktualisieren. Lokal verbindet die
+> Design-Time-Factory als Superuser `numera` (DDL + umgeht RLS) — kein BYPASSRLS-
+> Schritt wie in Prod nötig. Migrationen liegen in `Numera.Platform.Db`, Startprojekt
+> ist die API:
 >
 > ```bash
-> "$LOCALAPPDATA/Microsoft/dotnet/dotnet.exe" ef database update --project src/Numera.Api
+> "$LOCALAPPDATA/Microsoft/dotnet/dotnet.exe" ef database update \
+>   --project src/platform/Numera.Platform.Db --startup-project src/Numera.Api
 > ```
+>
+> Wenn die API gerade läuft, `--no-build` anhängen (vermeidet Datei-Sperren auf dem
+> laufenden Build).
 
 ## 3. Vor dem Merge: Test-Gate
 
