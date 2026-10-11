@@ -1,4 +1,4 @@
-import { useState, type ComponentType, type SVGProps } from 'react'
+import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
 import { Routes, Route, Navigate, Link, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
@@ -20,6 +20,7 @@ import {
   IconPartners,
   IconCatalog,
   IconSettings,
+  IconChevron,
   IconTeam,
   IconBook,
   IconSun,
@@ -69,13 +70,21 @@ import DegradationBanner from './features/billing/DegradationBanner'
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>
 interface NavItem {
-  to: string
+  /** A leaf links to a route. A parent omits `to` and carries `children`. */
+  to?: string
   label: string
   icon: Icon
+  /** When present, this item is a collapsible parent rendered with a sub-menu. */
+  children?: NavItem[]
 }
 interface NavGroup {
   label?: string
   items: NavItem[]
+}
+
+/** Flattens the nav tree to its leaf (routable) items for active-route resolution. */
+function leafItems(groups: NavGroup[]): NavItem[] {
+  return groups.flatMap((g) => g.items).flatMap((i) => i.children ?? [i])
 }
 
 export function useNavGroups(): NavGroup[] {
@@ -106,7 +115,7 @@ export function useNavGroups(): NavGroup[] {
   // tenant (UG/GmbH), so they are shown exactly when the EÜR is not.
   const showBilanz = ledger.data?.gewinnermittlungsart === Gewinnermittlungsart.Bilanzierung
 
-  return [
+  const groups: NavGroup[] = [
     { items: [{ to: '/dashboard', label: t('nav.dashboard'), icon: IconDashboard }] },
     {
       label: t('nav.sections.sales'),
@@ -160,19 +169,37 @@ export function useNavGroups(): NavGroup[] {
     {
       label: t('nav.sections.system'),
       items: [
-        { to: '/settings', label: ts('nav'), icon: IconSettings },
-        ...(me.data?.role === 'Owner'
-          ? [{ to: '/settings/email', label: te('title'), icon: IconSettings }]
-          : []),
+        {
+          label: ts('nav'),
+          icon: IconSettings,
+          children: [
+            { to: '/settings', label: ts('title'), icon: IconSettings },
+            ...(me.data?.role === 'Owner'
+              ? [{ to: '/settings/email', label: te('title'), icon: IconSettings }]
+              : []),
+            { to: '/settings/ledger', label: t('nav.ledger'), icon: IconSettings },
+          ],
+        },
         ...(billing.data?.selfHosted
           ? []
           : [{ to: '/billing', label: tbilling('nav.billing'), icon: IconOpenItems }]),
-        { to: '/settings/ledger', label: t('nav.ledger'), icon: IconSettings },
         { to: '/team', label: tt('nav'), icon: IconTeam },
         { to: '/handbuch', label: t('nav.handbuch'), icon: IconBook },
       ],
     },
-  ].map(group => ({ ...group, items: group.items.filter(item => canAccessRoute(me.data, item.to)) }))
+  ]
+  return groups
+    .map(group => ({
+      ...group,
+      items: group.items
+        // A parent keeps only the children the user may reach; a leaf is kept by its own route.
+        .map(item =>
+          item.children
+            ? { ...item, children: item.children.filter(child => canAccessRoute(me.data, child.to!)) }
+            : item,
+        )
+        .filter(item => (item.children ? item.children.length > 0 : canAccessRoute(me.data, item.to!))),
+    }))
     .filter(group => group.items.length > 0)
 }
 
@@ -238,6 +265,7 @@ function UgRuecklageRoute() {
 function activePath(items: NavItem[], pathname: string): string | null {
   let best: string | null = null
   for (const it of items) {
+    if (!it.to) continue
     if (pathname === it.to || pathname.startsWith(it.to + '/')) {
       if (!best || it.to.length > best.length) best = it.to
     }
@@ -272,10 +300,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation('common')
   const location = useLocation()
   const groups = useNavGroups()
-  const active = activePath(
-    groups.flatMap((g) => g.items),
-    location.pathname,
-  )
+  const active = activePath(leafItems(groups), location.pathname)
 
   return (
     <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-5">
@@ -286,36 +311,18 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               {group.label}
             </p>
           )}
-          {group.items.map((item) => {
-            const isActive = active === item.to
-            const Ico = item.icon
-            return (
-              <Link
+          {group.items.map((item) =>
+            item.children ? (
+              <NavParent key={item.label} item={item} active={active} onNavigate={onNavigate} />
+            ) : (
+              <NavLeaf
                 key={item.to}
-                to={item.to}
-                onClick={onNavigate}
-                aria-current={isActive ? 'page' : undefined}
-                className={cn(
-                  'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
-                )}
-              >
-                {isActive && (
-                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
-                )}
-                <Ico
-                  size={19}
-                  className={cn(
-                    'shrink-0 transition-colors',
-                    isActive ? 'text-primary' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
-                  )}
-                />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            )
-          })}
+                item={item}
+                isActive={active === item.to}
+                onNavigate={onNavigate}
+              />
+            ),
+          )}
         </div>
       ))}
       <div className="mt-auto flex flex-col gap-3 px-3 pt-2">
@@ -329,6 +336,112 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-[0.68rem] text-sidebar-muted">powered by NOEMA Essentials</p>
       </div>
     </nav>
+  )
+}
+
+// A single routable nav entry. `nested` renders it as an indented sub-menu row
+// (no icon) under a collapsible parent.
+function NavLeaf({
+  item,
+  isActive,
+  onNavigate,
+  nested = false,
+}: {
+  item: NavItem
+  isActive: boolean
+  onNavigate?: () => void
+  nested?: boolean
+}) {
+  const Ico = item.icon
+  return (
+    <Link
+      to={item.to!}
+      onClick={onNavigate}
+      aria-current={isActive ? 'page' : undefined}
+      className={cn(
+        'group relative flex items-center gap-3 rounded-lg py-2 text-sm font-medium transition-colors',
+        nested ? 'pl-11 pr-3' : 'px-3',
+        isActive
+          ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+          : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+      )}
+    >
+      {isActive && (
+        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-primary" />
+      )}
+      {!nested && (
+        <Ico
+          size={19}
+          className={cn(
+            'shrink-0 transition-colors',
+            isActive ? 'text-primary' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
+          )}
+        />
+      )}
+      <span className="truncate">{item.label}</span>
+    </Link>
+  )
+}
+
+// A collapsible parent entry (e.g. "Einstellungen") that reveals its sub-menu.
+// Opens automatically whenever one of its routes is active (incl. deep links).
+function NavParent({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem
+  active: string | null
+  onNavigate?: () => void
+}) {
+  const children = item.children ?? []
+  const hasActiveChild = children.some((c) => c.to === active)
+  const [open, setOpen] = useState(hasActiveChild)
+  useEffect(() => {
+    if (hasActiveChild) setOpen(true)
+  }, [hasActiveChild])
+  const Ico = item.icon
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={cn(
+          'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          'text-sidebar-foreground/75 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+        )}
+      >
+        <Ico
+          size={19}
+          className={cn(
+            'shrink-0 transition-colors',
+            hasActiveChild ? 'text-primary' : 'text-sidebar-muted group-hover:text-sidebar-foreground',
+          )}
+        />
+        <span className="truncate">{item.label}</span>
+        <IconChevron
+          size={16}
+          className={cn(
+            'ml-auto shrink-0 text-sidebar-muted transition-transform',
+            open && 'rotate-180',
+          )}
+        />
+      </button>
+      {open && (
+        <div className="flex flex-col gap-1">
+          {children.map((child) => (
+            <NavLeaf
+              key={child.to}
+              item={child}
+              isActive={active === child.to}
+              onNavigate={onNavigate}
+              nested
+            />
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -431,9 +544,9 @@ function AppShell() {
   const groups = useNavGroups()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const active = activePath(groups.flatMap((g) => g.items), location.pathname)
+  const active = activePath(leafItems(groups), location.pathname)
   const title =
-    groups.flatMap((g) => g.items).find((i) => i.to === active)?.label ?? 'Numera'
+    leafItems(groups).find((i) => i.to === active)?.label ?? 'Numera'
 
   return (
     <div className="min-h-dvh">

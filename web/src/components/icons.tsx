@@ -95,6 +95,12 @@ export const IconSettings = (p: IconProps) => (
   </Base>
 )
 
+export const IconChevron = (p: IconProps) => (
+  <Base {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </Base>
+)
+
 export const IconTeam = (p: IconProps) => (
   <Base {...p}>
     <circle cx="12" cy="7" r="3.2" />
