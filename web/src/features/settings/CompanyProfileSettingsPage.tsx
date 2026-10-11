@@ -328,6 +328,7 @@ export default function CompanyProfileSettingsPage() {
               <CardTitle>{t('sections.closingTexts')}</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground break-words">{t('hints.closingPlaceholders')}</p>
               {(['invoiceFooterText', 'deliveryNoteFooterText'] as const).map((field) => (
                 <div key={field} className="flex flex-col gap-1.5">
                   <Label htmlFor={field}>{t(`fields.${field}`)}</Label>

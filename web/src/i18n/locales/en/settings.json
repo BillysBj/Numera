@@ -44,8 +44,9 @@
     "contactPhone": "Phone"
   },
   "hints": {
-    "invoiceFooterText": "Appears at the bottom of the invoice.",
+    "invoiceFooterText": "Appears at the bottom of the invoice (above the bank details).",
     "deliveryNoteFooterText": "Appears at the bottom of the delivery note.",
+    "closingPlaceholders": "Placeholders: {Rechnungsnummer}, {Belegart}, {Gesamtbetrag}, {Fälligkeitsdatum}, {Zahlungsziel} (days), {Rechnungsdatum}, {Leistungsdatum}, {Kundenname}, {Firmenname}. Unknown placeholders remain unchanged.",
     "kleinunternehmer": "With §19 enabled, no VAT is shown on any invoice."
   },
   "logo": {

@@ -44,8 +44,9 @@
     "contactPhone": "Telefon"
   },
   "hints": {
-    "invoiceFooterText": "Erscheint unten auf der Rechnung.",
+    "invoiceFooterText": "Erscheint unten auf der Rechnung (über der Bankverbindung).",
     "deliveryNoteFooterText": "Erscheint unten auf dem Lieferschein.",
+    "closingPlaceholders": "Platzhalter: {Rechnungsnummer}, {Belegart}, {Gesamtbetrag}, {Fälligkeitsdatum}, {Zahlungsziel} (Tage), {Rechnungsdatum}, {Leistungsdatum}, {Kundenname}, {Firmenname}. Unbekannte Platzhalter bleiben unverändert.",
     "kleinunternehmer": "Bei aktivem §19 wird auf allen Rechnungen keine Umsatzsteuer ausgewiesen."
   },
   "logo": {
