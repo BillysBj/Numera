@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -17,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 /**
  * Reusable SERVER-SIDE table (shared by the partner and — later — catalog lists).
@@ -71,10 +73,25 @@ export function DataTable<TData, TValue>({
 
   const pageCount = table.getPageCount()
   const pageIndex = pagination.pageIndex
+  const rows = table.getRowModel().rows
+
+  // Header label per column id, for the mobile card layout ("Label: value").
+  const headerLabels = new Map<string, ReactNode>()
+  table.getHeaderGroups().forEach((headerGroup) =>
+    headerGroup.headers.forEach((header) => {
+      if (!header.isPlaceholder) {
+        headerLabels.set(
+          header.column.id,
+          flexRender(header.column.columnDef.header, header.getContext()),
+        )
+      }
+    }),
+  )
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-md border border-border">
+      {/* Desktop/tablet: the full table (scrolls horizontally if needed). */}
+      <div className="hidden rounded-md border border-border md:block">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -119,7 +136,53 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
+      {/* Mobile: one card per row, each cell as a labelled "Spalte: Wert" line. */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {rows.length ? (
+          rows.map((row) => (
+            <div key={row.id} className="rounded-md border border-border p-4">
+              <dl className="flex flex-col gap-2">
+                {row.getVisibleCells().map((cell) => {
+                  const label = headerLabels.get(cell.column.id)
+                  const content = flexRender(
+                    cell.column.columnDef.cell,
+                    cell.getContext(),
+                  )
+                  return (
+                    <div
+                      key={cell.id}
+                      className={cn(
+                        'flex gap-3',
+                        label ? 'items-start justify-between' : 'justify-end',
+                      )}
+                    >
+                      {label ? (
+                        <dt className="shrink-0 text-xs font-medium text-muted-foreground">
+                          {label}
+                        </dt>
+                      ) : null}
+                      <dd
+                        className={cn(
+                          'min-w-0 text-sm',
+                          label ? 'text-right' : 'w-full',
+                        )}
+                      >
+                        {content}
+                      </dd>
+                    </div>
+                  )
+                })}
+              </dl>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
+            {isLoading ? t('table.loading') : (emptyMessage ?? t('table.empty'))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <span>{t('table.total', { count: rowCount })}</span>
         <div className="flex items-center gap-2">
           <span>
