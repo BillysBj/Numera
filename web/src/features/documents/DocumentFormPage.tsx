@@ -253,7 +253,7 @@ export default function DocumentFormPage() {
 
   return (
     <main className="app-main" style={{ maxWidth: '960px' }}>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </h1>
@@ -390,7 +390,7 @@ export default function DocumentFormPage() {
 
           {documentType === DocumentType.Schlussrechnung && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>{t('form.sections.prepayments')}</CardTitle>
                 {!isReadOnly && canDownPayment && (
                   <Button
@@ -427,10 +427,10 @@ export default function DocumentFormPage() {
           )}
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>{t('form.sections.lines')}</CardTitle>
               {!isReadOnly && (
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     variant="outline"

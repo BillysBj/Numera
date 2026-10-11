@@ -196,7 +196,7 @@ export default function PartnerFormPage() {
 
   return (
     <main className="app-main" style={{ maxWidth: '820px' }}>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </h1>

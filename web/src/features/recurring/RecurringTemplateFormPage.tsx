@@ -274,7 +274,7 @@ export default function RecurringTemplateFormPage() {
 
   return (
     <main className="app-main" style={{ maxWidth: '960px' }}>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">
           {t(id ? 'form.editTitle' : 'form.createTitle')}
         </h1>

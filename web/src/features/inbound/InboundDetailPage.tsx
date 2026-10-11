@@ -135,7 +135,7 @@ export default function InboundDetailPage() {
 
   return (
     <main className="app-main" style={{ maxWidth: '960px' }}>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <Link to="/inbound" className="text-sm text-primary hover:underline">
             ← {t('detail.back')}
