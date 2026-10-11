@@ -192,9 +192,16 @@ public sealed class InvoiceDocument : IDocument
                 col.Item().Element(ComposeBreakdown);
                 col.Item().Element(ComposePrepayments);
                 col.Item().Element(ComposePflichttexte);
-                // Configurable closing text (from settings) appears ABOVE the payment / bank block.
-                col.Item().Element(ComposeClosingText);
-                col.Item().Element(ComposePaymentBlock);
+
+                // Closing text + bank/payment details belong on invoices only — a quote
+                // (Angebot) or order confirmation (Auftragsbestätigung) carries nothing to
+                // pay yet, so it shows no bank account and no payment note.
+                if (IsInvoice)
+                {
+                    // Configurable closing text (from settings) appears ABOVE the payment / bank block.
+                    col.Item().Element(ComposeClosingText);
+                    col.Item().Element(ComposePaymentBlock);
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(_model.Notes))
@@ -283,10 +290,14 @@ public sealed class InvoiceDocument : IDocument
             // Recipient (Bill To) block.
             row.RelativeItem().Column(col =>
             {
-                // A Lieferschein goes to the goods recipient, not the invoice recipient.
+                // A Lieferschein goes to the goods recipient; an invoice to the bill
+                // recipient; a quote / order confirmation simply to the customer (there
+                // is no "bill recipient" before an invoice exists).
                 var recipientHeading = IsDeliveryNote
                     ? (_model.Language == "en" ? "Ship To" : "Warenempfänger")
-                    : _labels.BillTo;
+                    : IsInvoice
+                        ? _labels.BillTo
+                        : (_model.Language == "en" ? "Customer" : "Kunde");
                 col.Item().Text(recipientHeading.ToUpperInvariant())
                     .FontSize(7.5f).FontColor(AccentSoft).LetterSpacing(0.08f);
 
