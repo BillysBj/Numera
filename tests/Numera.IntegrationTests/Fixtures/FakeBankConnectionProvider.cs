@@ -27,6 +27,12 @@ public sealed class FakeBankConnectionProvider : IBankConnectionProvider
     /// <summary>Connection ids received by account-discovery calls, in call order.</summary>
     public List<Guid> ListedConnectionIds { get; } = [];
 
+    /// <summary>Connection ids received by provider-data deletion calls, in call order.</summary>
+    public List<Guid> DeletedConnectionIds { get; } = [];
+
+    /// <summary>Decides the return value of each deletion call (default: a user was deleted).</summary>
+    public Func<BankConnection, bool> DeleteResult { get; set; } = _ => true;
+
     /// <inheritdoc />
     public Task<WebFormSession> StartImportAsync(BankConnection connection, CancellationToken ct)
     {
@@ -76,5 +82,13 @@ public sealed class FakeBankConnectionProvider : IBankConnectionProvider
     {
         ct.ThrowIfCancellationRequested();
         return Task.FromResult(Consent);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteProviderDataAsync(BankConnection connection, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        DeletedConnectionIds.Add(connection.Id);
+        return Task.FromResult(DeleteResult(connection));
     }
 }

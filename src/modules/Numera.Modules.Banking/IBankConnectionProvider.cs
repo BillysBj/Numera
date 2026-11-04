@@ -20,6 +20,15 @@ public interface IBankConnectionProvider
     Task<ConsentSnapshot> GetConsentStatusAsync(
         BankConnection connection,
         CancellationToken ct);
+
+    /// <summary>
+    /// Best-effort, irreversible deletion of all provider-side data for <paramref name="connection"/>
+    /// (Phase B1 Scheibe 2). For finAPI this deletes the sub-user, which cascades to every bank
+    /// connection, account, transaction and consent that sub-user owns. Returns <c>true</c> when a
+    /// provider-side user was deleted, <c>false</c> when there was nothing to delete (e.g. no
+    /// sub-user was ever provisioned, or it is already gone).
+    /// </summary>
+    Task<bool> DeleteProviderDataAsync(BankConnection connection, CancellationToken ct);
 }
 
 /// <summary>finAPI Web Form session returned for import or re-authentication.</summary>

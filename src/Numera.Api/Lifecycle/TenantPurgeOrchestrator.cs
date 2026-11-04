@@ -22,6 +22,7 @@ public sealed class TenantPurgeOrchestrator
 {
     private readonly NumeraDbContext _db;
     private readonly IBillingProvider _billing;
+    private readonly IBankConnectionProvider _banking;
     private readonly KeycloakTenantPurger _keycloak;
     private readonly TenantPurgeService _purge;
     private readonly ILogger<TenantPurgeOrchestrator> _logger;
@@ -30,12 +31,14 @@ public sealed class TenantPurgeOrchestrator
     public TenantPurgeOrchestrator(
         NumeraDbContext db,
         IBillingProvider billing,
+        IBankConnectionProvider banking,
         KeycloakTenantPurger keycloak,
         TenantPurgeService purge,
         ILogger<TenantPurgeOrchestrator> logger)
     {
         _db = db;
         _billing = billing;
+        _banking = banking;
         _keycloak = keycloak;
         _purge = purge;
         _logger = logger;
@@ -55,7 +58,7 @@ public sealed class TenantPurgeOrchestrator
         }
 
         var stripeOutcome = await CancelStripeAsync(tenant.StripeSubscriptionId, ct).ConfigureAwait(false);
-        var finapiOutcome = await DescribeFinApiAsync(ct).ConfigureAwait(false);
+        var finapiOutcome = await PurgeFinApiAsync(ct).ConfigureAwait(false);
         var keycloakOutcome = await PurgeKeycloakAsync(tenantId, ct).ConfigureAwait(false);
 
         var record = new TenantPurgeRecord(
@@ -103,22 +106,60 @@ public sealed class TenantPurgeOrchestrator
         }
     }
 
-    // finAPI deletion is not yet wired (the provider port has no delete method). To avoid leaving a
-    // silent orphan, the purge records whether the tenant had any bank connection that still needs
-    // manual finAPI cleanup, and logs a warning so an operator can act.
-    private async Task<string> DescribeFinApiAsync(CancellationToken ct)
+    // Deletes the tenant's finAPI sub-user(s). EnsureUserAsync reuses one sub-user across a tenant's
+    // bank connections, so deleting that sub-user once cascades to all of its connections, accounts,
+    // transactions and consents. We therefore de-duplicate by the stored (encrypted) sub-user id and
+    // delete each distinct sub-user exactly once. Best-effort: a provider failure is logged and
+    // recorded, but never blocks the irreversible DB purge that follows.
+    private async Task<string> PurgeFinApiAsync(CancellationToken ct)
     {
-        var connections = await _db.Set<BankConnection>().AsNoTracking().CountAsync(ct).ConfigureAwait(false);
-        if (connections == 0)
+        var connections = await _db.Set<BankConnection>()
+            .AsNoTracking()
+            .Where(connection => connection.FinApiUserId != null)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+        if (connections.Count == 0)
         {
             return "none";
         }
 
-        _logger.LogWarning(
-            "Tenant purge: {ConnectionCount} finAPI bank connection(s) require manual deletion at the "
-            + "provider — automatic finAPI purge is not yet implemented.",
-            connections);
-        return $"manual-required:{connections}";
+        var distinctSubUsers = connections
+            .GroupBy(connection => connection.FinApiUserId!, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+
+        var deleted = 0;
+        var failed = 0;
+        foreach (var connection in distinctSubUsers)
+        {
+            try
+            {
+                if (await _banking.DeleteProviderDataAsync(connection, ct).ConfigureAwait(false))
+                {
+                    deleted++;
+                }
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                _logger.LogError(
+                    ex,
+                    "Tenant purge could not delete finAPI data for bank connection {ConnectionId}.",
+                    connection.Id);
+            }
+        }
+
+        if (failed > 0)
+        {
+            _logger.LogWarning(
+                "Tenant purge: {Failed} finAPI sub-user(s) could not be deleted and require manual "
+                + "cleanup at the provider ({Deleted} deleted).",
+                failed,
+                deleted);
+            return $"deleted:{deleted};failed:{failed}";
+        }
+
+        return deleted == 0 ? "none" : $"deleted:{deleted}users";
     }
 
     private async Task<string> PurgeKeycloakAsync(Guid tenantId, CancellationToken ct)

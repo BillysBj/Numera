@@ -7,6 +7,7 @@ using Npgsql;
 
 using Numera.Api.Lifecycle;
 using Numera.IntegrationTests.Fixtures;
+using Numera.Modules.Banking;
 using Numera.Modules.Billing;
 using Numera.Platform.Db;
 using Numera.Platform.Db.Entities;
@@ -130,7 +131,53 @@ public sealed class TenantPurgeServiceTests(PostgresFixture fixture)
         Assert.Null(secondResult);
     }
 
+    [Fact]
+    public async Task Orchestrator_deletes_each_finapi_subuser_exactly_once()
+    {
+        var tenantId = await SeedTenantAsync("finAPI Löschung GmbH");
+        // finAPI reuses a single sub-user across a tenant's connections, so two of these share one
+        // (encrypted) sub-user id and the third has its own — the purge must delete two, not three.
+        await SeedBankConnectionAsync(tenantId, "cipher-user-A");
+        await SeedBankConnectionAsync(tenantId, "cipher-user-A");
+        await SeedBankConnectionAsync(tenantId, "cipher-user-B");
+
+        var banking = new FakeBankConnectionProvider();
+        var log = await RunOrchestratorAndReadLogAsync(tenantId, banking);
+
+        Assert.Equal("deleted:2users", log.FinApi);
+        Assert.Equal(2, banking.DeletedConnectionIds.Count);
+        // A connection without a finAPI sub-user is never handed to the provider.
+        Assert.All(banking.DeletedConnectionIds, id => Assert.NotEqual(Guid.Empty, id));
+    }
+
+    [Fact]
+    public async Task Orchestrator_records_finapi_failures_without_blocking_the_purge()
+    {
+        var tenantId = await SeedTenantAsync("finAPI Fehler GmbH");
+        await SeedBankConnectionAsync(tenantId, "cipher-user-A");
+
+        var banking = new FakeBankConnectionProvider
+        {
+            DeleteResult = _ => throw new InvalidOperationException("finAPI unreachable"),
+        };
+        var log = await RunOrchestratorAndReadLogAsync(tenantId, banking);
+
+        // The provider failed, but the DB purge still completed and the failure is recorded.
+        Assert.Equal("deleted:0;failed:1", log.FinApi);
+        Assert.False(await TenantRowExistsAsync(tenantId));
+    }
+
     // --- helpers -----------------------------------------------------------
+
+    private async Task<PurgeLogRow> RunOrchestratorAndReadLogAsync(
+        Guid tenantId,
+        IBankConnectionProvider banking)
+    {
+        var result = await CreateOrchestrator(tenantId, new FakeBillingProvider(), banking)
+            .PurgeAsync(tenantId, default);
+        Assert.NotNull(result);
+        return await ReadLogAsync(tenantId);
+    }
 
     private TenantPurgeService CreatePurgeService(Guid tenantId)
     {
@@ -138,7 +185,10 @@ public sealed class TenantPurgeServiceTests(PostgresFixture fixture)
         return new TenantPurgeService(db, MaintenanceConfig());
     }
 
-    private TenantPurgeOrchestrator CreateOrchestrator(Guid tenantId, IBillingProvider billing)
+    private TenantPurgeOrchestrator CreateOrchestrator(
+        Guid tenantId,
+        IBillingProvider billing,
+        IBankConnectionProvider? banking = null)
     {
         var db = fixture.CreateAppContext(tenantId);
         var purge = new TenantPurgeService(fixture.CreateAppContext(tenantId), MaintenanceConfig());
@@ -147,7 +197,27 @@ public sealed class TenantPurgeServiceTests(PostgresFixture fixture)
         // Empty config => KeycloakTenantPurger.IsConfigured is false => the Keycloak step is skipped.
         var keycloak = new KeycloakTenantPurger(httpFactory, new ConfigurationBuilder().Build());
         return new TenantPurgeOrchestrator(
-            db, billing, keycloak, purge, NullLogger<TenantPurgeOrchestrator>.Instance);
+            db,
+            billing,
+            banking ?? new StubBankConnectionProvider(),
+            keycloak,
+            purge,
+            NullLogger<TenantPurgeOrchestrator>.Instance);
+    }
+
+    private async Task<Guid> SeedBankConnectionAsync(Guid tenantId, string finApiUserId)
+    {
+        await using var db = fixture.CreateAppContext(tenantId);
+        var connection = new BankConnection
+        {
+            TenantId = tenantId,
+            Provider = BankProvider.FinApi,
+            FinApiUserId = finApiUserId,
+            FinApiUserSecret = "cipher-secret",
+        };
+        db.Set<BankConnection>().Add(connection);
+        await db.SaveChangesAsync();
+        return connection.Id;
     }
 
     private IConfiguration MaintenanceConfig() =>

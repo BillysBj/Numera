@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.CompilerServices;
 
 using Microsoft.EntityFrameworkCore;
@@ -133,6 +134,37 @@ public sealed class FinApiBankConnectionProvider : IBankConnectionProvider
             .GetConsentStatusAsync(userToken, bankConnectionId, ct)
             .ConfigureAwait(false);
         return new ConsentSnapshot(MapConsentStatus(consent), consent.ExpiresAt);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteProviderDataAsync(BankConnection connection, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(connection.FinApiUserId)
+            || string.IsNullOrWhiteSpace(connection.FinApiUserSecret))
+        {
+            // No finAPI sub-user was ever provisioned for this connection — nothing to delete.
+            return false;
+        }
+
+        var userId = _credentials.Unprotect(connection.FinApiUserId);
+        var secret = _credentials.Unprotect(connection.FinApiUserSecret);
+
+        string userToken;
+        try
+        {
+            // Call the client directly rather than the private GetUserTokenAsync, which would
+            // re-provision a sub-user and persist to the DB. We are deleting, not using.
+            userToken = await _client.GetUserTokenAsync(userId, secret, ct).ConfigureAwait(false);
+        }
+        catch (FinApiException ex) when (
+            ex.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
+        {
+            // The sub-user's token grant is rejected: it no longer exists at finAPI. Treat as done.
+            return false;
+        }
+
+        await _client.DeleteAuthorizedUserAsync(userToken, ct).ConfigureAwait(false);
+        return true;
     }
 
     private async Task<string> GetUserTokenAsync(
