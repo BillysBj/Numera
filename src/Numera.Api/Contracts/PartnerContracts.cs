@@ -95,7 +95,8 @@ public sealed record PartnerDetail(
     bool IsSupplier,
     string? CustomerNumber,
     string? SupplierNumber,
-    bool Archived);
+    bool Archived,
+    bool Anonymized);
 
 /// <summary>A partner contact person (EN 16931 BG-9).</summary>
 public sealed record ContactDto(

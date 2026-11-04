@@ -12,7 +12,8 @@
     "unarchive": "Reactivate",
     "delete": "Delete",
     "add": "Add",
-    "back": "Back"
+    "back": "Back",
+    "anonymize": "Anonymize"
   },
   "table": {
     "loading": "Loading …",
@@ -35,7 +36,8 @@
   },
   "status": {
     "active": "Active",
-    "archived": "Archived"
+    "archived": "Archived",
+    "anonymized": "Anonymized"
   },
   "filters": {
     "search": "Search …",
@@ -131,13 +133,16 @@
     "confirmDeleteContact": "Delete this contact?",
     "confirmDeleteNote": "Delete this note?",
     "editContact": "Edit contact",
-    "editNote": "Edit note"
+    "editNote": "Edit note",
+    "confirmAnonymize": "Irreversibly anonymize this partner? All personal data will be deleted; already issued documents remain unchanged. This cannot be undone.",
+    "anonymizedHint": "This partner has been anonymized (GDPR Art. 17). The master data was removed; the related documents are retained."
   },
   "activity": {
     "PartnerCreated": "Partner created",
     "PartnerUpdated": "Partner updated",
     "Archived": "Partner archived",
     "Unarchived": "Partner reactivated",
-    "NoteAdded": "Note added"
+    "NoteAdded": "Note added",
+    "Anonymized": "Partner anonymized"
   }
 }

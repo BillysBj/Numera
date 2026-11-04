@@ -28,6 +28,9 @@ public sealed class FakeBillingProvider : IBillingProvider
     /// <summary>The most recent subscription id requested, for assertions.</summary>
     public string? LastSubscriptionId { get; private set; }
 
+    /// <summary>The most recent subscription id cancelled, for assertions.</summary>
+    public string? LastCancelledSubscriptionId { get; private set; }
+
     /// <inheritdoc />
     public Task<CheckoutSession> CreateCheckoutSessionAsync(
         CheckoutRequest request,
@@ -60,5 +63,13 @@ public sealed class FakeBillingProvider : IBillingProvider
         return Task.FromResult(
             NextSubscription
             ?? throw new InvalidOperationException("No subscription response has been scripted."));
+    }
+
+    /// <inheritdoc />
+    public Task CancelSubscriptionAsync(string subscriptionId, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        LastCancelledSubscriptionId = subscriptionId;
+        return Task.CompletedTask;
     }
 }

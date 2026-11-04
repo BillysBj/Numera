@@ -14,6 +14,7 @@ using Numera.Api.Auth;
 using Numera.Api.Endpoints;
 using Numera.Api.Events;
 using Numera.Api.Jobs;
+using Numera.Api.Lifecycle;
 using Numera.Api.Reporting;
 using Numera.Api.Services;
 using Numera.Api.Services.Stripe;
@@ -77,6 +78,26 @@ builder.Services.Configure<BillingOptions>(
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IEntitlementService, EntitlementService>();
 builder.Services.AddScoped<IBillingState, BillingStateService>();
+
+// --- Account deletion (Phase B1) ------------------------------------------
+// Owner-initiated, GoBD-safe offboarding: request -> read-only grace window -> purge.
+builder.Services.Configure<AccountDeletionOptions>(
+    builder.Configuration.GetSection(AccountDeletionOptions.SectionName));
+builder.Services.AddScoped<AccountDeletionService>();
+builder.Services.AddScoped<IAccountDeletionState, AccountDeletionState>();
+builder.Services.AddScoped<PartnerAnonymizationService>();
+
+// --- Tenant hard-purge (Phase B1 Scheibe 2) --------------------------------
+// The irreversible purge after the grace window: cancels external provider state
+// (Stripe/Keycloak), then runs the privileged, GoBD-trigger-bypassing database purge on
+// a superuser maintenance connection and writes the append-only platform_deletion_log.
+// The per-tenant job runs on the Worker's "worker" queue; registered here too for parity
+// and any future operator-initiated purge.
+builder.Services.AddScoped<KeycloakTenantPurger>();
+builder.Services.AddScoped<TenantPurgeService>();
+builder.Services.AddScoped<TenantPurgeOrchestrator>();
+builder.Services.AddTransient<PurgeDueTenantsFanOutJob>();
+builder.Services.AddTransient<PurgeTenantJob>();
 
 // --- Ledger setup ---------------------------------------------------------
 // Materializes the selected embedded SKR03/SKR04 chart in the caller's tenant
@@ -274,6 +295,7 @@ app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 
 app.UseMiddleware<BillingDegradationWriteGuardMiddleware>();
+app.UseMiddleware<AccountDeletionWriteGuardMiddleware>();
 app.UseMiddleware<ReadOnlyWriteGuardMiddleware>();
 app.UseMiddleware<AreaPermissionGuardMiddleware>();
 
@@ -306,5 +328,6 @@ app.MapDunningEndpoints();
 app.MapRecurringInvoiceEndpoints();
 app.MapTeamEndpoints();
 app.MapExportEndpoints();
+app.MapAccountEndpoints();
 
 app.Run();

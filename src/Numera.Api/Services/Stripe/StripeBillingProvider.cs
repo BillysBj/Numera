@@ -107,4 +107,13 @@ public sealed class StripeBillingProvider : IBillingProvider
             subscription.CustomerId,
             tenantId);
     }
+
+    /// <inheritdoc />
+    public async Task CancelSubscriptionAsync(
+        string subscriptionId,
+        CancellationToken ct)
+    {
+        var service = new global::Stripe.SubscriptionService(_client);
+        await service.CancelAsync(subscriptionId, cancellationToken: ct).ConfigureAwait(false);
+    }
 }

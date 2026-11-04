@@ -73,6 +73,30 @@ public sealed class Tenant
     /// <summary>Creation timestamp (UTC).</summary>
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
+    /// <summary>
+    /// UTC instant of the tenant's most recent complete data export (DSGVO Art. 20),
+    /// stamped by the export endpoint. Used to enforce "export before deletion": an
+    /// account-deletion request is only accepted when a sufficiently fresh export exists.
+    /// </summary>
+    public DateTimeOffset? LastExportAt { get; set; }
+
+    /// <summary>
+    /// UTC instant the Owner requested full account deletion, or null if none is pending.
+    /// Part of the GoBD-safe offboarding flow (Phase B1): request → grace period → purge.
+    /// </summary>
+    public DateTimeOffset? DeletionRequestedAt { get; set; }
+
+    /// <summary>The Keycloak user id (sub) of the Owner who requested deletion, or null.</summary>
+    public Guid? DeletionRequestedBy { get; set; }
+
+    /// <summary>
+    /// UTC instant at or after which the hard purge may run (request + grace period).
+    /// A non-null value means the tenant is in the deletion grace window and is forced
+    /// read-only; clearing it (Undo) restores normal write access. The purge sweep job
+    /// (Phase B1 Scheibe 2) acts on tenants whose value is in the past.
+    /// </summary>
+    public DateTimeOffset? DeletionScheduledFor { get; set; }
+
     /// <summary>Memberships (user&lt;-&gt;tenant links) belonging to this tenant.</summary>
     public ICollection<Membership> Memberships { get; init; } = [];
 }

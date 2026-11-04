@@ -127,4 +127,12 @@ public sealed class BusinessPartner : ITenantEntity, IArchivable
 
     /// <inheritdoc />
     public DateTimeOffset? ArchivedAt { get; set; }
+
+    /// <summary>
+    /// When the partner's personal/master data was irreversibly anonymized (DSGVO Art. 17
+    /// right to erasure, Szenario 2). Set once; a non-null value means the PII fields above hold
+    /// neutral placeholders and the record is kept only to preserve referential integrity with the
+    /// GoBD-retained documents that froze their own recipient snapshot. Never cleared.
+    /// </summary>
+    public DateTimeOffset? AnonymizedAt { get; set; }
 }

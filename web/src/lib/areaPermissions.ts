@@ -12,7 +12,7 @@ const areaRoutes: [string, Area][] = [
   ['/inbound', 'Inbound'], ['/belege', 'Inbound'], ['/banking', 'Banking'],
   ['/partners', 'Partners'], ['/catalog', 'Catalog'], ['/reports', 'Reports'],
 ]
-const ownerRoutes = ['/settings/email', '/settings/ledger', '/team', '/reports/datev']
+const ownerRoutes = ['/settings/email', '/settings/account', '/settings/ledger', '/team', '/reports/datev']
 const matches = (path: string, prefix: string) => path === prefix || path.startsWith(prefix + '/')
 
 /** Cosmetic navigation/deep-link guard; the API remains authoritative. */

@@ -34,6 +34,9 @@ public enum PartnerActivityType
 
     /// <summary>A note was added to the partner.</summary>
     NoteAdded = 5,
+
+    /// <summary>The partner's personal/master data was irreversibly anonymized (DSGVO Art. 17).</summary>
+    Anonymized = 6,
 }
 
 /// <summary>Completion state of a partner task.</summary>

@@ -44,4 +44,12 @@ public sealed class StubBankConnectionProvider : IBankConnectionProvider
         ct.ThrowIfCancellationRequested();
         return Task.FromResult(new ConsentSnapshot(ConsentStatus.Active, null));
     }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteProviderDataAsync(BankConnection connection, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // No live provider is configured, so there is no provider-side data to delete.
+        return Task.FromResult(false);
+    }
 }

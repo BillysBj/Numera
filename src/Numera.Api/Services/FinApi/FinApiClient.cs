@@ -210,6 +210,28 @@ public sealed class FinApiClient
         return new FinApiConsent(status, expiresAt);
     }
 
+    /// <summary>
+    /// Deletes the authorized finAPI sub-user and, by cascade, all of its bank connections,
+    /// accounts, transactions and consents. A 404 is treated as already-deleted (idempotent),
+    /// so a repeated purge of the same tenant is safe.
+    /// </summary>
+    public async Task DeleteAuthorizedUserAsync(string userToken, CancellationToken ct = default)
+    {
+        using var request = CreateBearerRequest(HttpMethod.Delete, UsersPath, userToken);
+        using var response = await _http
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
+            .ConfigureAwait(false);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new FinApiException(response.StatusCode, "delete user");
+        }
+    }
+
     private async Task<FinApiWebForm> StartWebFormAsync(
         string path,
         string userToken,

@@ -52,6 +52,12 @@ public static class ExportEndpoints
             await audit.RecordAsync(new ExportAuditEvent(), ct).ConfigureAwait(false);
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
+            // Stamp the export time on the (RLS self-scoped) tenant row so the account-deletion
+            // flow can enforce "export before deletion" (Phase B1).
+            await db.Tenants
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.LastExportAt, DateTimeOffset.UtcNow), ct)
+                .ConfigureAwait(false);
+
             var fileName = $"numera-export-{Slug(meta?.Name)}-{DateTime.UtcNow:yyyyMMdd}.zip";
             ctx.Response.ContentType = "application/zip";
             ctx.Response.Headers.ContentDisposition = $"attachment; filename=\"{fileName}\"";

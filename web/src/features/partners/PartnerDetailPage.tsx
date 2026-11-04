@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  anonymizePartner,
   archivePartner,
   createContact,
   createNote,
@@ -22,6 +23,7 @@ import {
   type ContactDto,
   type ContactWriteRequest,
 } from '@/lib/api/partners'
+import { getMe } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -63,6 +65,7 @@ const ACTIVITY_KEY: Record<number, string> = {
   [PartnerActivityType.Archived]: 'Archived',
   [PartnerActivityType.Unarchived]: 'Unarchived',
   [PartnerActivityType.NoteAdded]: 'NoteAdded',
+  [PartnerActivityType.Anonymized]: 'Anonymized',
 }
 
 const emptyContact = (): ContactWriteRequest => ({
@@ -80,6 +83,7 @@ export default function PartnerDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
   const queryClient = useQueryClient()
 
+  const me = useQuery({ queryKey: ['me'], queryFn: getMe })
   const partner = useQuery({
     queryKey: ['partner', id],
     queryFn: () => getPartner(id),
@@ -106,6 +110,15 @@ export default function PartnerDetailPage() {
       partner.data?.archived ? unarchivePartner(id) : archivePartner(id),
     onSuccess: () => {
       invalidate('partner', 'activities')
+      queryClient.invalidateQueries({ queryKey: ['partners'] })
+    },
+  })
+
+  // --- Anonymize (DSGVO Art. 17, Owner-only, irreversible) ------------------
+  const anonymizeMutation = useMutation({
+    mutationFn: () => anonymizePartner(id),
+    onSuccess: () => {
+      invalidate('partner', 'activities', 'contacts', 'notes')
       queryClient.invalidateQueries({ queryKey: ['partners'] })
     },
   })
@@ -200,26 +213,48 @@ export default function PartnerDetailPage() {
         <h1 className="mr-auto text-2xl font-semibold">{p.name}</h1>
         {p.isCustomer && <Badge variant="secondary">{t('roles.customer')}</Badge>}
         {p.isSupplier && <Badge variant="outline">{t('roles.supplier')}</Badge>}
-        {p.archived && <Badge variant="destructive">{t('status.archived')}</Badge>}
-        <Link
-          to={`/partners/${id}/edit`}
-          className={cn(buttonVariants({ variant: 'outline' }))}
-        >
-          {t('actions.edit')}
-        </Link>
-        <Button
-          variant={p.archived ? 'secondary' : 'destructive'}
-          disabled={archiveMutation.isPending}
-          onClick={() => {
-            const msg = p.archived
-              ? t('detail.confirmUnarchive')
-              : t('detail.confirmArchive')
-            if (window.confirm(msg)) archiveMutation.mutate()
-          }}
-        >
-          {p.archived ? t('actions.unarchive') : t('actions.archive')}
-        </Button>
+        {p.anonymized && <Badge variant="destructive">{t('status.anonymized')}</Badge>}
+        {p.archived && !p.anonymized && <Badge variant="destructive">{t('status.archived')}</Badge>}
+        {!p.anonymized && (
+          <>
+            <Link
+              to={`/partners/${id}/edit`}
+              className={cn(buttonVariants({ variant: 'outline' }))}
+            >
+              {t('actions.edit')}
+            </Link>
+            <Button
+              variant={p.archived ? 'secondary' : 'destructive'}
+              disabled={archiveMutation.isPending}
+              onClick={() => {
+                const msg = p.archived
+                  ? t('detail.confirmUnarchive')
+                  : t('detail.confirmArchive')
+                if (window.confirm(msg)) archiveMutation.mutate()
+              }}
+            >
+              {p.archived ? t('actions.unarchive') : t('actions.archive')}
+            </Button>
+            {me.data?.role === 'Owner' && (
+              <Button
+                variant="destructive"
+                disabled={anonymizeMutation.isPending}
+                onClick={() => {
+                  if (window.confirm(t('detail.confirmAnonymize'))) anonymizeMutation.mutate()
+                }}
+              >
+                {t('actions.anonymize')}
+              </Button>
+            )}
+          </>
+        )}
       </div>
+
+      {p.anonymized && (
+        <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-muted-foreground">
+          {t('detail.anonymizedHint')}
+        </p>
+      )}
 
       <div className="grid gap-5 md:grid-cols-2">
         {/* Master data */}
