@@ -144,7 +144,7 @@ export default function RecordSupplierPaymentDialog({
     >
       <Form {...form}>
         <form onSubmit={onSubmit}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={t('payments.fields.amount')} error={errors.amount?.message}>
               <Input
                 type="number"

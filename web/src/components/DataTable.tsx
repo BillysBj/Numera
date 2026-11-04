@@ -91,7 +91,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="flex flex-col gap-3">
       {/* Desktop/tablet: the full table (scrolls horizontally if needed). */}
-      <div className="hidden rounded-md border border-border md:block">
+      <div className="hidden rounded-md border border-border bg-card md:block">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -140,7 +140,7 @@ export function DataTable<TData, TValue>({
       <div className="flex flex-col gap-3 md:hidden">
         {rows.length ? (
           rows.map((row) => (
-            <div key={row.id} className="rounded-md border border-border p-4">
+            <div key={row.id} className="rounded-md border border-border bg-card p-4">
               <dl className="flex flex-col gap-2">
                 {row.getVisibleCells().map((cell) => {
                   const label = headerLabels.get(cell.column.id)
@@ -176,7 +176,7 @@ export function DataTable<TData, TValue>({
             </div>
           ))
         ) : (
-          <div className="rounded-md border border-border p-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-md border border-border bg-card p-6 text-center text-sm text-muted-foreground">
             {isLoading ? t('table.loading') : (emptyMessage ?? t('table.empty'))}
           </div>
         )}

@@ -287,7 +287,7 @@ export default function RecurringTemplateFormPage() {
         <form onSubmit={onSubmit} className="flex flex-col gap-5">
           <Card>
             <CardHeader><CardTitle>{t('form.sections.details')}</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t('form.fields.name')} error={errors.name?.message} {...register('name')} />
               <div className="flex flex-col gap-1.5">
                 <Label>{t('form.fields.partner')}</Label>
@@ -314,7 +314,7 @@ export default function RecurringTemplateFormPage() {
           </Card>
           <Card>
             <CardHeader><CardTitle>{t('form.sections.schedule')}</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <Label>{t('form.fields.intervalUnit')}</Label>
                 <Select {...register('intervalUnit', { setValueAs: Number })}>
@@ -337,8 +337,8 @@ export default function RecurringTemplateFormPage() {
             <CardHeader><CardTitle>{t('form.sections.lines')}</CardTitle></CardHeader>
             <CardContent className="flex flex-col gap-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-6 gap-2 rounded-md border p-3">
-                  <Field className="col-span-3" label={t('form.fields.lineName')} error={errors.lines?.[index]?.name?.message} {...register(`lines.${index}.name`)} />
+                <div key={field.id} className="grid grid-cols-1 gap-2 rounded-md border p-3 sm:grid-cols-6">
+                  <Field className="sm:col-span-3" label={t('form.fields.lineName')} error={errors.lines?.[index]?.name?.message} {...register(`lines.${index}.name`)} />
                   <Field label={t('form.fields.quantity')} type="number" step="0.001" error={errors.lines?.[index]?.quantity?.message} {...register(`lines.${index}.quantity`)} />
                   <div className="flex flex-col gap-1.5">
                     <Label>{t('form.fields.unit')}</Label>
@@ -347,7 +347,7 @@ export default function RecurringTemplateFormPage() {
                     </Select>
                   </div>
                   <Button type="button" variant="ghost" onClick={() => remove(index)}>{t('actions.remove')}</Button>
-                  <Field className="col-span-2" label={t('form.fields.price')} type="number" min="0" step="0.01" error={errors.lines?.[index]?.netUnitPrice?.message} {...register(`lines.${index}.netUnitPrice`)} />
+                  <Field className="sm:col-span-2" label={t('form.fields.price')} type="number" min="0" step="0.01" error={errors.lines?.[index]?.netUnitPrice?.message} {...register(`lines.${index}.netUnitPrice`)} />
                   <div className="flex flex-col gap-1.5">
                     <Label>{t('form.fields.taxCategory')}</Label>
                     <Select {...register(`lines.${index}.taxCategory`, { setValueAs: Number })}>
@@ -355,7 +355,7 @@ export default function RecurringTemplateFormPage() {
                     </Select>
                   </div>
                   <Field label={t('form.fields.vatRate')} type="number" min="0" max="100" step="0.01" {...register(`lines.${index}.vatRatePercent`)} />
-                  <Field className="col-span-2" label={t('form.fields.description')} {...register(`lines.${index}.description`)} />
+                  <Field className="sm:col-span-2" label={t('form.fields.description')} {...register(`lines.${index}.description`)} />
                 </div>
               ))}
               {typeof errors.lines?.message === 'string' && <p className="text-sm text-destructive">{errors.lines.message}</p>}
