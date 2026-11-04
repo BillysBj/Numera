@@ -1,5 +1,6 @@
 using System.Text;
 
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Services;
@@ -47,23 +48,35 @@ public static class ExportEndpoints
                 .FirstOrDefaultAsync(ct)
                 .ConfigureAwait(false);
 
-            // Append exactly one data.exported audit row and persist it BEFORE streaming — the
-            // export is otherwise non-mutating (no business rows change).
-            await audit.RecordAsync(new ExportAuditEvent(), ct).ConfigureAwait(false);
-            await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-            // Stamp the export time on the (RLS self-scoped) tenant row so the account-deletion
-            // flow can enforce "export before deletion" (Phase B1).
-            await db.Tenants
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.LastExportAt, DateTimeOffset.UtcNow), ct)
-                .ConfigureAwait(false);
-
             var fileName = $"numera-export-{Slug(meta?.Name)}-{DateTime.UtcNow:yyyyMMdd}.zip";
             ctx.Response.ContentType = "application/zip";
             ctx.Response.Headers.ContentDisposition = $"attachment; filename=\"{fileName}\"";
 
+            // ZipArchive writes its local headers, data descriptors and central directory with
+            // SYNCHRONOUS Stream.Write calls (notably on Dispose). Kestrel forbids synchronous
+            // response-body IO by default (AllowSynchronousIO=false), which otherwise throws mid-
+            // stream and truncates the download ("network error" in the browser). Unit tests never
+            // caught this because they stream into a MemoryStream, which permits synchronous IO.
+            // Allow synchronous IO for THIS response only.
+            var bodyControl = ctx.Features.Get<IHttpBodyControlFeature>();
+            if (bodyControl is not null)
+            {
+                bodyControl.AllowSynchronousIO = true;
+            }
+
             // Stream the archive straight onto the response body (bounded memory; nothing buffered).
             await exportService.WriteArchiveAsync(ctx.Response.Body, ct).ConfigureAwait(false);
+
+            // Only AFTER the archive has streamed successfully: append exactly one data.exported
+            // audit row and stamp the export time on the (RLS self-scoped) tenant row. Doing this
+            // post-stream means a failed or aborted download never marks a "fresh export" for the
+            // account-deletion gate (Phase B1). The export is otherwise non-mutating.
+            await audit.RecordAsync(new ExportAuditEvent(), ct).ConfigureAwait(false);
+            await db.Tenants
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.LastExportAt, DateTimeOffset.UtcNow), ct)
+                .ConfigureAwait(false);
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
             return Results.Empty;
         });
 
