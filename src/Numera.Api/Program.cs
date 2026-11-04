@@ -85,6 +85,7 @@ builder.Services.Configure<AccountDeletionOptions>(
     builder.Configuration.GetSection(AccountDeletionOptions.SectionName));
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<IAccountDeletionState, AccountDeletionState>();
+builder.Services.AddScoped<PartnerAnonymizationService>();
 
 // --- Tenant hard-purge (Phase B1 Scheibe 2) --------------------------------
 // The irreversible purge after the grace window: cancels external provider state

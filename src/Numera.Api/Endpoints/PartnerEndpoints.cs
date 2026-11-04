@@ -5,6 +5,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Contracts;
+using Numera.Api.Lifecycle;
 using Numera.Modules.Crm;
 using Numera.Modules.Sales.Numbering;
 using Numera.Platform.Audit;
@@ -185,6 +186,15 @@ public static class PartnerEndpoints
                 return Results.NotFound();
             }
 
+            if (p.AnonymizedAt is not null)
+            {
+                // An anonymized partner is final: never let an edit re-introduce personal data.
+                return Results.Problem(
+                    title: "Partner anonymisiert",
+                    detail: "Ein anonymisierter Partner kann nicht mehr bearbeitet werden.",
+                    statusCode: StatusCodes.Status409Conflict);
+            }
+
             var before = Snapshot(p);
 
             p.Name = req.Name;
@@ -233,6 +243,23 @@ public static class PartnerEndpoints
         // POST /api/partners/{id}/unarchive — reactivate.
         g.MapPost("/{id:guid}/unarchive", (Guid id, NumeraDbContext db, IAuditWriter audit, ICurrentUser user, CancellationToken ct) =>
             SetArchivedAsync(id, archive: false, db, audit, user, ct));
+
+        // POST /api/partners/{id}/anonymize — irreversible DSGVO Art. 17 erasure (Owner-only).
+        // Keeps the GoBD-referenced row but overwrites every PII field; documents keep their frozen
+        // recipient snapshot. See PartnerAnonymizationService.
+        g.MapPost("/{id:guid}/anonymize", async (
+            Guid id,
+            PartnerAnonymizationService service,
+            CancellationToken ct) =>
+        {
+            var outcome = await service.AnonymizeAsync(id, ct).ConfigureAwait(false);
+            return outcome switch
+            {
+                PartnerAnonymizationOutcome.Ok
+                    or PartnerAnonymizationOutcome.AlreadyAnonymized => Results.NoContent(),
+                _ => Results.NotFound(),
+            };
+        }).RequireAuthorization("RequireOwner");
     }
 
     private static async Task<IResult> SetArchivedAsync(
@@ -298,7 +325,7 @@ public static class PartnerEndpoints
         p.PaymentTermsNetDays, p.SkontoPercent, p.SkontoDays,
         p.DefaultCurrency, p.Language, p.DefaultTaxCategory,
         p.IsCustomer, p.IsSupplier, p.CustomerNumber, p.SupplierNumber,
-        p.ArchivedAt != null);
+        p.ArchivedAt != null, p.AnonymizedAt != null);
 
     private static void AddActivity(
         NumeraDbContext db, Guid partnerId, Guid tenantId, PartnerActivityType type, string summary, Guid? actor) =>
