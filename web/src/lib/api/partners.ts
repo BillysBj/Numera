@@ -30,13 +30,14 @@ export const TaxCategory = {
 } as const
 export type TaxCategory = (typeof TaxCategory)[keyof typeof TaxCategory]
 
-/** Numera.Modules.Crm.PartnerActivityType — PartnerCreated=1 … NoteAdded=5. */
+/** Numera.Modules.Crm.PartnerActivityType — PartnerCreated=1 … Anonymized=6. */
 export const PartnerActivityType = {
   PartnerCreated: 1,
   PartnerUpdated: 2,
   Archived: 3,
   Unarchived: 4,
   NoteAdded: 5,
+  Anonymized: 6,
 } as const
 export type PartnerActivityType =
   (typeof PartnerActivityType)[keyof typeof PartnerActivityType]
@@ -90,6 +91,7 @@ export interface PartnerDetail {
   customerNumber?: string | null
   supplierNumber?: string | null
   archived: boolean
+  anonymized: boolean
 }
 
 export interface PartnerWriteRequest {
@@ -236,6 +238,15 @@ export function archivePartner(id: string): Promise<void> {
 /** POST /api/partners/{id}/unarchive — reactivate. */
 export function unarchivePartner(id: string): Promise<void> {
   return request<void>(`/partners/${id}/unarchive`, { method: 'POST' })
+}
+
+/**
+ * POST /api/partners/{id}/anonymize — irreversible DSGVO Art. 17 erasure (Owner-only).
+ * Overwrites all PII on the partner master and removes its PII child records while keeping the
+ * GoBD-referenced row (issued documents keep their own frozen recipient snapshot).
+ */
+export function anonymizePartner(id: string): Promise<void> {
+  return request<void>(`/partners/${id}/anonymize`, { method: 'POST' })
 }
 
 // ---- Contacts (BG-9) -------------------------------------------------------

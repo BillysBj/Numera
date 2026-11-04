@@ -12,7 +12,8 @@
     "unarchive": "Reaktivieren",
     "delete": "Löschen",
     "add": "Hinzufügen",
-    "back": "Zurück"
+    "back": "Zurück",
+    "anonymize": "Anonymisieren"
   },
   "table": {
     "loading": "Wird geladen …",
@@ -35,7 +36,8 @@
   },
   "status": {
     "active": "Aktiv",
-    "archived": "Archiviert"
+    "archived": "Archiviert",
+    "anonymized": "Anonymisiert"
   },
   "filters": {
     "search": "Suchen …",
@@ -131,13 +133,16 @@
     "confirmDeleteContact": "Ansprechpartner löschen?",
     "confirmDeleteNote": "Notiz löschen?",
     "editContact": "Ansprechpartner bearbeiten",
-    "editNote": "Notiz bearbeiten"
+    "editNote": "Notiz bearbeiten",
+    "confirmAnonymize": "Diesen Partner unwiderruflich anonymisieren? Alle personenbezogenen Daten werden gelöscht; bereits ausgestellte Belege bleiben unverändert. Dies kann nicht rückgängig gemacht werden.",
+    "anonymizedHint": "Dieser Partner wurde anonymisiert (DSGVO Art. 17). Die Stammdaten wurden entfernt; die zugehörigen Belege bleiben erhalten."
   },
   "activity": {
     "PartnerCreated": "Partner angelegt",
     "PartnerUpdated": "Partner aktualisiert",
     "Archived": "Partner archiviert",
     "Unarchived": "Partner reaktiviert",
-    "NoteAdded": "Notiz hinzugefügt"
+    "NoteAdded": "Notiz hinzugefügt",
+    "Anonymized": "Partner anonymisiert"
   }
 }
