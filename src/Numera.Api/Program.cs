@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Threading.RateLimiting;
+
 using FluentValidation;
 
 using Hangfire;
@@ -6,6 +9,7 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.FeatureManagement;
@@ -265,6 +269,53 @@ builder.Services.AddHangfire(config => config
     .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(hangfireConnectionString)));
 builder.Services.AddHangfireServer();
 
+// --- Rate limiting (B3) ----------------------------------------------------
+// Three layers, all partitioned by client IP (behind the reverse proxy the real IP comes
+// from UseForwardedHeaders, configured below). Rejections return 429 + Retry-After.
+//   - global : a generous safety net over ALL API traffic so no single client can hammer
+//               the service (covers uploads/renders without per-endpoint attributes).
+//   - "auth" : strict, for the unauthenticated account surface (register + login challenge)
+//               to blunt credential-stuffing / mass sign-up.
+//   - "expensive" : moderate, for the heavy data export.
+// Keycloak's own brute-force detection still guards the actual password checks at /auth/*.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(NumberFormatInfo.InvariantInfo);
+        }
+
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new
+            {
+                title = "Too many requests",
+                status = StatusCodes.Status429TooManyRequests,
+                detail = "Zu viele Anfragen. Bitte versuchen Sie es in Kürze erneut.",
+            },
+            token).ConfigureAwait(false);
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 300, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(5), QueueLimit = 0 }));
+
+    options.AddPolicy("expensive", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+});
+
 var app = builder.Build();
 
 if (builder.Configuration.GetValue<bool>("ReverseProxy:Enabled"))
@@ -279,6 +330,10 @@ if (builder.Configuration.GetValue<bool>("ReverseProxy:Enabled"))
     forwardedHeadersOptions.KnownProxies.Clear();
     app.UseForwardedHeaders(forwardedHeadersOptions);
 }
+
+// Rate limiting runs early (just after forwarded-headers so the client IP is correct) so
+// abusive traffic is shed before any authentication or database work.
+app.UseRateLimiter();
 
 // Liveness probe — intentionally unauthenticated and tenant-agnostic.
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
@@ -331,3 +386,9 @@ app.MapExportEndpoints();
 app.MapAccountEndpoints();
 
 app.Run();
+
+// Rate-limit partition key: the client IP. Behind the reverse proxy this is the real
+// client address because UseForwardedHeaders rewrites it from X-Forwarded-For. A missing
+// address collapses to a single shared "unknown" bucket (fail-closed, never unlimited).
+static string ClientIp(HttpContext httpContext) =>
+    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";

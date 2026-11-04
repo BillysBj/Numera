@@ -1,4 +1,26 @@
 {$DOMAIN} {
+	# Security headers (B4). Applied to everything we serve ourselves — the SPA, the
+	# BFF API and the OIDC callbacks — but NOT to /auth/* : Keycloak sends its own
+	# Content-Security-Policy, and a second policy here would intersect with it and
+	# break the hosted login page.
+	@self not path /auth/*
+	header @self {
+		# Force HTTPS for a year (Caddy already redirects http->https; this hardens it).
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# No MIME sniffing, no framing of our pages, lean referrer, drop the Server banner.
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		-Server
+		# CSP tuned to the real app: Stripe + finAPI are full-page REDIRECTS (window.location),
+		# never embedded, so no third-party script/frame hosts are needed. Google Fonts are the
+		# only cross-origin assets (stylesheet + font files). The only embedded frame is the
+		# receipt-PDF preview, which is a blob: URL. The theme bootstrap is an external
+		# same-origin script, so script-src stays strict 'self' (no 'unsafe-inline').
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; frame-src 'self' blob:; form-action 'self'; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'"
+	}
+
 	@api path /api/* /signin-oidc* /signout-callback-oidc*
 	handle @api {
 		reverse_proxy api:8080
@@ -14,4 +36,3 @@
 		file_server
 	}
 }
-

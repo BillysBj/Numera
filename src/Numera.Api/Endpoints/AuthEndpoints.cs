@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 using Numera.Api.Services;
 
@@ -31,13 +32,27 @@ public static class AuthEndpoints
                 });
             }
 
-            var result = await registration.RegisterAsync(
-                new RegistrationRequest(body.Email, body.Password, body.CompanyName), ct)
-                .ConfigureAwait(false);
+            try
+            {
+                var result = await registration.RegisterAsync(
+                    new RegistrationRequest(body.Email, body.Password, body.CompanyName), ct)
+                    .ConfigureAwait(false);
 
-            return Results.Ok(new { tenantId = result.TenantId, userId = result.UserId });
+                return Results.Ok(new { tenantId = result.TenantId, userId = result.UserId });
+            }
+            catch (DuplicateEmailException)
+            {
+                // A clean 409 (not a 500) when the email already has an account — the only
+                // expected "failure" of an otherwise now-atomic registration (see B2).
+                return Results.Problem(
+                    title: "E-Mail bereits registriert",
+                    detail: "Zu dieser E-Mail-Adresse besteht bereits ein Konto. Bitte melden Sie sich an.",
+                    statusCode: StatusCodes.Status409Conflict,
+                    extensions: new Dictionary<string, object?> { ["error"] = "email_exists" });
+            }
         })
-        .AllowAnonymous();
+        .AllowAnonymous()
+        .RequireRateLimiting("auth");
 
         // GET /api/auth/login — starts the OIDC code+PKCE flow; the cookie session is
         // issued on the callback. returnUrl controls where the SPA lands afterwards.
@@ -45,7 +60,8 @@ public static class AuthEndpoints
             Results.Challenge(
                 new AuthenticationProperties { RedirectUri = returnUrl ?? "/" },
                 [OpenIdConnectDefaults.AuthenticationScheme]))
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .RequireRateLimiting("auth");
 
         // POST /api/auth/logout — clears the cookie session and signs out of Keycloak.
         group.MapPost("/logout", () =>

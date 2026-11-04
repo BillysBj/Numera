@@ -13,14 +13,8 @@
       href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap"
       rel="stylesheet"
     />
-    <script>
-      // Apply the persisted theme before first paint to avoid a flash of the wrong theme.
-      try {
-        var t = localStorage.getItem('theme')
-        var d = t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
-        if (d) document.documentElement.classList.add('dark')
-      } catch (e) {}
-    </script>
+    <!-- Pre-paint theme (externalized so the CSP can keep a strict script-src 'self'). -->
+    <script src="/theme-init.js"></script>
     <title>Numera</title>
   </head>
   <body>

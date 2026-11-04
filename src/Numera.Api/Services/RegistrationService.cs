@@ -25,6 +25,20 @@ public sealed record RegistrationRequest(string Email, string Password, string C
 public sealed record RegistrationResult(Guid TenantId, Guid UserId);
 
 /// <summary>
+/// Thrown when registration is attempted with an email that already has a Keycloak account.
+/// The endpoint maps it to a clean <c>409 Conflict</c>; it never triggers compensation
+/// (the existing account must not be deleted).
+/// </summary>
+public sealed class DuplicateEmailException : Exception
+{
+    /// <summary>Creates the exception for the conflicting <paramref name="email"/>.</summary>
+    public DuplicateEmailException(string email)
+        : base($"A Keycloak account already exists for '{email}'.")
+    {
+    }
+}
+
+/// <summary>
 /// Registers a new company: creates a Keycloak user + Organization (Keycloak is the
 /// IAM source of truth), then mirrors that into the app DB as a <c>tenants</c> row
 /// (Keycloak org id as the PK) and an Owner <c>membership</c> row, records a
@@ -81,62 +95,140 @@ public sealed class RegistrationService
         var adminToken = await GetAdminTokenAsync(http, ct).ConfigureAwait(false);
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
 
-        var userId = await CreateUserAsync(http, realm, request, ct).ConfigureAwait(false);
-        var organizationId = await CreateOrganizationAsync(http, realm, request, ct).ConfigureAwait(false);
-        await AddMemberAsync(http, realm, organizationId, userId, ct).ConfigureAwait(false);
-
-        // Mirror into the app DB. Set the new tenant BEFORE any DB work so the tenant
-        // GUC (and thus RLS WITH CHECK) admits the tenants + membership inserts.
-        _currentTenant.SetTenant(organizationId);
-
-        var trialEndsAt = DateTimeOffset.UtcNow.AddDays(14);
-        _db.Add(new Tenant
+        // Multi-step provisioning across two systems (Keycloak + app DB). Each created
+        // Keycloak resource is tracked so that ANY failure after it is compensated (deleted)
+        // in reverse order — otherwise a half-done registration left an orphaned Keycloak
+        // user/org that also blocked a retry with the same email (B2). A duplicate email is
+        // the one expected "failure" and must NOT trigger compensation (it would delete a
+        // pre-existing account), so it is rethrown past the catch filter.
+        Guid? createdUserId = null;
+        Guid? createdOrgId = null;
+        try
         {
-            Id = organizationId,
-            Name = request.CompanyName,
-            Plan = TenantPlan.S,
-            TrialEndsAt = trialEndsAt,
-        });
+            var userId = await CreateUserAsync(http, realm, request, ct).ConfigureAwait(false);
+            createdUserId = userId;
+            var organizationId = await CreateOrganizationAsync(http, realm, request, ct).ConfigureAwait(false);
+            createdOrgId = organizationId;
+            await AddMemberAsync(http, realm, organizationId, userId, ct).ConfigureAwait(false);
 
-        _db.Add(new Membership
-        {
-            TenantId = organizationId,
-            UserId = userId,
-            Role = MembershipRole.Owner,
-        });
+            // Mirror into the app DB. Set the new tenant BEFORE any DB work so the tenant
+            // GUC (and thus RLS WITH CHECK) admits the tenants + membership inserts.
+            _currentTenant.SetTenant(organizationId);
 
-        // Audit the bootstrap in the same transaction. This is the one flow where the
-        // actor is the just-created user (no prior authenticated principal exists), so
-        // the AuditEvent is constructed directly with the known tenant + actor rather
-        // than through the ambient IAuditWriter (which stamps from HttpContext).
-        _db.Add(new AuditEvent
-        {
-            TenantId = organizationId,
-            ActorUserId = userId,
-            Action = "tenant.created",
-            EntityType = nameof(Tenant),
-            EntityId = organizationId,
-            Before = null,
-            After = JsonSerializer.Serialize(new
+            var trialEndsAt = DateTimeOffset.UtcNow.AddDays(14);
+            _db.Add(new Tenant
             {
-                name = request.CompanyName,
-                plan = TenantPlan.S.ToString(),
-                trialEndsAt,
-            }),
-            OccurredAt = DateTimeOffset.UtcNow,
-        });
+                Id = organizationId,
+                Name = request.CompanyName,
+                Plan = TenantPlan.S,
+                TrialEndsAt = trialEndsAt,
+            });
 
-        await _db.SaveChangesAsync(ct).ConfigureAwait(false);
+            _db.Add(new Membership
+            {
+                TenantId = organizationId,
+                UserId = userId,
+                Role = MembershipRole.Owner,
+            });
 
-        // Enqueue-after-commit: only once the transaction has persisted do we schedule
-        // the welcome email, so a rolled-back registration never leaves an orphan job.
-        _jobs.Enqueue<WelcomeEmailJob>(job => job.SendAsync(organizationId, userId, CancellationToken.None));
+            // Audit the bootstrap in the same transaction. This is the one flow where the
+            // actor is the just-created user (no prior authenticated principal exists), so
+            // the AuditEvent is constructed directly with the known tenant + actor rather
+            // than through the ambient IAuditWriter (which stamps from HttpContext).
+            _db.Add(new AuditEvent
+            {
+                TenantId = organizationId,
+                ActorUserId = userId,
+                Action = "tenant.created",
+                EntityType = nameof(Tenant),
+                EntityId = organizationId,
+                Before = null,
+                After = JsonSerializer.Serialize(new
+                {
+                    name = request.CompanyName,
+                    plan = TenantPlan.S.ToString(),
+                    trialEndsAt,
+                }),
+                OccurredAt = DateTimeOffset.UtcNow,
+            });
 
-        _logger.LogInformation(
-            "Registered tenant {TenantId} (owner {UserId}) for company {Company}.",
-            organizationId, userId, request.CompanyName);
+            await _db.SaveChangesAsync(ct).ConfigureAwait(false);
 
-        return new RegistrationResult(organizationId, userId);
+            // Enqueue-after-commit: only once the transaction has persisted do we schedule
+            // the welcome email, so a rolled-back registration never leaves an orphan job.
+            _jobs.Enqueue<WelcomeEmailJob>(job => job.SendAsync(organizationId, userId, CancellationToken.None));
+
+            _logger.LogInformation(
+                "Registered tenant {TenantId} (owner {UserId}) for company {Company}.",
+                organizationId, userId, request.CompanyName);
+
+            return new RegistrationResult(organizationId, userId);
+        }
+        catch (Exception ex) when (ex is not DuplicateEmailException)
+        {
+            _logger.LogError(
+                ex,
+                "Registration for company {Company} failed; compensating any created Keycloak resources.",
+                request.CompanyName);
+
+            // Reverse-order, best-effort cleanup on a fresh token (the request token may be
+            // the very thing that was cancelled). Failures here are logged, never masked.
+            await TryDeleteOrganizationAsync(http, realm, createdOrgId).ConfigureAwait(false);
+            await TryDeleteUserAsync(http, realm, createdUserId).ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    // Best-effort compensation: delete an orphaned Keycloak organization (404 = already gone).
+    private async Task TryDeleteOrganizationAsync(HttpClient http, string realm, Guid? organizationId)
+    {
+        if (organizationId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var response = await http
+                .DeleteAsync($"admin/realms/{realm}/organizations/{organizationId}", CancellationToken.None)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning(
+                    "Compensation: deleting orphaned Keycloak organization {OrganizationId} returned {Status}.",
+                    organizationId, (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Compensation: failed to delete orphaned Keycloak organization {OrganizationId}.", organizationId);
+        }
+    }
+
+    // Best-effort compensation: delete an orphaned Keycloak user (404 = already gone).
+    private async Task TryDeleteUserAsync(HttpClient http, string realm, Guid? userId)
+    {
+        if (userId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            using var response = await http
+                .DeleteAsync($"admin/realms/{realm}/users/{userId}", CancellationToken.None)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning(
+                    "Compensation: deleting orphaned Keycloak user {UserId} returned {Status}.",
+                    userId, (int)response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Compensation: failed to delete orphaned Keycloak user {UserId}.", userId);
+        }
     }
 
     private async Task<string> GetAdminTokenAsync(HttpClient http, CancellationToken ct)
@@ -177,6 +269,15 @@ public sealed class RegistrationService
 
         using var response = await http.PostAsJsonAsync($"admin/realms/{realm}/users", payload, ct)
             .ConfigureAwait(false);
+
+        // A 409 here means the email already has a Keycloak account. Surface it as a typed,
+        // non-compensating failure so the endpoint can return a clean 409 (never delete the
+        // pre-existing account, and never a 500).
+        if (response.StatusCode == HttpStatusCode.Conflict)
+        {
+            throw new DuplicateEmailException(request.Email);
+        }
+
         await EnsureSuccessAsync(response, "create user", ct).ConfigureAwait(false);
 
         return ExtractIdFromLocation(response, "user");
