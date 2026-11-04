@@ -17,7 +17,7 @@ namespace Numera.Platform.Db.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -2970,6 +2970,22 @@ namespace Numera.Platform.Db.Migrations
                     b.Property<DateTimeOffset?>("CurrentPeriodEnd")
                         .HasColumnType("timestamptz")
                         .HasColumnName("current_period_end");
+
+                    b.Property<DateTimeOffset?>("DeletionRequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deletion_requested_at");
+
+                    b.Property<Guid?>("DeletionRequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deletion_requested_by");
+
+                    b.Property<DateTimeOffset?>("DeletionScheduledFor")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deletion_scheduled_for");
+
+                    b.Property<DateTimeOffset?>("LastExportAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_export_at");
 
                     b.Property<string>("Name")
                         .IsRequired()
