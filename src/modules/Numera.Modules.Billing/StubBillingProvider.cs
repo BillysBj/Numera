@@ -24,4 +24,10 @@ public sealed class StubBillingProvider : IBillingProvider
         string subscriptionId,
         CancellationToken ct) =>
         throw new NotSupportedException(NotConfiguredMessage);
+
+    /// <inheritdoc />
+    public Task CancelSubscriptionAsync(
+        string subscriptionId,
+        CancellationToken ct) =>
+        throw new NotSupportedException(NotConfiguredMessage);
 }

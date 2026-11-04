@@ -86,6 +86,18 @@ builder.Services.Configure<AccountDeletionOptions>(
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<IAccountDeletionState, AccountDeletionState>();
 
+// --- Tenant hard-purge (Phase B1 Scheibe 2) --------------------------------
+// The irreversible purge after the grace window: cancels external provider state
+// (Stripe/Keycloak), then runs the privileged, GoBD-trigger-bypassing database purge on
+// a superuser maintenance connection and writes the append-only platform_deletion_log.
+// The per-tenant job runs on the Worker's "worker" queue; registered here too for parity
+// and any future operator-initiated purge.
+builder.Services.AddScoped<KeycloakTenantPurger>();
+builder.Services.AddScoped<TenantPurgeService>();
+builder.Services.AddScoped<TenantPurgeOrchestrator>();
+builder.Services.AddTransient<PurgeDueTenantsFanOutJob>();
+builder.Services.AddTransient<PurgeTenantJob>();
+
 // --- Ledger setup ---------------------------------------------------------
 // Materializes the selected embedded SKR03/SKR04 chart in the caller's tenant
 // transaction. The request pipeline owns tenant resolution and the RLS GUC.

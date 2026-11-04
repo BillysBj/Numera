@@ -1,0 +1,145 @@
+using Microsoft.EntityFrameworkCore;
+
+using Numera.Modules.Banking;
+using Numera.Modules.Billing;
+using Numera.Platform.Db;
+
+namespace Numera.Api.Lifecycle;
+
+/// <summary>
+/// Drives the full hard-purge of one tenant (Phase B1 Scheibe 2): cancels external provider
+/// state (Stripe, finAPI) and the Keycloak footprint as best-effort steps, then runs the
+/// irreversible, GoBD-trigger-bypassing database purge and writes the append-only log.
+/// </summary>
+/// <remarks>
+/// The database purge is the point of no return and always runs; the external steps are
+/// best-effort and their outcome (success / skipped / failed) is recorded in the log so an
+/// operator can follow up on any provider that could not be reached. The caller MUST have set the
+/// tenant context (<see cref="Numera.Platform.Tenancy.ICurrentTenant.SetTenant"/>) before invoking
+/// this so the tenant-scoped reads below resolve under the correct RLS scope.
+/// </remarks>
+public sealed class TenantPurgeOrchestrator
+{
+    private readonly NumeraDbContext _db;
+    private readonly IBillingProvider _billing;
+    private readonly KeycloakTenantPurger _keycloak;
+    private readonly TenantPurgeService _purge;
+    private readonly ILogger<TenantPurgeOrchestrator> _logger;
+
+    /// <summary>Creates the orchestrator over its tenant-scoped and provider dependencies.</summary>
+    public TenantPurgeOrchestrator(
+        NumeraDbContext db,
+        IBillingProvider billing,
+        KeycloakTenantPurger keycloak,
+        TenantPurgeService purge,
+        ILogger<TenantPurgeOrchestrator> logger)
+    {
+        _db = db;
+        _billing = billing;
+        _keycloak = keycloak;
+        _purge = purge;
+        _logger = logger;
+    }
+
+    /// <summary>Purges the tenant whose context is already set. A no-op if it no longer exists.</summary>
+    public async Task<TenantPurgeDbResult?> PurgeAsync(Guid tenantId, CancellationToken ct)
+    {
+        var tenant = await _db.Tenants.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, ct)
+            .ConfigureAwait(false);
+        if (tenant is null)
+        {
+            _logger.LogInformation(
+                "Tenant purge skipped for {TenantId}: already purged (no tenants row).", tenantId);
+            return null;
+        }
+
+        var stripeOutcome = await CancelStripeAsync(tenant.StripeSubscriptionId, ct).ConfigureAwait(false);
+        var finapiOutcome = await DescribeFinApiAsync(ct).ConfigureAwait(false);
+        var keycloakOutcome = await PurgeKeycloakAsync(tenantId, ct).ConfigureAwait(false);
+
+        var record = new TenantPurgeRecord(
+            tenantId,
+            tenant.Name,
+            tenant.DeletionRequestedBy,
+            tenant.DeletionRequestedAt,
+            keycloakOutcome,
+            finapiOutcome,
+            stripeOutcome);
+
+        var result = await _purge.PurgeDatabaseAndLogAsync(record, ct).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "Tenant {TenantId} ({TenantName}) purged: {RowsDeleted} rows across {TableCount} tables. "
+            + "Stripe={Stripe}, finAPI={FinApi}, Keycloak={Keycloak}.",
+            tenantId,
+            tenant.Name,
+            result.RowsDeleted,
+            result.RowCounts.Count,
+            stripeOutcome,
+            finapiOutcome,
+            keycloakOutcome);
+
+        return result;
+    }
+
+    private async Task<string> CancelStripeAsync(string? subscriptionId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(subscriptionId))
+        {
+            return "none";
+        }
+
+        try
+        {
+            await _billing.CancelSubscriptionAsync(subscriptionId, ct).ConfigureAwait(false);
+            return $"cancelled:{subscriptionId}";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex, "Tenant purge could not cancel Stripe subscription {SubscriptionId}.", subscriptionId);
+            return $"failed:{Truncate(ex.Message)}";
+        }
+    }
+
+    // finAPI deletion is not yet wired (the provider port has no delete method). To avoid leaving a
+    // silent orphan, the purge records whether the tenant had any bank connection that still needs
+    // manual finAPI cleanup, and logs a warning so an operator can act.
+    private async Task<string> DescribeFinApiAsync(CancellationToken ct)
+    {
+        var connections = await _db.Set<BankConnection>().AsNoTracking().CountAsync(ct).ConfigureAwait(false);
+        if (connections == 0)
+        {
+            return "none";
+        }
+
+        _logger.LogWarning(
+            "Tenant purge: {ConnectionCount} finAPI bank connection(s) require manual deletion at the "
+            + "provider — automatic finAPI purge is not yet implemented.",
+            connections);
+        return $"manual-required:{connections}";
+    }
+
+    private async Task<string> PurgeKeycloakAsync(Guid tenantId, CancellationToken ct)
+    {
+        if (!_keycloak.IsConfigured)
+        {
+            return "skipped:not-configured";
+        }
+
+        try
+        {
+            var users = await _keycloak.PurgeAsync(tenantId, ct).ConfigureAwait(false);
+            return $"purged:{users}users";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Tenant purge could not fully remove Keycloak org {TenantId}.", tenantId);
+            return $"failed:{Truncate(ex.Message)}";
+        }
+    }
+
+    private static string Truncate(string value) =>
+        value.Length <= 200 ? value : value[..200];
+}

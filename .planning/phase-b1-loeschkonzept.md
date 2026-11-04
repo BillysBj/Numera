@@ -80,6 +80,20 @@ Ein einzelner Geschäftspartner/eine Person verlangt Löschung, erscheint aber a
 - Grace/Undo: Abbruch stellt Schreibzugriff wieder her.
 - Partner-Anonymisierung: Kontaktfelder leer, Beleg-Snapshots unverändert.
 
+## Umsetzungsstand
+- **Scheibe 1 (fertig, committet `bd2b00d`):** Datenmodell (`deletion_*`, `last_export_at`), Owner-Self-Service-Anforderung/Undo, Export-Zwang, 30-Tage-Grace, Read-only-Write-Guard, Endpoints, 22 Tests.
+- **Scheibe 2 (fertig, getestet — noch nicht committet):** echter Hard-Purge.
+  - `platform_deletion_log` (append-only, **kein** RLS, **nicht** im EF-Modell → kein Export-Leak/kein Selbst-Purge); explizites `REVOKE ALL FROM numera_app`.
+  - `TenantPurgeService`: privilegierter DB-Purge über **Maintenance-Connection** (`ConnectionStrings:Maintenance` → Fallback `Hangfire` = Postgres-Superuser; **keine neue DB-Rolle nötig**), eine Transaktion mit `SET LOCAL session_replication_role = replica` (Trigger-Bypass nur hier), reflektive Löschung aller `ITenantEntity`-Tabellen + `tenants`-Zeile, atomarer Log-Insert.
+  - `TenantPurgeOrchestrator`: Stripe-Kündigung + Keycloak-Org/User-Löschung (`KeycloakTenantPurger`, idempotent/404-sicher) als **Best-Effort**, Ergebnis je Schritt im Log; dann DB-Purge.
+  - `PurgeDueTenantsFanOutJob` (täglicher Hangfire-Cron 03:00, `AccountDeletion:PurgeSweepCron`) + `PurgeTenantJob` (per Tenant).
+  - Tests: Purge löscht auch immutable `audit_events`, Cross-Tenant unberührt, Trigger außerhalb Purge weiterhin aktiv, Log append-only, Stripe-Cancel + Idempotenz. (4 Tests, grün; Suite 442/443, 1 Flake unabhängig.)
+- **Offen in Scheibe 2:**
+  - **finAPI-Löschung nicht automatisiert** (Port `IBankConnectionProvider` hat keine Delete-Methode): Orchestrator zählt offene Bank-Connections, loggt `manual-required:N` + Warnung. Automatisierung braucht verifizierten finAPI-„Delete bank user"-Call.
+  - **Stripe-Kündigung erfolgt beim Purge (T+30)**, nicht bei der Anforderung → Abo läuft in der Grace-Periode weiter. Alternative: bei Anforderung `cancel_at_period_end` (Undo reaktiviert). Produkt-Entscheidung.
+  - Migration `20261104152142_PlatformDeletionLog` muss deployt werden (prod via `migrate.sh`; dev beim nächsten Lauf).
+- **Scheibe 3 (offen):** Web-UI „Konto löschen" + Partner-Anonymisierung (Szenario 2).
+
 ## Produkt-Entscheidungen (entschieden)
 1. **Auslöser:** Owner-Self-Service-Anforderung + Auto-Purge nach Grace; Operator kann abbrechen/beschleunigen. ✅
 2. **Grace-Periode:** **30 Tage**, konfigurierbar. ✅

@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 using Numera.Api.Jobs;
+using Numera.Api.Lifecycle;
 using Numera.Api.Services;
 
 using Numera.Modules.Banking;
@@ -58,6 +59,17 @@ builder.Services.AddBelegeMailboxWorker(builder.Configuration);
 builder.Services.AddBankConnectionProvider(builder.Configuration);
 builder.Services.AddBankingModule(builder.Configuration);
 
+// Tenant hard-purge (Phase B1 Scheibe 2) runs on this worker's "worker" queue, so the
+// full orchestration graph must be registered here: the billing port (Stripe cancel), the
+// Keycloak purger (needs the HTTP client factory) and the privileged DB purge.
+builder.Services.AddHttpClient();
+builder.Services.AddBillingProvider(builder.Configuration);
+builder.Services.AddScoped<KeycloakTenantPurger>();
+builder.Services.AddScoped<TenantPurgeService>();
+builder.Services.AddScoped<TenantPurgeOrchestrator>();
+builder.Services.AddTransient<PurgeDueTenantsFanOutJob>();
+builder.Services.AddTransient<PurgeTenantJob>();
+
 builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
@@ -85,5 +97,10 @@ recurringJobs.AddOrUpdate<CheckBankConsentJob>(
     "bank-connections:check-consent",
     job => job.RunAllAsync(CancellationToken.None),
     "0 6 * * *");
+var purgeSweepCron = builder.Configuration["AccountDeletion:PurgeSweepCron"];
+recurringJobs.AddOrUpdate<PurgeDueTenantsFanOutJob>(
+    "tenant-purge:sweep",
+    job => job.RunAsync(CancellationToken.None),
+    string.IsNullOrWhiteSpace(purgeSweepCron) ? "0 3 * * *" : purgeSweepCron);
 
 host.Run();

@@ -18,4 +18,13 @@ public interface IBillingProvider
     Task<SubscriptionSnapshot> GetSubscriptionAsync(
         string subscriptionId,
         CancellationToken ct);
+
+    /// <summary>
+    /// Cancels the subscription immediately at the provider. Used by the irreversible
+    /// tenant purge (Phase B1 Scheibe 2) so a deleted tenant stops being billed; it is
+    /// called only at hard-purge time, never during the reversible grace window.
+    /// </summary>
+    Task CancelSubscriptionAsync(
+        string subscriptionId,
+        CancellationToken ct);
 }

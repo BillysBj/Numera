@@ -48,6 +48,13 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// <summary>Connection string for the least-privilege runtime role (numera_app).</summary>
     public string AppConnectionString { get; private set; } = string.Empty;
 
+    /// <summary>
+    /// Superuser connection string (the container owner). Used only where production uses the
+    /// privileged maintenance connection — notably the tenant hard-purge, which must bypass RLS
+    /// and set <c>session_replication_role = replica</c>. Never used for RLS-isolation assertions.
+    /// </summary>
+    public string AdminConnectionString => _adminConnectionString;
+
     /// <inheritdoc />
     public async Task InitializeAsync()
     {
