@@ -89,10 +89,13 @@ Ein einzelner Geschäftspartner/eine Person verlangt Löschung, erscheint aber a
   - **finAPI-Löschung automatisiert:** `IBankConnectionProvider.DeleteProviderDataAsync` → finAPI `DELETE /api/v1/users` (Sub-User-Löschung kaskadiert auf alle Connections/Konten/Transaktionen/Consents); Dedup pro Sub-User, 404-tolerant/idempotent; Log `deleted:Nusers` bzw. `deleted:x;failed:y` (Best-Effort, blockiert DB-Purge nie).
   - `PurgeDueTenantsFanOutJob` (täglicher Hangfire-Cron 03:00, `AccountDeletion:PurgeSweepCron`) + `PurgeTenantJob` (per Tenant).
   - Tests: Purge löscht auch immutable `audit_events`, Cross-Tenant unberührt, Trigger außerhalb Purge weiterhin aktiv, Log append-only, Stripe-Cancel + Idempotenz. (4 Tests, grün; Suite 442/443, 1 Flake unabhängig.)
-- **Offen in Scheibe 2:**
-  - **Stripe-Kündigung erfolgt beim Purge (T+30)**, nicht bei der Anforderung → Abo läuft in der Grace-Periode weiter. **Bewusst so:** der Account bleibt in der Grace-Periode per Undo wiederherstellbar; würde man bei Anforderung kündigen, müsste ein Undo das Abo neu anlegen. Daher Kündigung am Purge-Zeitpunkt. (Falls doch früher gewünscht: `cancel_at_period_end` bei Anforderung.)
-  - Migration `20261104152142_PlatformDeletionLog` muss deployt werden (prod via `migrate.sh`; dev beim nächsten Lauf).
-- **Scheibe 3 (offen):** Web-UI „Konto löschen" + Partner-Anonymisierung (Szenario 2).
+- **Scheibe 3 (fertig, getestet, committet — Backend `ebb6961`, Frontend `1631b5a`):**
+  - **Partner-Anonymisierung (Szenario 2):** `PartnerAnonymizationService` überschreibt alle PII-Stammfelder, behält Partnernummer/Rollen/DATEV-Konten, setzt `AnonymizedAt` + archiviert, härte-löscht PII-Kinder (Kontakte/Notizen/Aufgaben/Timeline) + schreibt einen neutralen „Anonymized"-Eintrag, Audit `partner.anonymized`. Ausgestellte Rechnungen bleiben unberührt (eingefrorener `RecipientSnapshot`). Endpoint `POST /api/partners/{id}/anonymize` (Owner-only, idempotent); PUT auf anonymisierten Partner → 409. 2 Tests.
+  - **Web-UI „Konto löschen"** (`/settings/account`, Owner-only): Status/Grace, Export-Zwang (Art. 20), Namens-Bestätigung, Undo; 3 Tests. **Partner-„Anonymisieren"-Button** (Owner-only) auf der Detailseite + Badge/Hinweis. i18n de/en, Routen-Guard.
+- **Offen / bewusst entschieden:**
+  - **Stripe-Kündigung erfolgt beim Purge (T+30)**, nicht bei der Anforderung → Abo läuft in der Grace-Periode weiter. **Bewusst so:** der Account bleibt in der Grace-Periode per Undo wiederherstellbar; würde man bei Anforderung kündigen, müsste ein Undo das Abo neu anlegen. (Falls doch früher gewünscht: `cancel_at_period_end` bei Anforderung.)
+  - **Migrationen** `20261104152142_PlatformDeletionLog` + `20261104185359_AddPartnerAnonymizedAt` müssen deployt werden (prod via `migrate.sh`; dev beim nächsten Lauf).
+  - **Noch nicht nach master gemergt / nicht auf der Prod-VM deployt** (dev-Branch; lokaler Smoke-Test + Merge/Deploy ausstehend).
 
 ## Produkt-Entscheidungen (entschieden)
 1. **Auslöser:** Owner-Self-Service-Anforderung + Auto-Purge nach Grace; Operator kann abbrechen/beschleunigen. ✅
