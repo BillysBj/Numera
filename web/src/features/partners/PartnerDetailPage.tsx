@@ -262,7 +262,7 @@ export default function PartnerDetailPage() {
           <CardHeader>
             <CardTitle>{t('form.sections.master')}</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          <CardContent className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             <Detail label={t('form.fields.legalForm')} value={p.legalForm} />
             <Detail label={t('form.fields.vatId')} value={p.vatId} />
             <Detail
@@ -485,7 +485,7 @@ export default function PartnerDetailPage() {
           editingContactId ? t('detail.editContact') : t('form.contact.add')
         }
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ContactField
             label={t('form.contact.firstName')}
             value={contactDraft.firstName ?? ''}

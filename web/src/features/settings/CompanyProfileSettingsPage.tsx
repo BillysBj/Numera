@@ -187,7 +187,7 @@ export default function CompanyProfileSettingsPage() {
             <CardHeader>
               <CardTitle>{t('sections.master')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 className="col-span-2"
                 label={t('fields.legalName')}
@@ -231,7 +231,7 @@ export default function CompanyProfileSettingsPage() {
             <CardHeader>
               <CardTitle>{t('sections.tax')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 label={t('fields.vatId')}
                 error={errors.vatId?.message}
@@ -262,7 +262,7 @@ export default function CompanyProfileSettingsPage() {
             <CardHeader>
               <CardTitle>{t('sections.payment')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 type="number"
                 step="1"
@@ -291,7 +291,7 @@ export default function CompanyProfileSettingsPage() {
             <CardHeader>
               <CardTitle>{t('sections.bank')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField label={t('fields.iban')} {...register('iban')} />
               <TextField label={t('fields.bic')} {...register('bic')} />
               <TextField

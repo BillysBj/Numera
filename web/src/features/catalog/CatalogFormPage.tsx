@@ -193,7 +193,7 @@ export default function CatalogFormPage() {
             <CardHeader>
               <CardTitle>{t('form.sections.master')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 label={t('form.fields.itemNumber')}
                 error={errors.itemNumber?.message}
@@ -247,7 +247,7 @@ export default function CatalogFormPage() {
             <CardHeader>
               <CardTitle>{t('form.sections.pricing')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 type="number"
                 step="0.01"

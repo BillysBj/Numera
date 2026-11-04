@@ -159,7 +159,7 @@ export default function PartnerFormPage() {
   const addressFields = (prefix: 'billingAddress' | 'shippingAddress') => {
     const e = errors[prefix]
     return (
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <TextField
           className="col-span-2"
           label={t('form.fields.street')}
@@ -211,7 +211,7 @@ export default function PartnerFormPage() {
             <CardHeader>
               <CardTitle>{t('form.sections.master')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 className="col-span-2"
                 label={t('form.fields.name')}
@@ -299,7 +299,7 @@ export default function PartnerFormPage() {
             <CardHeader>
               <CardTitle>{t('form.sections.tax')}</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
+            <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <TextField
                 label={t('form.fields.vatId')}
                 error={errors.vatId?.message}
@@ -362,7 +362,7 @@ export default function PartnerFormPage() {
                 {contacts.fields.map((f, i) => (
                   <div
                     key={f.id}
-                    className="grid grid-cols-2 gap-3 rounded-md border border-border p-3"
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-md border border-border p-3"
                   >
                     <TextField
                       label={t('form.contact.firstName')}
