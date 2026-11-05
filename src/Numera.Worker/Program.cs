@@ -54,6 +54,11 @@ builder.Services.AddDbContext<NumeraDbContext>(options => options.UseNpgsql(conn
 // Shared capture closure only: scanner + audit + enqueue; no extractor or ledger services.
 builder.Services.AddBelegeMailboxWorker(builder.Configuration);
 
+// Owner-configured shared receipt-mailbox settings (platform_belege_mailbox) + password decryption
+// (shares the DataProtection keys volume with the Api). The poll job prefers these over env.
+builder.Services.AddScoped<BelegeMailboxConfigStore>();
+builder.Services.AddScoped<BelegeMailboxPasswordProtector>();
+
 // Banking jobs added by later plans resolve the same stub-default port and shared
 // module registration seam as the API host.
 builder.Services.AddBankConnectionProvider(builder.Configuration);

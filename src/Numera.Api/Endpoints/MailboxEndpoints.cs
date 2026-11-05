@@ -23,15 +23,23 @@ public static class MailboxEndpoints
         NumeraDbContext db,
         ICurrentTenant currentTenant,
         IOptions<BelegeMailboxOptions> configuredOptions,
+        BelegeMailboxConfigStore mailboxStore,
         CancellationToken ct)
     {
         var tenantId = currentTenant.TenantId
             ?? throw new InvalidOperationException("No tenant is active for mailbox provisioning.");
-        var domain = configuredOptions.Value.Domain.Trim().TrimStart('@');
+
+        // The catch-all domain comes from the Owner-configured global settings when active, else
+        // from the env fallback (BelegeMailbox:Domain). No domain configured => feature is off.
+        var stored = await mailboxStore.GetAsync(ct).ConfigureAwait(false);
+        var domain = (stored is { IsActive: true } && !string.IsNullOrWhiteSpace(stored.Domain)
+                ? stored.Domain
+                : configuredOptions.Value.Domain)
+            .Trim().TrimStart('@');
         if (string.IsNullOrWhiteSpace(domain))
         {
             return Results.Problem(
-                "BelegeMailbox:Domain ist nicht konfiguriert.",
+                "Das Beleg-Postfach ist noch nicht konfiguriert (Einstellungen → Beleg-Postfach).",
                 statusCode: StatusCodes.Status503ServiceUnavailable);
         }
 

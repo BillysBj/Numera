@@ -145,6 +145,11 @@ builder.Services.AddScoped<IDomainEventHandler<InvoiceFinalized>, EnqueuePdfOnFi
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.Configure<BelegeMailboxOptions>(
     builder.Configuration.GetSection(BelegeMailboxOptions.SectionName));
+// Shared receipt-mailbox config (Owner-editable in Settings, stored globally in
+// platform_belege_mailbox; env BelegeMailbox is the fallback). The API reads the domain for the
+// per-tenant alias; the password protector is shared with the worker via the DataProtection keys.
+builder.Services.AddScoped<BelegeMailboxConfigStore>();
+builder.Services.AddScoped<BelegeMailboxPasswordProtector>();
 builder.Services.AddScoped<IEmailSender, MailKitEmailSender>();
 builder.Services.AddScoped<SmtpPasswordProtector>();
 builder.Services.AddScoped<ITenantEmailConfigResolver, TenantEmailConfigResolver>();
@@ -375,6 +380,7 @@ app.MapReceiptEndpoints();
 app.MapSupplierPaymentEndpoints();
 app.MapVatPaymentEndpoints();
 app.MapMailboxEndpoints();
+app.MapBelegeMailboxSettingsEndpoints();
 app.MapOpenItemEndpoints();
 app.MapPaymentEndpoints();
 app.MapBankAccountEndpoints();

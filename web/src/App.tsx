@@ -46,6 +46,7 @@ import InboundDetailPage from './features/inbound/InboundDetailPage'
 import CompanyProfileSettingsPage from './features/settings/CompanyProfileSettingsPage'
 import EmailSettingsPage from './features/settings/EmailSettingsPage'
 import AccountDeletionSettingsPage from './features/settings/AccountDeletionSettingsPage'
+import BelegeMailboxSettingsPage from './features/settings/BelegeMailboxSettingsPage'
 import DunningConfigSettingsPage from './features/dunning/DunningConfigSettingsPage'
 import RecurringTemplateListPage from './features/recurring/RecurringTemplateListPage'
 import RecurringTemplateFormPage from './features/recurring/RecurringTemplateFormPage'
@@ -182,6 +183,9 @@ export function useNavGroups(): NavGroup[] {
             { to: '/settings/ledger', label: t('nav.ledger'), icon: IconSettings },
             ...(me.data?.role === 'Owner'
               ? [{ to: '/settings/account', label: ts('account.nav'), icon: IconSettings }]
+              : []),
+            ...(me.data?.role === 'Owner'
+              ? [{ to: '/settings/belege-mailbox', label: ts('belegeMailbox.nav'), icon: IconSettings }]
               : []),
           ],
         },
@@ -611,6 +615,7 @@ function AppShell() {
             <Route path="/settings/dunning" element={<DunningConfigSettingsPage />} />
             <Route path="/settings/email" element={<EmailSettingsPage />} />
             <Route path="/settings/account" element={<AccountDeletionSettingsPage />} />
+            <Route path="/settings/belege-mailbox" element={<BelegeMailboxSettingsPage />} />
             <Route path="/settings/ledger" element={<LedgerSetupPage />} />
             <Route path="/recurring" element={<RecurringTemplateListPage />} />
             <Route path="/recurring/new" element={<RecurringTemplateFormPage />} />
