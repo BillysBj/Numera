@@ -22,14 +22,14 @@ interface LegalDoc {
 // --- Operator identity (single source for all three documents) ----------------------------
 const OPERATOR = {
   company: 'NOEMA Essentials UG (haftungsbeschränkt)',
-  street: '[Straße und Hausnummer]',
-  city: '[PLZ und Ort]',
+  street: 'Schäftlarnstraße 72',
+  city: '81371 München',
   country: 'Deutschland',
-  managingDirector: '[Geschäftsführer:in]',
-  register: '[Amtsgericht …, HRB …]',
-  vatId: '[USt-IdNr. gem. § 27a UStG, falls vorhanden]',
-  email: '[kontakt@…]',
-  phone: '[Telefon, optional]',
+  managingDirector: 'Vasilios Petropoulos',
+  register: 'Amtsgericht München, HRB 312487',
+  vatId: '[USt-IdNr. gem. § 27a UStG, falls vorhanden – nachtragen]',
+  email: 'info@noema-essentials.com',
+  phone: '+49 176 99234953',
 }
 
 const impressum: LegalDoc = {

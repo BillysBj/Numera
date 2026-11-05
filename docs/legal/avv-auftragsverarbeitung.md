@@ -7,8 +7,9 @@
 ## Parteien
 
 - **Verantwortlicher** („Kunde"): der registrierende Mandant (Unternehmer i. S. d. § 14 BGB).
-- **Auftragsverarbeiter** („Anbieter"): NOEMA Essentials UG (haftungsbeschränkt), `[Anschrift]`,
-  vertreten durch `[Geschäftsführer:in]`.
+- **Auftragsverarbeiter** („Anbieter"): NOEMA Essentials UG (haftungsbeschränkt),
+  Schäftlarnstraße 72, 81371 München, vertreten durch den Geschäftsführer Vasilios Petropoulos
+  (Amtsgericht München, HRB 312487).
 
 Dieser AVV wird mit Vertragsschluss (Registrierung) Bestandteil des Nutzungsvertrags.
 
