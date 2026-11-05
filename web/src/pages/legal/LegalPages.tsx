@@ -27,7 +27,7 @@ const OPERATOR = {
   country: 'Deutschland',
   managingDirector: 'Vasilios Petropoulos',
   register: 'Amtsgericht München, HRB 312487',
-  vatId: '[USt-IdNr. gem. § 27a UStG, falls vorhanden – nachtragen]',
+  vatId: 'DE463689885 (gemäß § 27a UStG)',
   email: 'info@noema-essentials.com',
   phone: '+49 176 99234953',
 }
@@ -83,7 +83,7 @@ const datenschutz: LegalDoc = {
       heading: '1. Verantwortlicher',
       body: [
         `${OPERATOR.company}, ${OPERATOR.street}, ${OPERATOR.city}.`,
-        `E-Mail: ${OPERATOR.email}. Einen Datenschutzbeauftragten haben wir [bestellt/nicht bestellt – prüfen].`,
+        `E-Mail: ${OPERATOR.email}. Einen Datenschutzbeauftragten haben wir nicht bestellt; eine gesetzliche Bestellpflicht nach § 38 BDSG besteht derzeit nicht.`,
       ],
     },
     {
@@ -104,10 +104,10 @@ const datenschutz: LegalDoc = {
     {
       heading: '4. Empfänger und Auftragsverarbeiter (Subunternehmer)',
       body: [
-        'Oracle Cloud Infrastructure – Hosting/Infrastruktur, Region [bestätigen, z. B. Frankfurt/EU].',
+        'Oracle Cloud Infrastructure – Hosting/Infrastruktur, Region Frankfurt (eu-frankfurt-1), EU.',
         'Stripe Payments Europe, Ltd. – Zahlungsabwicklung/Abonnement (nur bei kostenpflichtiger Nutzung).',
         'finAPI GmbH – Kontoanbindung (Banking), sofern der Kunde die Funktion nutzt.',
-        'SMTP-/E-Mail-Dienstleister [Anbieter benennen] – Versand von System- und Rechnungs-E-Mails.',
+        'ALL-INKL.COM – Neue Medien Münnich (SMTP-/E-Mail-Dienstleister) – Versand von System- und Rechnungs-E-Mails.',
         'KoSIT-Validator – Prüfung von E-Rechnungen (Betrieb als Sidecar; keine dauerhafte Speicherung).',
         'Mit allen Auftragsverarbeitern bestehen Verträge nach Art. 28 DSGVO. Eine aktuelle Liste stellen wir auf Anfrage bereit.',
       ],
@@ -131,7 +131,7 @@ const datenschutz: LegalDoc = {
       body: [
         'Sie haben das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21).',
         'Numera stellt dafür einen vollständigen Datenexport (Art. 20) sowie eine Konto-Löschung bereit.',
-        'Sie haben zudem das Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77), z. B. [zuständige Landesdatenschutzbehörde].',
+        'Sie haben zudem das Recht auf Beschwerde bei einer Aufsichtsbehörde (Art. 77). Für uns zuständig ist das Bayerische Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach.',
       ],
     },
     {
