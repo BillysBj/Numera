@@ -94,6 +94,8 @@ export interface RegisterCompanyRequest {
   companyName: string
   email: string
   password: string
+  /** The legal-document version the user accepted (A2). Sent to the BFF for provable consent. */
+  acceptedLegalVersion: string
 }
 
 // ---- Endpoints ------------------------------------------------------------

@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { registerCompany, loginUrl, ApiError } from '../lib/api'
+import { LEGAL_VERSION } from '../lib/legal'
 import { useTheme } from '../lib/useTheme'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { IconSun, IconMoon } from '../components/icons'
@@ -21,6 +23,7 @@ export default function Login() {
   const { t: tc } = useTranslation('common')
   const { theme, toggle } = useTheme()
   const [state, setState] = useState<RegisterState>({ status: 'idle' })
+  const [consent, setConsent] = useState(false)
 
   // Sign in = full-page navigation to the BFF OIDC challenge. The SPA never
   // handles credentials or tokens directly; the BFF sets the session cookie.
@@ -37,6 +40,7 @@ export default function Login() {
         companyName: String(form.get('company') ?? ''),
         email: String(form.get('email') ?? ''),
         password: String(form.get('password') ?? ''),
+        acceptedLegalVersion: LEGAL_VERSION,
       })
       setState({ status: 'success' })
     } catch (err) {
@@ -105,11 +109,31 @@ export default function Login() {
               <Label htmlFor="password">{t('register.password')}</Label>
               <Input id="password" name="password" type="password" autoComplete="new-password" required />
             </div>
+            <label className="mt-1 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                required
+              />
+              <span>
+                {t('register.consentPrefix')}{' '}
+                <Link to="/agb" target="_blank" className="text-primary hover:underline">
+                  {t('register.consentAgb')}
+                </Link>{' '}
+                {t('register.consentAnd')}{' '}
+                <Link to="/datenschutz" target="_blank" className="text-primary hover:underline">
+                  {t('register.consentPrivacy')}
+                </Link>
+                .
+              </span>
+            </label>
             <Button
               type="submit"
               variant="outline"
               className="mt-1 w-full"
-              disabled={state.status === 'submitting'}
+              disabled={state.status === 'submitting' || !consent}
             >
               {state.status === 'submitting' ? t('register.submitting') : t('register.submit')}
             </Button>

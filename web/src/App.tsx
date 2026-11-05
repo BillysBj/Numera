@@ -30,6 +30,7 @@ import {
 } from './components/icons'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import { ImpressumPage, DatenschutzPage, AgbPage } from './pages/legal/LegalPages'
 import Dashboard from './pages/Dashboard'
 import PartnerListPage from './features/partners/PartnerListPage'
 import PartnerFormPage from './features/partners/PartnerFormPage'
@@ -648,6 +649,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/impressum" element={<ImpressumPage />} />
+      <Route path="/datenschutz" element={<DatenschutzPage />} />
+      <Route path="/agb" element={<AgbPage />} />
       <Route path="/*" element={<AppShell />} />
     </Routes>
   )

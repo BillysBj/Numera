@@ -1,6 +1,7 @@
 using System.Text;
 
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 using Numera.Api.Services;
@@ -26,7 +27,9 @@ public static class ExportEndpoints
     /// <summary>Maps <c>GET /api/export</c> — Owner-only, DataExport-gated, audited, streamed.</summary>
     public static IEndpointRouteBuilder MapExportEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/export").RequireAuthorization("RequireOwner");
+        var group = app.MapGroup("/api/export")
+            .RequireAuthorization("RequireOwner")
+            .RequireRateLimiting("expensive");
 
         group.MapGet("/", async (
             HttpContext ctx,
