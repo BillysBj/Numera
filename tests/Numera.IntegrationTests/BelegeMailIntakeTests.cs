@@ -272,6 +272,11 @@ public sealed class BelegeMailIntakeTests(PostgresFixture fixture, GreenMailFixt
     {
         var services = new ServiceCollection();
         services.AddLogging();
+        // Mirror production DI: the poll job reads the shared mailbox config from the store
+        // (which finds no row here and falls back to the BelegeMailboxOptions set below).
+        services.AddDataProtection();
+        services.AddScoped<BelegeMailboxConfigStore>();
+        services.AddScoped<BelegeMailboxPasswordProtector>();
         services.AddScoped<ICurrentTenant, TenantContext>();
         services.AddScoped<ICurrentUser, BelegeMailboxSystemCurrentUser>();
         services.AddDbContext<NumeraDbContext>(options =>

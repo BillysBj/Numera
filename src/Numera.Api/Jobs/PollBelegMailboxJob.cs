@@ -50,8 +50,41 @@ public sealed class PollBelegMailboxJob
     /// <summary>Fetches unseen mail, resolves its routing secret, and invokes shared ingest.</summary>
     public async Task RunAsync(CancellationToken ct = default)
     {
-        var domain = _options.Domain.Trim().TrimStart('@');
-        if (string.IsNullOrWhiteSpace(_options.Host) || string.IsNullOrWhiteSpace(domain))
+        // Effective config: the Owner-configured global settings (platform_belege_mailbox) take
+        // precedence when active; otherwise the env fallback (BelegeMailboxOptions).
+        string host, username, password, domain;
+        int port;
+        bool useSsl;
+        using (var cfgScope = _scopeFactory.CreateScope())
+        {
+            var store = cfgScope.ServiceProvider.GetRequiredService<BelegeMailboxConfigStore>();
+            var stored = await store.GetAsync(ct).ConfigureAwait(false);
+            if (stored is { IsActive: true }
+                && !string.IsNullOrWhiteSpace(stored.Host)
+                && !string.IsNullOrWhiteSpace(stored.Domain))
+            {
+                var protector = cfgScope.ServiceProvider.GetRequiredService<BelegeMailboxPasswordProtector>();
+                host = stored.Host;
+                port = stored.Port;
+                useSsl = stored.UseSsl;
+                username = stored.Username;
+                password = string.IsNullOrWhiteSpace(stored.PasswordCipher)
+                    ? string.Empty
+                    : protector.Unprotect(stored.PasswordCipher);
+                domain = stored.Domain.Trim().TrimStart('@');
+            }
+            else
+            {
+                host = _options.Host;
+                port = _options.Port;
+                useSsl = _options.UseSsl;
+                username = _options.Username;
+                password = _options.Password;
+                domain = _options.Domain.Trim().TrimStart('@');
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(domain))
         {
             _logger.LogWarning("Receipt mailbox poll skipped because Host or Domain is not configured.");
             return;
@@ -59,14 +92,14 @@ public sealed class PollBelegMailboxJob
 
         try
         {
-            var socketOptions = _options.UseSsl
+            var socketOptions = useSsl
                 ? SecureSocketOptions.SslOnConnect
                 : SecureSocketOptions.None;
-            await _imap.ConnectAsync(_options.Host, _options.Port, socketOptions, ct)
+            await _imap.ConnectAsync(host, port, socketOptions, ct)
                 .ConfigureAwait(false);
-            if (!string.IsNullOrWhiteSpace(_options.Username))
+            if (!string.IsNullOrWhiteSpace(username))
             {
-                await _imap.AuthenticateAsync(_options.Username, _options.Password, ct)
+                await _imap.AuthenticateAsync(username, password, ct)
                     .ConfigureAwait(false);
             }
 
