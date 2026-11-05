@@ -371,9 +371,9 @@ export default function Landing() {
             <p className="mt-0.5 text-xs text-muted-foreground/80">powered by NOEMA Essentials</p>
           </div>
           <div className="flex items-center gap-5">
-            <span>GoBD-konform</span>
-            <span>EN 16931</span>
-            <span>DSGVO</span>
+            <Link to="/impressum" className="transition-colors hover:text-foreground">Impressum</Link>
+            <Link to="/datenschutz" className="transition-colors hover:text-foreground">Datenschutz</Link>
+            <Link to="/agb" className="transition-colors hover:text-foreground">AGB</Link>
           </div>
         </div>
       </footer>

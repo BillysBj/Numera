@@ -17,7 +17,12 @@ namespace Numera.Api.Services;
 /// <param name="Email">The owner's login email.</param>
 /// <param name="Password">The owner's initial password.</param>
 /// <param name="CompanyName">The company/Mandant display name.</param>
-public sealed record RegistrationRequest(string Email, string Password, string CompanyName);
+/// <param name="AcceptedLegalVersion">The legal-document version the owner accepted at sign-up (A2).</param>
+public sealed record RegistrationRequest(
+    string Email,
+    string Password,
+    string CompanyName,
+    string AcceptedLegalVersion);
 
 /// <summary>Result of a successful registration.</summary>
 /// <param name="TenantId">The created tenant id (== Keycloak organization id).</param>
@@ -122,6 +127,9 @@ public sealed class RegistrationService
                 Name = request.CompanyName,
                 Plan = TenantPlan.S,
                 TrialEndsAt = trialEndsAt,
+                // Persist the accepted legal-document version + timestamp for provability (A2).
+                LegalAcceptedVersion = request.AcceptedLegalVersion,
+                LegalAcceptedAt = DateTimeOffset.UtcNow,
             });
 
             _db.Add(new Membership

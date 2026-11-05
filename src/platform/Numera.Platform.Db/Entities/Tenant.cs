@@ -74,6 +74,16 @@ public sealed class Tenant
     public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
 
     /// <summary>
+    /// Version identifier of the legal documents (AGB + Datenschutzerklärung) the Owner
+    /// accepted at registration (A2 — Nachweisbarkeit der Zustimmung). Null for tenants
+    /// created before consent capture was introduced.
+    /// </summary>
+    public string? LegalAcceptedVersion { get; set; }
+
+    /// <summary>UTC instant the Owner accepted the legal documents at registration, or null.</summary>
+    public DateTimeOffset? LegalAcceptedAt { get; set; }
+
+    /// <summary>
     /// UTC instant of the tenant's most recent complete data export (DSGVO Art. 20),
     /// stamped by the export endpoint. Used to enforce "export before deletion": an
     /// account-deletion request is only accepted when a sufficiently fresh export exists.

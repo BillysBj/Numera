@@ -2991,6 +2991,14 @@ namespace Numera.Platform.Db.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_export_at");
 
+                    b.Property<DateTimeOffset?>("LegalAcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("legal_accepted_at");
+
+                    b.Property<string>("LegalAcceptedVersion")
+                        .HasColumnType("text")
+                        .HasColumnName("legal_accepted_version");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")

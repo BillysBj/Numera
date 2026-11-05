@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
+using Numera.Api.Legal;
 using Numera.Api.Services;
 
 namespace Numera.Api.Endpoints;
@@ -32,10 +33,22 @@ public static class AuthEndpoints
                 });
             }
 
+            // A2: the owner must accept the CURRENT legal documents (AGB + Datenschutz). The
+            // client echoes back the version string it displayed; a mismatch means it was not
+            // accepted or the texts changed under the user, so we refuse rather than record a
+            // stale/absent consent.
+            if (body.AcceptedLegalVersion != LegalDocuments.CurrentVersion)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["legal"] = ["Bitte akzeptieren Sie die aktuelle Fassung von AGB und Datenschutzerklärung."],
+                });
+            }
+
             try
             {
                 var result = await registration.RegisterAsync(
-                    new RegistrationRequest(body.Email, body.Password, body.CompanyName), ct)
+                    new RegistrationRequest(body.Email, body.Password, body.CompanyName, body.AcceptedLegalVersion), ct)
                     .ConfigureAwait(false);
 
                 return Results.Ok(new { tenantId = result.TenantId, userId = result.UserId });
@@ -74,5 +87,9 @@ public static class AuthEndpoints
     }
 
     /// <summary>Request body for <c>POST /api/auth/register</c>.</summary>
-    public sealed record RegisterBody(string Email, string Password, string CompanyName);
+    public sealed record RegisterBody(
+        string Email,
+        string Password,
+        string CompanyName,
+        string? AcceptedLegalVersion);
 }

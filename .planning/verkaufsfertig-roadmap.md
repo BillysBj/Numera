@@ -3,6 +3,16 @@
 > Ziel: Numera als **gehostete Multi-Tenant-SaaS an Fremdkunden (B2B) verkaufen und betreiben** dürfen.
 > Stand der Prüfung: Kern (Multi-Tenancy, Billing, Compliance) steht; es fehlen Recht, ein paar Code-Blocker und Betriebsreife.
 
+## Umsetzungsstand (2026-11-05)
+
+- ✅ **B1** DSGVO-Löschung/Offboarding — fertig & **live** (Merge `c05471a`, + Export-Hotfix `321fec5`).
+- ✅ **B2** Registrierung transaktional — Saga mit Kompensation, Duplikat→409 (`dev`, noch nicht deployt).
+- ✅ **B3** Rate-Limiting — global + `auth` (Register/Login) + `expensive` (Export), 429/Retry-After (`dev`).
+- ✅ **B4** Security-Header + CSP im Caddyfile; Theme-Skript ausgelagert für striktes `script-src 'self'` (`dev`).
+- ✅ **A2** Rechtstexte-Gerüst: Seiten `/impressum` `/datenschutz` `/agb`, Footer-Links, Consent-Checkbox bei Registrierung, versionierte Zustimmung persistiert (`legal_accepted_version/_at` + Migration `20261105085011`). Texte = ENTWURF (`dev`).
+- 🟡 **A1** Entwürfe geliefert (`docs/legal/`: README, AVV, TOMs; Impressum/Datenschutz/AGB als App-Entwurf) — **müssen noch an den Anwalt** und finalisiert werden.
+- ⏳ Offen: **C** (Monitoring/Logging/Restore-Probe), **D** (ELSTER, Steuerberater, Abo-E2E, Preise live). B2–B4+A2 sind committet auf `dev`, **noch nicht gemergt/deployt** (Migration + voller Testlauf ausstehend).
+
 ## Annahmen (bei Bedarf korrigieren)
 1. **Zielkunden = Unternehmer (B2B).** Eine Buchhaltungs-SaaS richtet sich an Gewerbetreibende → kein Verbraucher-Widerrufsrecht nötig, aber AGB/Datenschutz/Impressum/AVV trotzdem Pflicht. Falls auch Verbraucher: Widerrufsbelehrung + Button-Lösung ergänzen.
 2. **Nur gehostet (SaaS bei uns).** Self-Hosted-Verkauf beim Kunden ist ein **separater, optionaler Track** (Ablauf-Lizenz-Modul) und nicht Teil dieses Meilensteins.
