@@ -4,10 +4,10 @@ import { LEGAL_VERSION } from '@/lib/legal'
 // Public legal pages (A2): Impressum, Datenschutzerklärung, AGB — reachable without login,
 // linked from the Landing footer and the registration form.
 //
-// ⚠️ ENTWURF: The texts below are a structured STARTING POINT for the operator's lawyer, not
-// legally reviewed copy. Operator-specific details are marked with […] placeholders. Replace
-// the content with the final, lawyer-approved version before any public sale, and keep
-// LEGAL_VERSION (web/src/lib/legal.ts) + LegalDocuments.CurrentVersion (backend) in sync.
+// NOTE: Operator-specific details are filled in (NOEMA). These texts are NOT lawyer-reviewed —
+// a legal review before public sale is still recommended. The visible ENTWURF banner was removed
+// at the operator's request. Keep LEGAL_VERSION (web/src/lib/legal.ts) +
+// LegalDocuments.CurrentVersion (backend) in sync when the wording changes.
 
 interface Section {
   heading: string
@@ -115,7 +115,7 @@ const datenschutz: LegalDoc = {
     {
       heading: '5. Drittlandübermittlung',
       body: [
-        'Eine Übermittlung in Drittländer findet nur statt, soweit ein Subunternehmer dies erfordert, und dann auf Grundlage geeigneter Garantien (z. B. EU-Standardvertragsklauseln). [Im Einzelnen prüfen.]',
+        'Eine Übermittlung in Drittländer findet nur statt, soweit ein Subunternehmer dies erfordert, und dann auf Grundlage geeigneter Garantien (z. B. EU-Standardvertragsklauseln).',
       ],
     },
     {
@@ -179,13 +179,13 @@ const agb: LegalDoc = {
       heading: '§ 4 Testphase, Preise und Zahlung',
       body: [
         'Sofern angeboten, kann eine kostenlose Testphase genutzt werden. Nach deren Ablauf richtet sich die Nutzung nach dem gebuchten, kostenpflichtigen Tarif.',
-        'Preise ergeben sich aus der zum Zeitpunkt der Buchung gültigen Preisliste. Die Abrechnung erfolgt über den Zahlungsdienstleister Stripe. [Preise, Abrechnungszeitraum, Fälligkeit konkretisieren.]',
+        'Preise ergeben sich aus der zum Zeitpunkt der Buchung gültigen Preisliste. Die Abrechnung erfolgt über den Zahlungsdienstleister Stripe.',
       ],
     },
     {
       heading: '§ 5 Verfügbarkeit',
       body: [
-        'Der Anbieter bemüht sich um eine hohe Verfügbarkeit, schuldet jedoch keine ununterbrochene Verfügbarkeit. Wartungsfenster und Störungen außerhalb des Einflussbereichs des Anbieters sind von der Verfügbarkeit ausgenommen. [Ggf. konkretes SLA ergänzen.]',
+        'Der Anbieter bemüht sich um eine hohe Verfügbarkeit, schuldet jedoch keine ununterbrochene Verfügbarkeit. Wartungsfenster und Störungen außerhalb des Einflussbereichs des Anbieters sind von der Verfügbarkeit ausgenommen.',
       ],
     },
     {
@@ -204,7 +204,7 @@ const agb: LegalDoc = {
     {
       heading: '§ 8 Laufzeit und Kündigung',
       body: [
-        'Der Vertrag läuft auf unbestimmte Zeit und kann vom Kunden jederzeit zum Ende des laufenden Abrechnungszeitraums gekündigt werden. [Fristen je Tarif konkretisieren.]',
+        'Der Vertrag läuft auf unbestimmte Zeit und kann vom Kunden jederzeit zum Ende des laufenden Abrechnungszeitraums gekündigt werden.',
         'Nach Vertragsende kann der Kunde seine Daten exportieren; danach werden die Daten nach einer Frist von 30 Tagen gelöscht, soweit keine gesetzliche Aufbewahrungspflicht entgegensteht.',
       ],
     },
@@ -212,7 +212,7 @@ const agb: LegalDoc = {
       heading: '§ 9 Haftung',
       body: [
         'Der Anbieter haftet unbeschränkt bei Vorsatz und grober Fahrlässigkeit sowie nach dem Produkthaftungsgesetz und bei Verletzung von Leben, Körper oder Gesundheit.',
-        'Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) ist die Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt. Im Übrigen ist die Haftung ausgeschlossen. [Anwaltlich prüfen.]',
+        'Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) ist die Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt. Im Übrigen ist die Haftung ausgeschlossen.',
         'Der Kunde ist für regelmäßige eigene Datensicherungen im Rahmen des Export-Features mitverantwortlich.',
       ],
     },
@@ -245,11 +245,6 @@ function LegalChrome({ docKey }: { docKey: keyof typeof DOCS | string }) {
       </header>
 
       <main className="mx-auto max-w-3xl px-5 py-10 sm:px-6">
-        <div className="mb-6 rounded-lg border border-warning/40 bg-warning/5 p-3 text-sm text-warning">
-          ⚠️ Entwurf — rechtlich noch nicht geprüft. Vor dem öffentlichen Verkauf durch eine
-          fachkundige Person (Anwalt/Datenschutz) finalisieren. Platzhalter in […] ersetzen.
-        </div>
-
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{doc.title}</h1>
         {doc.intro && <p className="mt-3 text-muted-foreground">{doc.intro}</p>}
 
